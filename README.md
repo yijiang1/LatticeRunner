@@ -20,7 +20,7 @@ A session ends when the electrons run out or the lattice is fully phased — the
 
 Every upgrade is a real technique for getting more picture out of fewer electrons — an 80 kV column that sits under carbon's knock-on threshold, mixed-state reconstruction, a direct electron detector, a fast blanker, wide-field scan coils, a cryo stage, sparse scanning. Seven lines, three levels each. Progress is kept in `localStorage`; if that's unavailable the game still runs, it just won't remember.
 
-This is also the answer to a problem the base game had: on a stock instrument, 130 electrons make a full reconstruction nearly unreachable. The full clear is something the rig earns over several sessions.
+This is also the answer to a problem the base game had: on a stock instrument, 100 electrons make a full reconstruction hard to reach. The full clear is something the rig earns over several sessions.
 
 ## Controls
 
@@ -61,6 +61,14 @@ Colour carries one meaning each: hue is element identity, and anything warm mean
 
 Under it: cached sphere sprites, a quarter-res additive bloom pass, three parallax layers, a false-colour phase LUT with the bonding network baked into the hidden image, device-pixel scanlines, film grain, and a DPR-aware canvas so none of it is soft on a retina display. Still one file, still no dependencies.
 
+## Balance
+
+The tuning is measured rather than guessed. Riding one row end to end converges half the lattice for 20 electrons; rows 1 and 4 together reach 100% for 38. Running right and jumping at every edge — which drifts diagonally down the lattice and re-scans ground it has already covered — costs about 1.1 electrons per percent, so ~110 for the same picture. The budget of 100 sits between those two on purpose: sloppy routing runs out short, and row discipline plus blanking are what close the gap.
+
+Sweeping at full speed destroys nothing. Slow to 90 px/s and it costs four columns; slow to 70 and it costs forty-five. Hovering is the only thing the dose model punishes, which is the point.
+
+One fix worth calling out: horizontal damping used to be applied per frame rather than per second, so the probe's top speed depended on your refresh rate — 237 px/s at 30 Hz, 118 at 60, 49 at 144. Above about 90 Hz it could no longer clear a gap in the lattice, which made the game close to unplayable on a 120 Hz display. Top speed is now ~120 px/s on any monitor.
+
 ## More
 
-[`DESIGN.md`](DESIGN.md) has the full design document: mechanics, tuning constants, known limitations, and roadmap. `DOSE_BUDGET` is the most important number in the game and the one most likely to still be wrong.
+[`DESIGN.md`](DESIGN.md) has the full design document: mechanics, tuning constants, the measured balance tables, known limitations, and roadmap.

@@ -644,15 +644,34 @@
   // (a standard trick for beam-sensitive specimens) stops the drain, but
   // also stops resolving: you can cross ground you've already scanned for
   // free, and that route planning is the actual skill.
-  // 152 atoms across 6 rows needs roughly three horizontal sweeps at
-  // different depths (~9s each) plus vertical navigation, so ~130 leaves
-  // room to learn while still punishing hovering. Main tuning dial.
-  const DOSE_BUDGET = 130;      // units; 1 unit = 1 second of beam-on time
+  // Measured, not guessed. Riding row 1 from end to end converges 49% of the
+  // lattice for 20 electrons; rows 1 and 4 together reach 100% for 38. Naive
+  // play — running right and jumping at every edge, which drifts diagonally
+  // down the lattice and re-scans ground it has already covered — costs about
+  // 1.1 electrons per percent, so ~110 for a full clear. 100 sits just under
+  // that: sloppy routing tops out short of a complete reconstruction, and
+  // blanking and row discipline are what close the gap. Main tuning dial.
+  const DOSE_BUDGET = 100;      // units; 1 unit = 1 second of beam-on time
   const BEAM_DRAIN = 1.0;       // units/sec while unblanked
 
   const RESOLVE_RADIUS = 150;      // must be this close to build resolve progress
   const RESOLVE_TIME = 0.5;        // seconds of continuous presence to fully resolve
   const RESOLVE_DECAY_MULT = 2.2;  // progress bleeds off faster than it builds when you leave
+
+  // A run opens on a survey scan: every column within one probe field of the
+  // spawn is already converged. Without it the first second is unrecoverable
+  // in both directions — step off the spawn column and the probe drops through
+  // six rows of unconverged speckle to the detector, or stand on it long enough
+  // to converge the row below and the column you are standing on knocks out.
+  const SURVEY_RADIUS = RESOLVE_RADIUS * 1.25;
+  const SEEDED = (() => {
+    const px = a => a.x * WORLD_SCALE + 80, py = a => a.y * WORLD_SCALE + 120;
+    const s0 = rawLattice[SPAWN_ATOM_INDEX], set = new Set();
+    rawLattice.forEach((a, i) => {
+      if (Math.hypot(px(a) - px(s0), py(a) - py(s0)) <= SURVEY_RADIUS) set.add(i);
+    });
+    return set;
+  })();
 
   // ---------------------------------------------------------------------
   // Between-run upgrades. Every run ends in a draft: three instruments are
@@ -677,7 +696,7 @@
       effect: (v) => `Columns resolve ${Math.round((1 - v) * 100)}% faster` },
     { id: "det", code: "DED", name: "Direct electron detector", identity: 0,
       blurb: "Counting single electrons instead of integrating a current means the same picture for a fraction of the dose.",
-      steps: [30, 65, 105],
+      steps: [22, 48, 78],
       effect: (v) => `+${v} electrons of budget` },
     { id: "blank", code: "BLNK", name: "Fast electrostatic blanker", identity: 1,
       blurb: "A blanker that switches in microseconds gives the specimen real rest between scan positions.",
@@ -747,7 +766,7 @@
 
   const world = rawLattice.map((a, i) => {
     const r = a.dopantDef ? a.dopantDef.r : 13 + a.intensity * 6;
-    const preResolved = i === SPAWN_ATOM_INDEX;
+    const preResolved = SEEDED.has(i);
     const vib = vibrationFactor(a.element);
     // A fixed speckle cloud per atom: the dots start scattered and collapse
     // onto the site as resolveProgress builds, so an unresolved atom looks
@@ -802,9 +821,13 @@
   const worldWidth = Math.max(...world.map(a => a.x)) + 400;
   const worldHeight = Math.max(...world.map(a => a.y)) + 500;
   const GROUND_Y = worldHeight - 60;
+  // the scan field ends on the outermost columns: the probe can stand over the
+  // last one but not walk off into empty frame past it
+  const SPECIMEN_LEFT = Math.min(...world.map(a => a.x)) - 10;
+  const SPECIMEN_RIGHT = Math.max(...world.map(a => a.x)) - 10;
 
   const totalResolvable = world.length;
-  let resolvedCount = 1; // the pre-resolved spawn atom
+  let resolvedCount = SEEDED.size; // the columns the survey scan already has
   let doseSpent = 0;     // against DOSE_BUDGET
   let damagedCount = 0;
   let probeHeat = 0;     // 0..1, how close the worst-hit nearby atom is to knocking out
@@ -814,7 +837,8 @@
   // ---------------------------------------------------------------------
   // Player (the scanning probe)
   // ---------------------------------------------------------------------
-  const SPAWN = { x: 60, y: world[0].y - 200 };
+  // centred on the spawn column, not clipping its left edge
+  const SPAWN = { x: world[SPAWN_ATOM_INDEX].x - 10, y: world[SPAWN_ATOM_INDEX].y - 200 };
   const player = {
     x: SPAWN.x, y: SPAWN.y, w: 20, h: 26,
     vx: 0, vy: 0, onGround: false, facing: 1,
@@ -859,7 +883,7 @@
     player.coyoteTimer = 0; player.jumpBufferTimer = 0; player.standingOn = null;
     player.trail.length = 0; player.landSquash = 0;
     world.forEach((a, i) => {
-      const preResolved = i === SPAWN_ATOM_INDEX;
+      const preResolved = SEEDED.has(i);
       a.resolveProgress = preResolved ? 1 : 0; a.resolved = preResolved;
       a.damaged = false; a.dose = 0; a.solidNow = true;
       a.flickerPhase = 0; a.gone = false;
@@ -867,7 +891,7 @@
       a.cracks = null; a.popIn = preResolved ? 1 : 0;
       a.doseLimit = doseLimitEff / a.vib; // upgrades bought since the last run
     });
-    resolvedCount = 1;
+    resolvedCount = SEEDED.size;
     doseSpent = 0; damagedCount = 0; probeHeat = 0;
     beamOn = true; runOver = false;
     particles.length = 0; rings.length = 0; shake = 0;
@@ -875,7 +899,7 @@
     // the next session rolls a fresh three
     draftOffer = [];
     resetFog();
-    eraseFogAt(world[SPAWN_ATOM_INDEX]);
+    SEEDED.forEach(i => eraseFogAt(world[i]));
     overlay.classList.remove("on");
     card.classList.remove("lab");
     toastEl.classList.remove("on");
@@ -1165,7 +1189,11 @@
     // --- horizontal input ---
     if (keys["arrowleft"] || keys["a"]) { player.vx -= MOVE_SPEED * dt * 6; player.facing = -1; }
     if (keys["arrowright"] || keys["d"]) { player.vx += MOVE_SPEED * dt * 6; player.facing = 1; }
-    player.vx *= FRICTION;
+    // damping has to be resolved per second, not per frame: a raw `vx *= 0.82`
+    // makes the probe's top speed a function of refresh rate (237 px/s at 30 Hz,
+    // 118 at 60, 49 at 144), and above ~90 Hz the probe can no longer clear a
+    // lattice gap at all. Same idiom the particle drag already uses.
+    player.vx *= Math.pow(FRICTION, dt * 60);
     if (Math.abs(player.vx) > MOVE_SPEED) player.vx = MOVE_SPEED * Math.sign(player.vx);
 
     // --- coyote time + jump buffering ---
@@ -1237,19 +1265,34 @@
     for (const a of world) {
       if (!a.resolved || !a.solidNow) continue;
       const ay = a.y + a.wobbleOffset;
-      const pw = a.dopant ? a.r * 2.6 : a.r * 2.3;
+      // The standable top of a column is a little wider than the sphere drawn
+      // on it — the glow already reads that wide, and the geometry is what
+      // decides whether the lattice is crossable at all. At 2.3 the columns
+      // are 40px on a 90px pitch, so the gaps (50px) are wider than the
+      // platforms and a mistimed jump has nothing under it; 2.7 puts the gap
+      // at 44px, which measurably lengthens an unpractised run without
+      // closing the lattice up. Coyote time and the jump buffer were the
+      // obvious knobs here and both turned out to do nothing: the constraint
+      // is the gap, not the input window.
+      const pw = a.dopant ? a.r * 3.0 : a.r * 2.7;
       const ph = a.r * 0.9;
       const bx = a.x - pw / 2, by = ay - ph / 2;
       if (aabbOverlap(player.x, player.y, player.w, player.h, bx, by, pw, ph)) {
         const overlapX = Math.min(player.x + player.w - bx, bx + pw - player.x);
         const overlapY = Math.min(player.y + player.h - by, by + ph - player.y);
-        if (overlapY < overlapX) {
+        // A column being knocked out must never shove the probe sideways. It
+        // flickers as it leaves its site, so the probe sinks into it on the
+        // frames it is not solid and is then deeply overlapped on the frames
+        // it is — which reads as a lateral hit and ejects the probe off the
+        // column, usually into the one place with nothing underneath it.
+        // While it is collapsing, the only thing it can still do is hold you.
+        if (overlapY < overlapX || a.damaged) {
           if (player.y < ay) {
             player.y = by - player.h;
             player.vy = 0;
             player.onGround = true;
             player.standingOn = a;
-          } else {
+          } else if (!a.damaged) {
             player.y = by + ph;
             player.vy = 0;
           }
@@ -1355,7 +1398,9 @@
       }
     }
 
-    player.x = Math.max(0, Math.min(worldWidth, player.x));
+    // the specimen ends before the world does; running off its right edge into
+    // empty frame is not a challenge, it is just an unmarked hole
+    player.x = Math.max(SPECIMEN_LEFT, Math.min(SPECIMEN_RIGHT, player.x));
 
     // probe trail (a short comet tail; long enough to read direction)
     player.trail.push({ x: cx, y: cy });
@@ -1668,7 +1713,7 @@
     fogCtx.arc(a.x, a.y, rad, 0, TAU);
     fogCtx.fill();
   }
-  eraseFogAt(world[SPAWN_ATOM_INDEX]);
+  SEEDED.forEach(i => eraseFogAt(world[i]));
 
   function paintThumbnail() {
     const tw = 960; // 2x the on-card width, so the recovered image stays sharp
