@@ -10,7 +10,7 @@ The catch is the central bargain of electron microscopy: **to see an atom you ha
 
 Open [`index.html`](index.html) in a browser. No build step, no dependencies, no server — it's one self-contained file.
 
-It also runs inside the [PtychoHub](https://ptychohub.com) Kids section, which serves this repo's `index.html` directly.
+It also runs inside the [PtychoHub](https://ptychohub.com) Kids section, which fetches this repo's `index.html` through an authenticated proxy route. While this repo is private that card is contributor-only and the route is session-gated, so the game isn't reachable by the public. Making the repo public is the switch that ships it.
 
 ## Controls
 
