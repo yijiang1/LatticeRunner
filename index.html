@@ -3,123 +3,510 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Lattice Runner (Prototype)</title>
+<title>Lattice Runner</title>
 <style>
+  :root {
+    --void:      #04060c;
+    --panel:     rgba(8,16,28,0.60);
+    --line:      rgba(120,200,255,0.13);
+    --line-2:    rgba(120,200,255,0.28);
+    --ice:       #dff2ff;
+    --dim:       #7b9cb5;
+    --cyan:      #5ad4ff;
+    --mint:      #7dffc4;
+    --amber:     #ffc078;
+    --ember:     #ff7a4d;
+    --mono: ui-monospace, "SF Mono", "SFMono-Regular", "Cascadia Mono", "JetBrains Mono", "Roboto Mono", Menlo, Consolas, monospace;
+    --sans: "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", system-ui, "Helvetica Neue", Arial, sans-serif;
+  }
+  * { box-sizing: border-box; }
   html, body {
     margin: 0; padding: 0; width: 100%; height: 100%;
-    background: #05070a; overflow: hidden;
-    font-family: 'Courier New', monospace;
+    background: var(--void); overflow: hidden;
+    font-family: var(--sans);
+    -webkit-font-smoothing: antialiased;
+    text-rendering: optimizeLegibility;
   }
-  canvas { display: block; }
+  canvas#game { display: block; position: fixed; inset: 0; }
+
+  /* ---------------------------------------------------------------- HUD */
   #hud {
-    position: fixed; top: 0; left: 0; right: 0;
-    padding: 14px 18px; box-sizing: border-box;
+    position: fixed; inset: 0; padding: 20px 22px; pointer-events: none;
     display: flex; justify-content: space-between; align-items: flex-start;
-    pointer-events: none; color: #cdeaff;
+    color: var(--ice);
   }
-  #hud .title { font-size: 13px; letter-spacing: 2px; opacity: 0.7; text-transform: uppercase; }
-  #meterWrap { width: 220px; }
-  #meterLabel { font-size: 11px; letter-spacing: 1px; opacity: 0.75; margin-bottom: 4px; }
-  #meterBar {
-    width: 100%; height: 10px; background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(120,220,255,0.4); border-radius: 5px; overflow: hidden;
+  /* a bright atom column can sit directly behind the title lockup — this
+     keeps the type legible without putting a hard box around it */
+  #hud::before {
+    content: ""; position: absolute; inset: 0 0 auto 0; height: 150px;
+    background: linear-gradient(180deg, rgba(4,6,12,0.6), rgba(4,6,12,0));
+    pointer-events: none;
+  }
+  #brand, #panel { position: relative; }
+
+  #brand { display: flex; gap: 12px; align-items: center; }
+  #brand .mark {
+    width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
+    border: 1px solid var(--line-2);
+    background: linear-gradient(150deg, rgba(90,212,255,0.16), rgba(90,212,255,0.02));
+    box-shadow: 0 0 22px rgba(90,212,255,0.13), inset 0 0 14px rgba(90,212,255,0.08);
+  }
+  #brand h1 {
+    margin: 0; font: 600 13px/1.1 var(--sans);
+    letter-spacing: 0.34em; text-transform: uppercase;
+  }
+  #brand p {
+    margin: 5px 0 0; font: 400 9px/1 var(--mono);
+    letter-spacing: 0.19em; color: var(--dim); text-transform: uppercase;
+  }
+
+  #panel {
+    width: 266px; padding: 14px 16px 13px; border-radius: 13px;
+    background: var(--panel); border: 1px solid var(--line);
+    backdrop-filter: blur(16px) saturate(1.25);
+    -webkit-backdrop-filter: blur(16px) saturate(1.25);
+    box-shadow: 0 18px 50px rgba(0,0,0,0.5), inset 0 1px 0 rgba(255,255,255,0.05);
+  }
+  .readout { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 7px; }
+  .readout .k {
+    font: 500 8.5px/1 var(--mono); letter-spacing: 0.2em;
+    color: var(--dim); text-transform: uppercase;
+  }
+  .readout .v {
+    font: 300 27px/0.9 var(--sans); letter-spacing: -0.02em;
+    font-variant-numeric: tabular-nums; color: var(--ice);
+  }
+  .readout .v i { font-style: normal; font-size: 13px; color: var(--dim); margin-left: 2px; }
+  .readout .v.small { font-size: 20px; }
+  .readout + .readout { margin-top: 15px; }
+
+  .track {
+    position: relative; height: 7px; border-radius: 4px;
+    background: rgba(255,255,255,0.055); overflow: hidden;
+    box-shadow: inset 0 0 0 1px rgba(255,255,255,0.045);
+  }
+  .track .fill { height: 100%; width: 0; border-radius: 4px; }
+  .track .ticks {
+    position: absolute; inset: 0; pointer-events: none;
+    background-image: repeating-linear-gradient(90deg,
+      transparent 0 calc(10% - 1px), rgba(4,8,14,0.9) calc(10% - 1px) 10%);
   }
   #meterFill {
-    height: 100%; width: 0%; background: linear-gradient(90deg,#3ad1ff,#8fffc1);
-    transition: width 0.25s ease;
-  }
-  #doseLabel { font-size: 11px; letter-spacing: 1px; opacity: 0.75; margin: 8px 0 4px; }
-  #doseBar {
-    width: 100%; height: 10px; background: rgba(255,255,255,0.08);
-    border: 1px solid rgba(255,190,120,0.45); border-radius: 5px; overflow: hidden;
+    background: linear-gradient(90deg, #2ea8ff, #5ad4ff 55%, #7dffc4);
+    box-shadow: 0 0 14px rgba(90,212,255,0.55);
+    transition: width 0.3s cubic-bezier(.2,.8,.3,1);
   }
   #doseFill {
-    height: 100%; width: 100%; background: linear-gradient(90deg,#ffb765,#ff7a4d);
-    transition: width 0.15s linear;
+    background: linear-gradient(90deg, #ff7a4d, #ffc078);
+    box-shadow: 0 0 14px rgba(255,160,90,0.45);
+    transition: width 0.12s linear;
   }
-  #doseLine { font-size: 10px; letter-spacing: 1px; opacity: 0.6; margin-top: 5px; }
-  #beamState { color: #8fffc1; }
-  #beamState.blanked { color: #7fa8bf; }
-  #instructions {
-    position: fixed; bottom: 14px; left: 18px; color: #7fa8bf;
-    font-size: 12px; letter-spacing: 0.5px; pointer-events: none;
+  #panel.low #doseFill { animation: throb 1.05s ease-in-out infinite; }
+  @keyframes throb { 0%,100% { filter: brightness(1); } 50% { filter: brightness(1.55); } }
+
+  .status {
+    display: flex; align-items: center; gap: 11px;
+    margin-top: 12px; padding-top: 11px;
+    border-top: 1px solid rgba(255,255,255,0.06);
+    font: 500 9px/1 var(--mono); letter-spacing: 0.16em;
+    text-transform: uppercase; color: var(--dim);
   }
+  .status b { color: var(--ice); font-weight: 600; }
+  .status .sep { flex: 1; }
+  #beamState { display: inline-flex; align-items: center; gap: 7px; color: var(--mint); }
+  #beamState .dot {
+    width: 6px; height: 6px; border-radius: 50%; background: currentColor;
+    box-shadow: 0 0 9px currentColor; animation: blink 1.7s ease-in-out infinite;
+  }
+  @keyframes blink { 0%,100% { opacity: 1; } 50% { opacity: 0.35; } }
+  #beamState.blanked { color: #6d8fa6; }
+  #beamState.blanked .dot {
+    animation: none; background: transparent;
+    box-shadow: none; border: 1px solid currentColor;
+  }
+
+  /* ----------------------------------------------------------- controls */
+  #hints {
+    position: fixed; left: 50%; bottom: 22px; transform: translateX(-50%);
+    display: flex; gap: 18px; align-items: center; pointer-events: none;
+    padding: 10px 17px; border-radius: 11px;
+    background: rgba(6,12,22,0.5); border: 1px solid rgba(120,200,255,0.09);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    font: 500 9.5px/1 var(--mono); letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--dim);
+    transition: opacity 0.9s ease;
+  }
+  #hints.faded { opacity: 0; }
+  #hints .grp { display: flex; gap: 7px; align-items: center; }
+  #hints .hl { color: var(--mint); }
+  kbd {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 21px; height: 21px; padding: 0 6px; border-radius: 5px;
+    border: 1px solid var(--line-2); border-bottom-width: 2px;
+    background: linear-gradient(180deg, rgba(32,56,80,0.9), rgba(13,25,40,0.9));
+    color: var(--ice); font: 600 9.5px/1 var(--mono); letter-spacing: 0.06em;
+  }
+
+  /* -------------------------------------------------------------- alert */
   #warning {
-    position: fixed; bottom: 14px; right: 18px; color: #ff8f6b;
-    font-size: 12px; letter-spacing: 0.5px; pointer-events: none;
-    opacity: 0; transition: opacity 0.15s ease;
+    position: fixed; right: 22px; bottom: 22px;
+    display: flex; gap: 9px; align-items: center;
+    padding: 10px 15px; border-radius: 11px; color: #ffd6bd;
+    background: linear-gradient(180deg, rgba(62,22,12,0.74), rgba(28,10,6,0.74));
+    border: 1px solid rgba(255,120,70,0.35);
+    box-shadow: 0 0 28px rgba(255,90,50,0.16);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+    font: 600 9.5px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase;
+    opacity: 0; transform: translateY(7px); pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease;
   }
-  #overlay {
-    position: fixed; top: 64px; left: 50%; transform: translateX(-50%);
-    display: none; flex-direction: column; align-items: center;
-    background: rgba(5,9,14,0.72); border: 1px solid rgba(143,255,193,0.35);
-    border-radius: 8px; padding: 16px 28px; color: #dff6ff; text-align: center;
-    gap: 8px; pointer-events: none;
+  #warning.on { opacity: 1; transform: none; }
+  #warning .pip {
+    width: 7px; height: 7px; border-radius: 2px; background: var(--ember);
+    box-shadow: 0 0 10px var(--ember); animation: blink 0.65s steps(2) infinite;
   }
-  #overlay h1 { font-size: 20px; letter-spacing: 2.5px; margin: 0; color: #8fffc1; }
-  #overlay p { font-size: 12px; opacity: 0.8; margin: 0; max-width: 380px; }
-  #overlay button {
-    margin-top: 8px; padding: 6px 20px; font-family: inherit; font-size: 12px;
-    letter-spacing: 1px; background: transparent; color: #8fffc1;
-    border: 1px solid #8fffc1; border-radius: 4px; cursor: pointer;
-    pointer-events: auto;
-  }
-  #overlay button:hover { background: rgba(143,255,193,0.12); }
+
+  /* -------------------------------------------------------------- toast */
   #toast {
-    position: fixed; bottom: 44px; left: 50%; transform: translateX(-50%);
-    max-width: 480px; padding: 8px 16px; color: #f1e9ff;
-    background: rgba(5,9,14,0.8); border: 1px solid rgba(200,160,255,0.4);
-    border-radius: 6px; font-size: 12px; text-align: center; line-height: 1.5;
-    opacity: 0; transition: opacity 0.3s ease; pointer-events: none;
+    position: fixed; left: 50%; bottom: 88px; transform: translate(-50%, 10px);
+    max-width: 560px; display: flex; gap: 13px; align-items: flex-start;
+    padding: 13px 18px 13px 14px; border-radius: 13px;
+    background: rgba(10,15,27,0.8); border: 1px solid rgba(180,150,255,0.22);
+    box-shadow: 0 22px 55px rgba(0,0,0,0.5);
+    backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px);
+    color: #e8e3ff; font: 400 12.5px/1.55 var(--sans);
+    opacity: 0; pointer-events: none;
+    transition: opacity 0.35s ease, transform 0.35s cubic-bezier(.2,.9,.25,1);
+  }
+  #toast.on { opacity: 1; transform: translate(-50%, 0); }
+  #toast .chip {
+    flex: none; width: 32px; height: 32px; border-radius: 9px;
+    display: grid; place-items: center; color: #08101e;
+    font: 700 12px/1 var(--mono);
+  }
+  #toast .body em {
+    display: block; font: 500 8.5px/1 var(--mono); letter-spacing: 0.2em;
+    text-transform: uppercase; color: #a794d8; font-style: normal; margin-bottom: 5px;
+  }
+
+  /* ------------------------------------------------------------ endcard */
+  #overlay {
+    position: fixed; inset: 0; display: none; place-items: center;
+    background: rgba(3,6,12,0.55);
+    backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
+    pointer-events: none; z-index: 5;
+  }
+  #overlay.on { display: grid; }
+  #card {
+    width: min(540px, 92vw); padding: 26px 28px 24px; border-radius: 18px;
+    pointer-events: auto;
+    background: linear-gradient(180deg, rgba(13,21,36,0.95), rgba(7,12,21,0.97));
+    border: 1px solid rgba(120,200,255,0.17);
+    box-shadow: 0 40px 120px rgba(0,0,0,0.72), inset 0 1px 0 rgba(255,255,255,0.06);
+    animation: rise 0.55s cubic-bezier(.2,.9,.25,1);
+  }
+  @keyframes rise { from { opacity: 0; transform: translateY(18px) scale(0.985); } }
+  #card .eyebrow {
+    font: 500 8.5px/1 var(--mono); letter-spacing: 0.26em;
+    text-transform: uppercase; color: var(--dim);
+  }
+  /* styled structurally, not by id — both panels in the card use them */
+  #card h1 {
+    margin: 10px 0 0; font: 300 28px/1.1 var(--sans);
+    letter-spacing: -0.015em; color: var(--mint);
+  }
+  #card p {
+    margin: 11px 0 0; font: 400 13px/1.6 var(--sans);
+    color: #9fbdd0; max-width: 52ch;
+  }
+  .stats {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.07);
+    border-radius: 11px; overflow: hidden; margin: 20px 0 16px;
+  }
+  .stats div { background: #0a1220; padding: 12px 8px; text-align: center; }
+  .stats .n {
+    font: 300 22px/1 var(--sans); color: var(--ice);
+    font-variant-numeric: tabular-nums;
+  }
+  .stats .n small { font-size: 11px; color: var(--dim); }
+  .stats .l {
+    margin-top: 6px; font: 500 7.5px/1 var(--mono); letter-spacing: 0.15em;
+    color: var(--dim); text-transform: uppercase;
+  }
+  #thumbWrap {
+    position: relative; border-radius: 11px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.08); background: #04070d;
+  }
+  #thumb { display: block; width: 100%; height: auto; }
+  #thumbWrap span {
+    position: absolute; left: 10px; bottom: 8px;
+    font: 500 7.5px/1 var(--mono); letter-spacing: 0.18em;
+    text-transform: uppercase; color: rgba(223,242,255,0.55);
+    text-shadow: 0 1px 4px rgba(0,0,0,0.9);
+  }
+  .actions { display: flex; gap: 10px; margin-top: 20px; }
+  .actions button {
+    flex: 1; padding: 13px; border: none; border-radius: 11px; cursor: pointer;
+    font: 600 10.5px/1 var(--mono); letter-spacing: 0.2em; text-transform: uppercase;
+    color: #05131c; background: linear-gradient(180deg, #8affd0, #45d3a5);
+    box-shadow: 0 12px 32px rgba(80,220,170,0.22);
+    transition: transform 0.12s ease, filter 0.12s ease;
+  }
+  .actions button:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .actions button:active { transform: translateY(0); }
+  .actions button.ghost {
+    color: var(--ice); background: rgba(120,200,255,0.07);
+    border: 1px solid var(--line-2); box-shadow: none;
+  }
+  .actions button.ghost:hover { background: rgba(120,200,255,0.13); }
+
+  /* ---------------------------------------------------- upgrades earned */
+  #earned {
+    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
+    margin-top: 16px; padding: 13px 16px; border-radius: 11px;
+    background: linear-gradient(180deg, rgba(90,212,255,0.09), rgba(90,212,255,0.03));
+    border: 1px solid rgba(90,212,255,0.2);
+  }
+  #earned .big {
+    font: 300 26px/1 var(--sans); color: var(--cyan);
+    font-variant-numeric: tabular-nums; white-space: nowrap;
+  }
+  #earned .big em {
+    font-style: normal; font-size: 9px; letter-spacing: 0.2em; margin-left: 4px;
+    text-transform: uppercase; font-family: var(--mono); color: var(--dim);
+  }
+  #earnBrk { font: 400 10.5px/1.55 var(--mono); color: var(--dim); letter-spacing: 0.02em; }
+
+  /* ------------------------------------------------------- upgrade draft */
+  #panelLab { display: none; }
+  #card.lab #panelReport { display: none; }
+  #card.lab #panelLab { display: block; }
+  #card { max-height: 88vh; overflow-y: auto; scrollbar-width: thin; transition: width 0.2s ease; }
+  #card.lab { width: min(780px, 94vw); }
+  #labDone { display: none; }
+  #card::-webkit-scrollbar { width: 8px; }
+  #card::-webkit-scrollbar-thumb { background: rgba(120,200,255,0.16); border-radius: 4px; }
+
+  #pickLeft {
+    margin: 18px 0 0; font: 500 8.5px/1 var(--mono); letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--dim);
+  }
+  #draft { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 12px 0 4px; }
+  .dcard {
+    display: flex; flex-direction: column; gap: 8px; text-align: left;
+    padding: 15px 14px; border-radius: 12px; cursor: pointer; font: inherit; color: inherit;
+    background: linear-gradient(180deg, rgba(90,212,255,0.07), rgba(90,212,255,0.015));
+    border: 1px solid rgba(120,200,255,0.18);
+    transition: transform 0.14s ease, border-color 0.14s ease, background 0.14s ease;
+  }
+  .dcard:hover {
+    transform: translateY(-3px); border-color: rgba(140,225,255,0.5);
+    background: linear-gradient(180deg, rgba(90,212,255,0.15), rgba(90,212,255,0.04));
+  }
+  .dcard .code {
+    align-self: flex-start; padding: 3px 7px; border-radius: 5px;
+    background: rgba(90,212,255,0.16); color: #bfeaff;
+    font: 700 8px/1 var(--mono); letter-spacing: 0.14em;
+  }
+  .dcard .nm { font: 500 12.5px/1.3 var(--sans); color: var(--ice); }
+  .dcard .ef {
+    font: 500 8.5px/1.4 var(--mono); letter-spacing: 0.12em;
+    text-transform: uppercase; color: var(--mint);
+  }
+  .dcard .bl { font: 400 10.5px/1.5 var(--sans); color: #8ba6ba; }
+  .dcard .dots { margin-top: auto; padding-top: 4px; }
+  .dots { display: flex; gap: 5px; }
+  .dots i {
+    width: 8px; height: 8px; border-radius: 50%; box-sizing: border-box;
+    border: 1px solid rgba(120,200,255,0.45);
+  }
+  .dots i.on {
+    background: var(--cyan); border-color: var(--cyan);
+    box-shadow: 0 0 9px rgba(90,212,255,0.65);
+  }
+  .dots i.next { border-color: var(--mint); border-width: 1.5px; box-shadow: 0 0 7px rgba(125,255,196,0.4); }
+
+  #labDone {
+    margin: 18px 0 0; padding: 14px 16px; border-radius: 11px;
+    background: rgba(125,255,196,0.06); border: 1px solid rgba(125,255,196,0.2);
+    font: 400 12px/1.6 var(--sans); color: #a8e6c8;
+  }
+
+  /* ------------------------------------------------- in-run rig strip */
+  #rig, #rigSummary { display: flex; flex-wrap: wrap; gap: 6px; }
+  #rig { margin-top: 11px; padding-top: 11px; border-top: 1px solid rgba(255,255,255,0.06); }
+  #rig:empty { display: none; margin: 0; padding: 0; border: 0; }
+  #rigSummary { margin-top: 10px; }
+  #rigLabel {
+    margin-top: 20px; font: 500 8.5px/1 var(--mono); letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--dim);
+  }
+  #rigLabel:empty { display: none; }
+  .rchip {
+    display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px;
+    background: rgba(90,212,255,0.07); border: 1px solid rgba(90,212,255,0.16);
+    font: 600 8px/1 var(--mono); letter-spacing: 0.12em; color: #a9d8ef;
+  }
+  .rchip u { text-decoration: none; display: flex; gap: 3px; }
+  .rchip u i {
+    width: 4px; height: 4px; border-radius: 50%;
+    background: var(--cyan); box-shadow: 0 0 6px rgba(90,212,255,0.7);
+  }
+
+  @media (max-width: 720px) {
+    #panel { width: 210px; }
+    #brand p { display: none; }
+    #hints { display: none; }
   }
 </style>
 </head>
 <body>
 <canvas id="game"></canvas>
+
 <div id="hud">
-  <div class="title">Lattice Runner — reconstruction prototype</div>
-  <div id="meterWrap">
-    <div id="meterLabel">IMAGE RECONSTRUCTED <span id="meterPct">0%</span></div>
-    <div id="meterBar"><div id="meterFill"></div></div>
-    <div id="doseLabel">DOSE REMAINING <span id="doseVal">130</span></div>
-    <div id="doseBar"><div id="doseFill"></div></div>
-    <div id="doseLine">KNOCKED OUT <span id="dmgVal">0</span> · <span id="beamState">BEAM ON</span></div>
+  <div id="brand">
+    <div class="mark">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7fe3ff" stroke-width="1.2">
+        <path d="M12 3.2 18.5 7v8L12 18.8 5.5 15V7z" opacity=".55"/>
+        <circle cx="12" cy="3.2" r="1.5" fill="#bff0ff" stroke="none"/>
+        <circle cx="18.5" cy="7" r="1.5" fill="#7fe3ff" stroke="none"/>
+        <circle cx="18.5" cy="15" r="1.5" fill="#7fe3ff" stroke="none"/>
+        <circle cx="12" cy="18.8" r="1.5" fill="#7fe3ff" stroke="none"/>
+        <circle cx="5.5" cy="15" r="1.5" fill="#7fe3ff" stroke="none"/>
+        <circle cx="5.5" cy="7" r="1.5" fill="#7fe3ff" stroke="none"/>
+        <circle cx="12" cy="11" r="2.1" fill="#ffe08a" stroke="none"/>
+      </svg>
+    </div>
+    <div>
+      <h1>Lattice Runner</h1>
+      <p>Scanning probe · dose-limited reconstruction</p>
+    </div>
+  </div>
+
+  <div id="panel">
+    <div class="readout">
+      <span class="k">Reconstructed</span>
+      <span class="v" id="meterPct">0<i>%</i></span>
+    </div>
+    <div class="track"><div class="fill" id="meterFill"></div><div class="ticks"></div></div>
+
+    <div class="readout">
+      <span class="k">Dose remaining</span>
+      <span class="v small" id="doseVal">130</span>
+    </div>
+    <div class="track"><div class="fill" id="doseFill"></div><div class="ticks"></div></div>
+
+    <div class="status">
+      <span id="beamState"><i class="dot"></i>Beam on</span>
+      <span class="sep"></span>
+      <span>Knocked out <b id="dmgVal">0</b></span>
+    </div>
+    <div id="rig"></div>
   </div>
 </div>
-<div id="instructions">← → / A D move · SPACE jump · <b>SHIFT blank the beam</b> · R restart · you only get one specimen's worth of electrons</div>
-<div id="warning">⚠ prolonged exposure — move on</div>
-<div id="toast"></div>
+
+<div id="hints">
+  <span class="grp"><kbd>A</kbd><kbd>D</kbd> move</span>
+  <span class="grp"><kbd>Space</kbd> jump</span>
+  <span class="grp hl"><kbd>Shift</kbd> blank the beam</span>
+  <span class="grp"><kbd>R</kbd> abandon run</span>
+</div>
+
+<div id="warning"><i class="pip"></i><span id="warnText">Prolonged exposure</span></div>
+
+<div id="toast">
+  <div class="chip" id="toastChip">C</div>
+  <div class="body"><em id="toastKind">Dopant resolved</em><span id="toastText"></span></div>
+</div>
+
 <div id="overlay">
-  <h1 id="overlayTitle">RECONSTRUCTION COMPLETE</h1>
-  <p id="overlayText">Every scan position has converged. The lattice is fully phased — take a look around.</p>
-  <button id="restartBtn">SCAN AGAIN</button>
+  <div id="card">
+    <div id="panelReport">
+      <div class="eyebrow" id="reportEyebrow">Scan report</div>
+      <h1 id="overlayTitle">Reconstruction complete</h1>
+      <p id="overlayText"></p>
+      <div class="stats">
+        <div><div class="n" id="statPct">0<small>%</small></div><div class="l">Resolved</div></div>
+        <div><div class="n" id="statDose">0</div><div class="l">Dose spent</div></div>
+        <div><div class="n" id="statKo">0</div><div class="l">Knocked out</div></div>
+        <div><div class="n" id="statAtoms">0</div><div class="l">Atoms</div></div>
+      </div>
+      <div id="thumbWrap"><canvas id="thumb"></canvas><span>Recovered phase image</span></div>
+      <div id="earned">
+        <div class="big"><span id="earnVal">1</span><em id="earnUnit">upgrades earned</em></div>
+        <div id="earnBrk"></div>
+      </div>
+      <div class="actions">
+        <button id="restartBtn">Choose an upgrade</button>
+      </div>
+    </div>
+
+    <div id="panelLab">
+      <div class="eyebrow">Between sessions</div>
+      <h1 id="labTitle">Choose an upgrade</h1>
+      <p id="labText">Every option here is a real technique microscopists use to get more picture out of fewer electrons. What you take carries into every session from now on.</p>
+      <div id="pickLeft"></div>
+      <div id="draft"></div>
+      <div id="labDone"></div>
+      <div id="rigLabel"></div>
+      <div id="rigSummary"></div>
+      <div class="actions">
+        <button id="beginBtn">Begin session</button>
+      </div>
+    </div>
+  </div>
 </div>
 
 <script>
 (function () {
   "use strict";
 
+  const TAU = Math.PI * 2;
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
-  const meterFill = document.getElementById("meterFill");
-  const meterPct = document.getElementById("meterPct");
-  const overlay = document.getElementById("overlay");
-  const restartBtn = document.getElementById("restartBtn");
-  const warningEl = document.getElementById("warning");
-  const toastEl = document.getElementById("toast");
-  const doseVal = document.getElementById("doseVal");
-  const doseFill = document.getElementById("doseFill");
-  const dmgVal = document.getElementById("dmgVal");
-  const beamState = document.getElementById("beamState");
-  const overlayTitle = document.getElementById("overlayTitle");
-  const overlayText = document.getElementById("overlayText");
 
+  const el = (id) => document.getElementById(id);
+  const meterFill = el("meterFill"), meterPct = el("meterPct");
+  const doseVal = el("doseVal"), doseFill = el("doseFill");
+  const dmgVal = el("dmgVal"), beamState = el("beamState"), panel = el("panel");
+  const overlay = el("overlay"), overlayTitle = el("overlayTitle"), overlayText = el("overlayText");
+  const restartBtn = el("restartBtn"), warningEl = el("warning"), warnText = el("warnText");
+  const toastEl = el("toast"), toastChip = el("toastChip"), toastText = el("toastText"), toastKind = el("toastKind");
+  const hintsEl = el("hints"), thumb = el("thumb");
+  const statPct = el("statPct"), statDose = el("statDose"), statKo = el("statKo"), statAtoms = el("statAtoms");
+  const card = el("card"), reportEyebrow = el("reportEyebrow"), rigEl = el("rig");
+  const earnVal = el("earnVal"), earnUnit = el("earnUnit"), earnBrk = el("earnBrk");
+  const labTitle = el("labTitle"), labText = el("labText"), pickLeft = el("pickLeft");
+  const draftEl = el("draft"), labDone = el("labDone"), rigSummary = el("rigSummary");
+  const rigLabel = el("rigLabel");
+  const beginBtn = el("beginBtn");
+
+  // ---------------------------------------------------------------------
+  // Small colour helpers. Art definitions below are authored as hex so the
+  // palette stays readable; everything downstream wants rgb triplets.
+  // ---------------------------------------------------------------------
+  function rgba(hex, a) {
+    const n = parseInt(hex.slice(1), 16);
+    return `rgba(${(n >> 16) & 255},${(n >> 8) & 255},${n & 255},${a})`;
+  }
+
+  // The whole renderer works in CSS pixels (VW x VH) and the backing store
+  // is scaled up by the device pixel ratio, so nothing is soft on a retina
+  // display — a 1x canvas stretched to 2x was costing the art most of its
+  // crispness.
+  let DPR = 1, VW = 0, VH = 0;
   function resize() {
-    canvas.width = window.innerWidth;
-    canvas.height = window.innerHeight;
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    VW = window.innerWidth;
+    VH = window.innerHeight;
+    canvas.width = Math.round(VW * DPR);
+    canvas.height = Math.round(VH * DPR);
+    canvas.style.width = VW + "px";
+    canvas.style.height = VH + "px";
+    buildScreenBuffers();
   }
   window.addEventListener("resize", resize);
-  resize();
 
   // ---------------------------------------------------------------------
   // Data contract: an array of atom sites. This is the shape a real
@@ -134,11 +521,11 @@
   // it's resolved — optional curiosity content for players who explore
   // off the direct path.
   const DOPANT_DEFS = {
-    15: { symbol: "Au", r: 22, color: ["#fff3b0", "#e0a72c"],
+    15: { symbol: "Au", r: 22,
       fact: "Au — gold sits far heavier than carbon; dense atoms scatter electrons more strongly and glow brighter in a real STEM image." },
-    80: { symbol: "N", r: 18, color: ["#c9b6ff", "#6a4fd6"],
+    80: { symbol: "N", r: 18,
       fact: "N — a single substituted nitrogen atom can change how an entire 2D material conducts electricity." },
-    130: { symbol: "O", r: 18, color: ["#ffd9a0", "#d97b2c"],
+    130: { symbol: "O", r: 18,
       fact: "O — oxygen dopants are light and hard to see with X-rays, but electron ptychography can resolve them directly." },
   };
 
@@ -154,6 +541,34 @@
   function vibrationFactor(element) {
     return Math.sqrt(REF_MASS / (ATOMIC_MASS[element] || REF_MASS));
   }
+
+  // ---------------------------------------------------------------------
+  // Art direction. Each element gets a four-stop shading ramp (core →
+  // mid → edge for the sphere, rim for the light wrapping its far side)
+  // plus a bloom colour and a `z` weight. `z` is a stand-in for Rutherford
+  // scattering: heavier nuclei scatter harder and read brighter in a real
+  // STEM image, so gold physically earns its glow rather than being
+  // art-directed into it.
+  // ---------------------------------------------------------------------
+  const ELEMENT_ART = {
+    C:  { core: "#eaf9ff", mid: "#5ec2ec", edge: "#0e3a54", rim: "#8ff0ff", glow: "90,212,255",  z: 1.00 },
+    N:  { core: "#f5ecff", mid: "#a488f2", edge: "#2a1a5e", rim: "#cbb2ff", glow: "168,136,242", z: 1.15 },
+    O:  { core: "#fff1de", mid: "#f2a05c", edge: "#5f2a10", rim: "#ffd0a0", glow: "242,160,92",  z: 1.30 },
+    Au: { core: "#fffbe6", mid: "#ffd05a", edge: "#5f3a04", rim: "#fff2b0", glow: "255,208,90",  z: 2.60 },
+  };
+  const DAMAGED_ART = { core: "#ffdfd4", mid: "#df5f45", edge: "#450f08", rim: "#ff9d80", glow: "255,110,70", z: 1.0 };
+
+  // False-colour ramp for the hidden reconstruction. Reads as a real phase
+  // image: dark vacuum, teal lattice, cream-hot atomic columns.
+  const PHASE_RAMP = [
+    [0.00,   4,   7,  15],
+    [0.13,  10,  27,  50],
+    [0.30,  15,  66,  96],
+    [0.50,  29, 127, 150],
+    [0.69,  69, 194, 180],
+    [0.85, 168, 230, 176],
+    [1.00, 246, 255, 228],
+  ];
 
   function generateSyntheticLattice() {
     const atoms = [];
@@ -219,6 +634,9 @@
   const DOSE_ANNEAL = 0.25;     // dose/sec bleeding off once the probe leaves
   const DOSE_LIMIT = 2.0;       // carbon's knock-out threshold; heavier atoms scale up
   const DOSE_WARN_FRAC = 0.55;  // fraction of the limit that starts the warning ring
+  const DAMAGE_COLLAPSE = 0.5;  // sec a carbon column survives after knock-out
+                                // before it leaves the lattice for good;
+                                // scales with sqrt(mass), so gold lingers 4x
 
   // The global budget. A real beam runs at a fixed current, so total
   // electrons spent is just beam-on time — which makes the budget a clock
@@ -232,16 +650,125 @@
   const DOSE_BUDGET = 130;      // units; 1 unit = 1 second of beam-on time
   const BEAM_DRAIN = 1.0;       // units/sec while unblanked
 
+  const RESOLVE_RADIUS = 150;      // must be this close to build resolve progress
+  const RESOLVE_TIME = 0.5;        // seconds of continuous presence to fully resolve
+  const RESOLVE_DECAY_MULT = 2.2;  // progress bleeds off faster than it builds when you leave
+
+  // ---------------------------------------------------------------------
+  // Between-run upgrades. Every run ends in a draft: three instruments are
+  // offered, the player keeps one, and it carries into every session after.
+  // How much of the lattice a run recovered decides how many picks it earns,
+  // so resolving more is what buys the tools that let you resolve more.
+  //
+  // Each option is a real technique. That is the point — "how do you get
+  // more picture out of fewer electrons" is the actual subject of the game,
+  // and the draft is where it gets taught. The constants above are the base
+  // instrument; everything below scales them.
+  // ---------------------------------------------------------------------
+  const MAX_LEVEL = 3;
+  const UPGRADES = [
+    { id: "volt", code: "80 kV", name: "Low-voltage column", identity: 1,
+      blurb: "Drop the accelerating voltage below carbon's knock-on threshold and the beam stops displacing atoms outright.",
+      steps: [1.3, 1.65, 2.1],
+      effect: (v) => `Atoms survive ${Math.round((v - 1) * 100)}% more dose` },
+    { id: "recon", code: "MSR", name: "Mixed-state reconstruction", identity: 1,
+      blurb: "Modelling the probe as several partially coherent modes lets the phase converge from far fewer scan positions.",
+      steps: [0.82, 0.68, 0.55],
+      effect: (v) => `Columns resolve ${Math.round((1 - v) * 100)}% faster` },
+    { id: "det", code: "DED", name: "Direct electron detector", identity: 0,
+      blurb: "Counting single electrons instead of integrating a current means the same picture for a fraction of the dose.",
+      steps: [30, 65, 105],
+      effect: (v) => `+${v} electrons of budget` },
+    { id: "blank", code: "BLNK", name: "Fast electrostatic blanker", identity: 1,
+      blurb: "A blanker that switches in microseconds gives the specimen real rest between scan positions.",
+      steps: [2, 3, 4.2],
+      effect: (v) => `Damage anneals ${v}× faster with the beam off` },
+    { id: "fov", code: "FOV", name: "Wide-field scan coils", identity: 0,
+      blurb: "A larger scan field takes in more columns per position — and irradiates every one of them.",
+      steps: [26, 54, 88],
+      effect: (v) => `+${v}px scan field` },
+    { id: "cryo", code: "CRYO", name: "Cryogenic stage", identity: 1,
+      blurb: "Cooling the specimen suppresses thermal motion, so drifting columns hold much closer to their true positions.",
+      steps: [0.7, 0.48, 0.3],
+      effect: (v) => `Scan drift cut by ${Math.round((1 - v) * 100)}%` },
+    { id: "sparse", code: "SPRS", name: "Sparse scan strategy", identity: 1,
+      blurb: "A smarter scan pattern keeps partial information instead of discarding it, so leaving a column half-solved costs less.",
+      steps: [0.65, 0.45, 0.3],
+      effect: (v) => `Partial progress decays ${Math.round((1 - v) * 100)}% slower` },
+  ];
+
+  // localStorage is unavailable in private mode and in some sandboxed
+  // iframes. The game has to run there too — just without carrying progress.
+  const SAVE_KEY = "latticeRunner.v1";
+  const save = { sessions: 0, picks: 0, best: 0, levels: {} };
+  (function loadSave() {
+    try {
+      const raw = window.localStorage.getItem(SAVE_KEY);
+      const p = raw ? JSON.parse(raw) : null;
+      if (p && typeof p === "object") {
+        save.sessions = Math.max(0, p.sessions | 0);
+        save.picks = Math.max(0, p.picks | 0);
+        save.best = Math.max(0, Math.min(100, p.best | 0));
+        if (p.levels && typeof p.levels === "object") Object.assign(save.levels, p.levels);
+      }
+    } catch (e) { /* no persistence here; play on */ }
+    for (const u of UPGRADES) {
+      save.levels[u.id] = Math.max(0, Math.min(MAX_LEVEL, save.levels[u.id] | 0));
+    }
+  })();
+  function writeSave() {
+    try { window.localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
+  }
+
+  function levelOf(u) { return save.levels[u.id] | 0; }
+  function valueAt(u, level) { return level > 0 ? u.steps[level - 1] : u.identity; }
+  function currentValue(id) {
+    const u = UPGRADES.find(x => x.id === id);
+    return valueAt(u, levelOf(u));
+  }
+
+  // Effective tuning for the current run. Rebuilt whenever an upgrade lands
+  // so a pick takes effect on the very next session.
+  let doseLimitEff, resolveTimeEff, resolveRadiusEff, doseBudgetEff,
+      doseAnnealEff, decayMultEff, driftScaleEff;
+  function applyUpgrades() {
+    doseLimitEff     = DOSE_LIMIT * currentValue("volt");
+    resolveTimeEff   = RESOLVE_TIME * currentValue("recon");
+    doseBudgetEff    = DOSE_BUDGET + currentValue("det");
+    doseAnnealEff    = DOSE_ANNEAL * currentValue("blank");
+    resolveRadiusEff = RESOLVE_RADIUS + currentValue("fov");
+    driftScaleEff    = currentValue("cryo");
+    decayMultEff     = RESOLVE_DECAY_MULT * currentValue("sparse");
+  }
+  applyUpgrades();
+
+  // the three instruments currently on offer; rerolled per pick and per session
+  let draftOffer = [];
+
   const world = rawLattice.map((a, i) => {
     const r = a.dopantDef ? a.dopantDef.r : 13 + a.intensity * 6;
     const preResolved = i === SPAWN_ATOM_INDEX;
     const vib = vibrationFactor(a.element);
+    // A fixed speckle cloud per atom: the dots start scattered and collapse
+    // onto the site as resolveProgress builds, so an unresolved atom looks
+    // like a reconstruction that has not converged yet.
+    const speckle = [];
+    for (let s = 0; s < 10; s++) {
+      speckle.push({
+        ang: Math.random() * TAU,
+        dist: 0.9 + Math.random() * 1.9,
+        phase: Math.random() * TAU,
+        dir: Math.random() < 0.5 ? -1 : 1,
+        size: 1 + Math.random(),
+      });
+    }
     return {
       id: i,
       x: a.x * WORLD_SCALE + 80,
       y: a.y * WORLD_SCALE + 120,
       r,
       element: a.element,
+      intensity: a.intensity,
       dopant: a.dopant,
       dopantDef: a.dopantDef,
       factShown: false,
@@ -254,17 +781,21 @@
       // any atom the probe crowds for too long will eventually knock out.
       damaged: false,
       dose: 0,
-      doseLimit: DOSE_LIMIT / vib, // C 2.0 · N 2.2 · O 2.3 · Au 8.1
+      doseLimit: doseLimitEff / vib, // base C 2.0 · N 2.2 · O 2.3 · Au 8.1
       flickerPhase: 0,
+      gone: false,   // knocked out and past its collapse — never solid again
       solidNow: true,
       // drift hazard: bobs vertically once resolved, on top of its true
       // (unmoving) reconstructed position. Base speed/amplitude scaled by
       // atomic mass — see vibrationFactor().
       wobble: a.wobble,
-      wobblePhase: Math.random() * Math.PI * 2,
+      wobblePhase: Math.random() * TAU,
       wobbleSpeed: (1.3 + Math.random() * 0.6) * vib,
       wobbleAmp: 10 * vib,
       wobbleOffset: 0,
+      speckle,
+      cracks: null,   // built lazily the moment the atom knocks out
+      popIn: preResolved ? 1 : 0, // 0..1 easing used for the resolve "snap"
     };
   });
 
@@ -280,10 +811,6 @@
   let beamOn = true;     // false while SHIFT is held
   let runOver = false;   // budget exhausted or lattice fully resolved
 
-  const RESOLVE_RADIUS = 150;      // must be this close to build resolve progress
-  const RESOLVE_TIME = 0.5;        // seconds of continuous presence to fully resolve
-  const RESOLVE_DECAY_MULT = 2.2;  // progress bleeds off faster than it builds when you leave
-
   // ---------------------------------------------------------------------
   // Player (the scanning probe)
   // ---------------------------------------------------------------------
@@ -293,6 +820,8 @@
     vx: 0, vy: 0, onGround: false, facing: 1,
     coyoteTimer: 0, jumpBufferTimer: 0,
     standingOn: null,
+    trail: [],
+    landSquash: 0,
   };
 
   const GRAVITY = 1800;
@@ -306,9 +835,12 @@
 
   const keys = {};
   const JUMP_KEYS = new Set([" ", "arrowup", "w"]);
+  const MOVE_KEYS = new Set([" ", "arrowup", "w", "arrowleft", "arrowright", "a", "d"]);
+  let hintsFading = 0, hintsArmed = false;
   window.addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
     if (!e.repeat && JUMP_KEYS.has(k)) player.jumpBufferTimer = JUMP_BUFFER_TIME;
+    if (MOVE_KEYS.has(k)) hintsArmed = true;
     keys[k] = true;
     if (k === "r") resetGame();
   });
@@ -321,29 +853,48 @@
   }
 
   function resetGame() {
+    applyUpgrades();
     player.x = SPAWN.x; player.y = SPAWN.y;
     player.vx = 0; player.vy = 0; player.onGround = false;
     player.coyoteTimer = 0; player.jumpBufferTimer = 0; player.standingOn = null;
+    player.trail.length = 0; player.landSquash = 0;
     world.forEach((a, i) => {
       const preResolved = i === SPAWN_ATOM_INDEX;
       a.resolveProgress = preResolved ? 1 : 0; a.resolved = preResolved;
       a.damaged = false; a.dose = 0; a.solidNow = true;
+      a.flickerPhase = 0; a.gone = false;
       a.factShown = false; a.wobbleOffset = 0;
+      a.cracks = null; a.popIn = preResolved ? 1 : 0;
+      a.doseLimit = doseLimitEff / a.vib; // upgrades bought since the last run
     });
     resolvedCount = 1;
     doseSpent = 0; damagedCount = 0; probeHeat = 0;
     beamOn = true; runOver = false;
+    particles.length = 0; rings.length = 0; shake = 0;
+    // skipping a draft banks the picks but must not lock in that offer —
+    // the next session rolls a fresh three
+    draftOffer = [];
     resetFog();
     eraseFogAt(world[SPAWN_ATOM_INDEX]);
-    overlay.style.display = "none";
-    toastEl.style.opacity = "0";
+    overlay.classList.remove("on");
+    card.classList.remove("lab");
+    toastEl.classList.remove("on");
+    renderRig();
   }
-  restartBtn.addEventListener("click", resetGame);
+  restartBtn.addEventListener("click", () => {
+    if (save.picks > 0 && UPGRADES.some(u => levelOf(u) < MAX_LEVEL)) openLab();
+    else resetGame();
+  });
+  beginBtn.addEventListener("click", resetGame);
 
   // Two ways a run ends: the lattice is fully phased, or the budget is gone.
   // Neither is a failure screen — the score is how much of the specimen you
   // got to see, and what you spent to see it.
-  function endRun(complete) {
+  // Three ways a session ends. None of them is a failure screen — the report
+  // and the upgrade pick are earned by what the scan recovered, however it
+  // stopped. "lost" is the only one the player can walk into by mistake, so
+  // it says plainly what happened.
+  function endRun(kind) {
     if (runOver) return;
     runOver = true;
     beamOn = false;
@@ -351,21 +902,175 @@
     const dmg = damagedCount === 0
       ? "not one atom knocked out"
       : `${damagedCount} atom${damagedCount > 1 ? "s" : ""} knocked out`;
-    if (complete) {
-      overlayTitle.textContent = "RECONSTRUCTION COMPLETE";
-      overlayTitle.style.color = "#8fffc1";
+    if (kind === "complete") {
+      overlayTitle.textContent = "Reconstruction complete";
+      overlayTitle.style.color = "#7dffc4";
       overlayText.textContent =
-        `Fully phased on ${doseSpent.toFixed(0)} of ${DOSE_BUDGET} electrons, ${dmg}. ` +
+        `Fully phased on ${doseSpent.toFixed(0)} of ${doseBudgetEff.toFixed(0)} electrons, ${dmg}. ` +
         `Every electron you didn't spend is specimen that survived — that is the whole game of low-dose imaging.`;
+    } else if (kind === "lost") {
+      overlayTitle.textContent = "Probe lost";
+      overlayTitle.style.color = "#ff8f6b";
+      overlayText.textContent =
+        `The probe dropped past the last atom column and struck the detector at ${pct}% resolved, ${dmg}. ` +
+        `Nothing below the lattice is close enough to climb back onto — down there the session is already over.`;
     } else {
-      overlayTitle.textContent = "BEAM EXHAUSTED";
-      overlayTitle.style.color = "#ffb765";
+      overlayTitle.textContent = "Beam exhausted";
+      overlayTitle.style.color = "#ffc078";
       overlayText.textContent =
         `${pct}% of the lattice resolved before the electrons ran out, ${dmg}. ` +
         `Blank the beam (SHIFT) across ground you have already scanned and the same budget goes much further.`;
     }
-    overlay.style.display = "flex";
+    statPct.innerHTML = pct + "<small>%</small>";
+    statDose.textContent = doseSpent.toFixed(0);
+    statKo.textContent = String(damagedCount);
+    statAtoms.textContent = `${resolvedCount}/${totalResolvable}`;
+    paintThumbnail();
+
+    save.sessions++;
+    save.best = Math.max(save.best, pct);
+    const anyLeft = UPGRADES.some(u => levelOf(u) < MAX_LEVEL);
+    const earned = anyLeft ? picksFor(pct) : 0;
+    // once every line is maxed there is nothing to bank picks against, so
+    // don't let the save quietly accumulate them
+    save.picks = anyLeft ? save.picks + earned : 0;
+    writeSave();
+
+    reportEyebrow.textContent = `Session ${save.sessions} · scan report`;
+    if (anyLeft) {
+      earnVal.textContent = String(earned);
+      earnUnit.textContent = earned === 1 ? "upgrade earned" : "upgrades earned";
+      earnBrk.textContent =
+        `${pct}% resolved — ${PICK_TIER_1}% earns a second pick, ${PICK_TIER_2}% a third`;
+    } else {
+      earnVal.textContent = String(save.best);
+      earnUnit.textContent = "% best session";
+      earnBrk.textContent = "Instrument fully upgraded — this is the rig you finish on";
+    }
+    restartBtn.textContent = (save.picks > 0 && anyLeft) ? "Choose an upgrade" : "Scan again";
+
+    card.classList.remove("lab");
+    overlay.classList.add("on");
   }
+
+  // How much of the picture you recovered is the score, and the score is
+  // paid in picks. One is guaranteed so a bad run still moves you forward.
+  const PICK_TIER_1 = 40, PICK_TIER_2 = 70;
+  function picksFor(pct) {
+    return pct >= PICK_TIER_2 ? 3 : pct >= PICK_TIER_1 ? 2 : 1;
+  }
+
+  // ---------------------------------------------------------------------
+  // The draft. Three instruments are offered, one is kept, and it applies
+  // from the next session on. Offers are drawn only from lines that still
+  // have a level left, so late runs never show a dead card.
+  // ---------------------------------------------------------------------
+  function rollDraft() {
+    const pool = UPGRADES.filter(u => levelOf(u) < MAX_LEVEL);
+    for (let i = pool.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      const t = pool[i]; pool[i] = pool[j]; pool[j] = t;
+    }
+    draftOffer = pool.slice(0, 3);
+  }
+
+  function takeUpgrade(u) {
+    if (levelOf(u) >= MAX_LEVEL || save.picks <= 0) return;
+    save.levels[u.id] = levelOf(u) + 1;
+    save.picks--;
+    writeSave();
+    applyUpgrades();
+    draftOffer = [];
+    renderLab();
+    renderRig();
+  }
+
+  function dotsHTML(level, preview) {
+    let out = '<div class="dots">';
+    for (let i = 0; i < MAX_LEVEL; i++) {
+      const cls = i < level ? "on" : (preview && i === level ? "next" : "");
+      out += `<i class="${cls}"></i>`;
+    }
+    return out + "</div>";
+  }
+
+  function openLab() {
+    card.classList.add("lab");
+    renderLab();
+  }
+
+  function renderLab() {
+    const anyLeft = UPGRADES.some(u => levelOf(u) < MAX_LEVEL);
+    if (!anyLeft) save.picks = 0;
+    if (save.picks > 0 && draftOffer.length === 0) rollDraft();
+
+    draftEl.innerHTML = "";
+    if (save.picks > 0 && draftOffer.length) {
+      labTitle.textContent = "Choose an upgrade";
+      labText.textContent =
+        "Every option here is a real technique microscopists use to get more picture out of fewer electrons. " +
+        "What you take is permanent — it carries into every session from now on.";
+      pickLeft.textContent = save.picks > 1
+        ? `Pick 1 of ${draftOffer.length} · ${save.picks} picks remaining`
+        : `Pick 1 of ${draftOffer.length}`;
+      labDone.style.display = "none";
+      beginBtn.textContent = "Skip and begin session";
+      beginBtn.classList.add("ghost");
+      for (const u of draftOffer) {
+        const lvl = levelOf(u);
+        const b = document.createElement("button");
+        b.className = "dcard";
+        b.innerHTML =
+          `<span class="code">${u.code}</span>` +
+          `<span class="nm">${u.name}</span>` +
+          `<span class="ef">${u.effect(valueAt(u, lvl + 1))}</span>` +
+          `<span class="bl">${u.blurb}</span>` +
+          dotsHTML(lvl, true);
+        b.addEventListener("click", () => takeUpgrade(u));
+        draftEl.appendChild(b);
+      }
+    } else {
+      labTitle.textContent = anyLeft ? "Rig ready" : "Instrument complete";
+      labText.textContent = anyLeft
+        ? "Nothing left to pick this session. Recover more of the lattice next run and the draft comes back wider."
+        : "Every line on the column is at its limit. Whatever the specimen has left to show you, this is the instrument that has to show it.";
+      pickLeft.textContent = "";
+      labDone.style.display = "block";
+      beginBtn.textContent = "Begin session";
+      beginBtn.classList.remove("ghost");
+      labDone.textContent = anyLeft
+        ? `Best session so far: ${save.best}% of the lattice recovered.`
+        : `Fully upgraded after ${save.sessions} session${save.sessions === 1 ? "" : "s"}. Best so far: ${save.best}%.`;
+    }
+
+    rigSummary.innerHTML = "";
+    rigLabel.textContent = UPGRADES.some(u => levelOf(u) > 0) ? "Instrument so far" : "";
+    for (const u of UPGRADES) {
+      const lvl = levelOf(u);
+      if (!lvl) continue;
+      const d = document.createElement("div");
+      d.className = "rchip";
+      d.innerHTML = `${u.code}<u>${"<i></i>".repeat(lvl)}</u>`;
+      d.title = `${u.name} — ${u.effect(valueAt(u, lvl))}`;
+      rigSummary.appendChild(d);
+    }
+  }
+
+  // the same loadout, condensed into the in-run HUD so the player can see
+  // what they are carrying without leaving the session
+  function renderRig() {
+    rigEl.innerHTML = "";
+    for (const u of UPGRADES) {
+      const lvl = levelOf(u);
+      if (!lvl) continue;
+      const d = document.createElement("div");
+      d.className = "rchip";
+      d.innerHTML = `${u.code}<u>${"<i></i>".repeat(lvl)}</u>`;
+      d.title = `${u.name} — ${u.effect(valueAt(u, lvl))}`;
+      rigEl.appendChild(d);
+    }
+  }
+  renderRig();
 
   function aabbOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
     return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
@@ -375,11 +1080,77 @@
   let simTime = 0;
 
   let toastTimer = null;
-  function showFact(text) {
-    toastEl.textContent = text;
-    toastEl.style.opacity = "1";
+  function showFact(atom) {
+    const art = ELEMENT_ART[atom.element] || ELEMENT_ART.C;
+    toastChip.textContent = atom.element;
+    toastChip.style.background = `linear-gradient(160deg, ${art.core}, ${art.mid})`;
+    toastChip.style.boxShadow = `0 0 18px rgba(${art.glow},0.45)`;
+    toastKind.textContent = atom.dopant ? "Dopant resolved" : "Site resolved";
+    toastText.textContent = atom.dopantDef.fact.replace(/^[A-Za-z]{1,2}\s+—\s+/, "");
+    toastEl.classList.add("on");
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(() => { toastEl.style.opacity = "0"; }, 4200);
+    toastTimer = setTimeout(() => { toastEl.classList.remove("on"); }, 5200);
+  }
+
+  // ---------------------------------------------------------------------
+  // Particles. One pooled array covers resolve sparks, knock-out embers and
+  // the electrons scattering out of the transmitted cone; expanding rings
+  // live in their own list because they are strokes, not points.
+  // ---------------------------------------------------------------------
+  const MAX_PARTICLES = 420;
+  const particles = [];
+  const rings = [];
+  let shake = 0;
+
+  function emit(x, y, n, opts) {
+    for (let i = 0; i < n; i++) {
+      if (particles.length >= MAX_PARTICLES) return;
+      const ang = opts.ang != null ? opts.ang + (Math.random() - 0.5) * opts.spread : Math.random() * TAU;
+      const spd = opts.speed * (0.45 + Math.random() * 0.75);
+      const life = opts.life * (0.6 + Math.random() * 0.7);
+      particles.push({
+        x, y,
+        vx: Math.cos(ang) * spd, vy: Math.sin(ang) * spd,
+        life, maxLife: life,
+        size: opts.size * (0.6 + Math.random() * 0.8),
+        grav: opts.grav || 0,
+        drag: opts.drag != null ? opts.drag : 0.92,
+        glow: opts.glow,
+      });
+    }
+  }
+  function emitRing(x, y, r0, r1, life, glow, width) {
+    rings.push({ x, y, r0, r1, life, maxLife: life, glow, width });
+  }
+
+  function updateParticles(dt) {
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      p.life -= dt;
+      if (p.life <= 0) { particles.splice(i, 1); continue; }
+      p.vy += p.grav * dt;
+      const d = Math.pow(p.drag, dt * 60);
+      p.vx *= d; p.vy *= d;
+      p.x += p.vx * dt; p.y += p.vy * dt;
+    }
+    for (let i = rings.length - 1; i >= 0; i--) {
+      rings[i].life -= dt;
+      if (rings[i].life <= 0) rings.splice(i, 1);
+    }
+    shake = Math.max(0, shake - dt * 26);
+  }
+
+  // Ambient dust: parallax motes drifting through the vacuum, drawn in
+  // screen space so the field never runs out no matter how far you travel.
+  const motes = [];
+  for (let i = 0; i < 90; i++) {
+    motes.push({
+      x: Math.random(), y: Math.random(),
+      depth: 0.18 + Math.random() * 0.6,
+      size: 0.6 + Math.random() * 1.7,
+      phase: Math.random() * TAU,
+      speed: 0.006 + Math.random() * 0.02,
+    });
   }
 
   function update(dt) {
@@ -388,8 +1159,8 @@
     // --- beam state + global budget --------------------------------------
     beamOn = !runOver && !keys["shift"];
     if (beamOn) {
-      doseSpent = Math.min(DOSE_BUDGET, doseSpent + BEAM_DRAIN * dt);
-      if (doseSpent >= DOSE_BUDGET) { beamOn = false; endRun(false); }
+      doseSpent = Math.min(doseBudgetEff, doseSpent + BEAM_DRAIN * dt);
+      if (doseSpent >= doseBudgetEff) { beamOn = false; endRun("exhausted"); }
     }
     // --- horizontal input ---
     if (keys["arrowleft"] || keys["a"]) { player.vx -= MOVE_SPEED * dt * 6; player.facing = -1; }
@@ -407,6 +1178,8 @@
       player.onGround = false;
       player.coyoteTimer = 0;
       player.jumpBufferTimer = 0;
+      emit(player.x + player.w / 2, player.y + player.h, 5,
+        { ang: Math.PI / 2, spread: 1.5, speed: 90, life: 0.3, size: 1.6, glow: "150,220,255", drag: 0.86 });
     }
 
     // --- variable jump height: releasing early clamps upward speed ---
@@ -415,40 +1188,46 @@
     }
 
     // --- gravity, heavier while falling for a snappier arc ---
+    const fallSpeedBefore = player.vy;
     player.vy += GRAVITY * (player.vy > 0 ? FALL_GRAVITY_MULT : 1) * dt;
     if (player.vy > 1600) player.vy = 1600;
 
     player.x += player.vx * dt;
     player.y += player.vy * dt;
+    const wasAirborne = !player.onGround;
     player.onGround = false;
     player.standingOn = null;
 
     // --- build / decay resolve progress based on probe proximity ---
     const cx = player.x + player.w / 2, cy = player.y + player.h / 2;
     for (const a of world) {
-      if (a.resolved) continue;
+      if (a.resolved) { a.popIn = Math.min(1, a.popIn + dt * 5); continue; }
       const dx = a.x - cx, dy = a.y - cy;
-      const near = beamOn && (dx * dx + dy * dy) < RESOLVE_RADIUS * RESOLVE_RADIUS;
+      const near = beamOn && (dx * dx + dy * dy) < resolveRadiusEff * resolveRadiusEff;
       if (near) {
-        a.resolveProgress = Math.min(1, a.resolveProgress + dt / RESOLVE_TIME);
+        a.resolveProgress = Math.min(1, a.resolveProgress + dt / resolveTimeEff);
         eraseFogAt(a);
         if (a.resolveProgress >= 1 && !a.resolved) {
           a.resolved = true;
           resolvedCount++;
+          const art = ELEMENT_ART[a.element] || ELEMENT_ART.C;
+          emit(a.x, a.y, a.dopant ? 16 : 9,
+            { speed: 130, life: 0.55, size: 1.9, glow: art.glow, drag: 0.9 });
+          emitRing(a.x, a.y, a.r * 0.7, a.r * (a.dopant ? 4.4 : 3.2), 0.5, art.glow, 2.2);
           if (a.dopantDef && !a.factShown) {
             a.factShown = true;
-            showFact(a.dopantDef.fact);
+            showFact(a);
           }
         }
       } else if (a.resolveProgress > 0) {
-        a.resolveProgress = Math.max(0, a.resolveProgress - dt / RESOLVE_TIME * RESOLVE_DECAY_MULT);
+        a.resolveProgress = Math.max(0, a.resolveProgress - dt / resolveTimeEff * decayMultEff);
       }
     }
 
     // --- drifting hazard atoms bob once resolved and undamaged ---
     for (const a of world) {
       if (a.wobble && a.resolved && !a.damaged) {
-        a.wobbleOffset = Math.sin(simTime * a.wobbleSpeed + a.wobblePhase) * a.wobbleAmp;
+        a.wobbleOffset = Math.sin(simTime * a.wobbleSpeed + a.wobblePhase) * a.wobbleAmp * driftScaleEff;
       } else {
         a.wobbleOffset = 0;
       }
@@ -469,6 +1248,7 @@
             player.y = by - player.h;
             player.vy = 0;
             player.onGround = true;
+            player.standingOn = a;
           } else {
             player.y = by + ph;
             player.vy = 0;
@@ -481,6 +1261,14 @@
       }
     }
 
+    // landing juice: squash the focal spot and kick a little scatter out
+    if (player.onGround && wasAirborne && fallSpeedBefore > 420) {
+      player.landSquash = Math.min(1, fallSpeedBefore / 1300);
+      emit(player.x + player.w / 2, player.y + player.h, 6,
+        { ang: 0, spread: TAU, speed: 110, life: 0.28, size: 1.5, glow: "160,225,255", drag: 0.85 });
+    }
+    player.landSquash = Math.max(0, player.landSquash - dt * 4.5);
+
     // --- dose: the probe irradiates everything it crowds -----------------
     // Same act, two consequences — proximity is what resolves an atom AND
     // what destroys it. Standing on one is simply the closest you can get.
@@ -488,56 +1276,229 @@
     for (const a of world) {
       const ddx = a.x - cx, ddy = (a.y + a.wobbleOffset) - cy;
       const d2 = ddx * ddx + ddy * ddy;
-      if (beamOn && d2 < RESOLVE_RADIUS * RESOLVE_RADIUS) {
+      if (beamOn && d2 < resolveRadiusEff * resolveRadiusEff) {
         a.dose += (DOSE_PEAK / (1 + d2 / (DOSE_FALLOFF * DOSE_FALLOFF))) * dt;
       } else if (!a.damaged && a.dose > 0) {
-        a.dose = Math.max(0, a.dose - DOSE_ANNEAL * dt);
+        a.dose = Math.max(0, a.dose - doseAnnealEff * dt);
       }
 
       if (!a.damaged) {
         const frac = a.dose / a.doseLimit;
         if (frac > hottestFrac) { hottestFrac = frac; hottest = a; }
-        if (frac >= 1) { a.damaged = true; damagedCount++; }
-      } else {
-        // lighter elements flicker (and drop solidity) faster once damaged
-        a.flickerPhase += dt * 4 * a.vib;
-        a.solidNow = Math.sin(a.flickerPhase) > -0.2;
+        if (frac >= 1) {
+          a.damaged = true; damagedCount++;
+          buildCracks(a);
+          emit(a.x, a.y + a.wobbleOffset, 18,
+            { speed: 200, life: 0.8, size: 2.1, glow: "255,130,70", grav: 240, drag: 0.93 });
+          emitRing(a.x, a.y + a.wobbleOffset, a.r * 0.8, a.r * 5.5, 0.6, "255,120,60", 2.6);
+          shake = Math.min(9, shake + 6);
+        }
+      } else if (!a.gone) {
+        // A displaced atom does not come back. The column flickers while it
+        // is being knocked out of its site — long enough to feel it go, and
+        // to give anyone standing on it a moment — then it is gone for the
+        // rest of the run. Mass sets how long that takes: a light carbon is
+        // out almost at once, gold hangs on far longer.
+        a.flickerPhase += dt;
+        const collapse = DAMAGE_COLLAPSE / a.vib;
+        if (a.flickerPhase >= collapse) {
+          a.gone = true;
+          a.solidNow = false;
+          emit(a.x, a.y, 12,
+            { ang: -Math.PI / 2, spread: 2.2, speed: 120, life: 1.0, size: 1.8,
+              glow: "255,150,90", grav: 180, drag: 0.94 });
+        } else {
+          a.solidNow = Math.sin(a.flickerPhase * 26 * a.vib) > -0.2;
+          // the site vents while the column is being driven out of it
+          if (Math.random() < dt * 9) {
+            emit(a.x + (Math.random() - 0.5) * a.r, a.y - a.r * 0.3, 1,
+              { ang: -Math.PI / 2, spread: 1.0, speed: 44, life: 1.0, size: 1.4,
+                glow: "255,140,80", drag: 0.97 });
+          }
+        }
       }
     }
     probeHeat = Math.min(1, hottestFrac);
     if (hottest && hottestFrac > DOSE_WARN_FRAC) {
-      warningEl.textContent = `⚠ ${hottest.element} taking dose — back off`;
-      warningEl.style.opacity = "1";
+      // blanking stops the deposition, so while the beam is off the same
+      // atom is annealing rather than cooking — say which
+      warnText.textContent = beamOn
+        ? `${hottest.element} taking dose — back off`
+        : `${hottest.element} near its limit — cooling`;
+      warningEl.classList.add("on");
     } else {
-      warningEl.style.opacity = "0";
+      warningEl.classList.remove("on");
     }
 
-    // --- ground floor fallback ---
+    // transmitted electrons scattering off toward the detector
+    if (beamOn && Math.random() < dt * 34) {
+      emit(cx + (Math.random() - 0.5) * 10, cy + 14, 1,
+        { ang: Math.PI / 2, spread: 1.1, speed: 150, life: 0.42, size: 1.2, glow: "140,225,255", drag: 0.96 });
+    }
+
+    // --- the detector plane is the bottom of the world --------------------
+    // The lattice's lowest row sits ~470px above it and a full jump clears
+    // ~114px, so there is no climbing back: reaching the detector is the end
+    // of the session, not a ledge to stand on.
     if (player.y + player.h > GROUND_Y) {
+      const impactX = player.x + player.w / 2;
       player.y = GROUND_Y - player.h;
       player.vy = 0;
       player.onGround = true;
-    }
-
-    // --- fell off world -> respawn ---
-    if (player.y > worldHeight + 300) {
-      player.x = SPAWN.x; player.y = SPAWN.y; player.vx = 0; player.vy = 0;
+      if (!runOver) {
+        emit(impactX, GROUND_Y, 26,
+          { ang: -Math.PI / 2, spread: 2.6, speed: 260, life: 0.9, size: 2.2,
+            glow: "150,225,255", grav: 420, drag: 0.93 });
+        emitRing(impactX, GROUND_Y, 6, 190, 0.7, "150,225,255", 3);
+        shake = 12;
+        endRun("lost");
+      }
     }
 
     player.x = Math.max(0, Math.min(worldWidth, player.x));
 
+    // probe trail (a short comet tail; long enough to read direction)
+    player.trail.push({ x: cx, y: cy });
+    if (player.trail.length > 16) player.trail.shift();
+
+    updateParticles(dt);
+    updateBeamStreaks(dt);
+    updateCamera(dt);
+
+    if (hintsArmed) {
+      hintsFading += dt;
+      if (hintsFading > 5) hintsEl.classList.add("faded");
+    }
+
     const pct = totalResolvable ? Math.round((resolvedCount / totalResolvable) * 100) : 0;
     meterFill.style.width = pct + "%";
-    meterPct.textContent = pct + "%";
+    meterPct.innerHTML = pct + "<i>%</i>";
 
-    const left = DOSE_BUDGET - doseSpent;
+    const left = doseBudgetEff - doseSpent;
     doseVal.textContent = left.toFixed(0);
-    doseFill.style.width = (left / DOSE_BUDGET * 100) + "%";
-    beamState.textContent = runOver ? "BEAM OFF" : beamOn ? "BEAM ON" : "BEAM BLANKED";
+    doseFill.style.width = (left / doseBudgetEff * 100) + "%";
+    panel.classList.toggle("low", left / doseBudgetEff < 0.22);
+    beamState.innerHTML = '<i class="dot"></i>' + (runOver ? "Beam off" : beamOn ? "Beam on" : "Beam blanked");
     beamState.className = beamOn ? "" : "blanked";
     dmgVal.textContent = String(damagedCount);
 
-    if (resolvedCount >= totalResolvable && totalResolvable > 0) endRun(true);
+    if (resolvedCount >= totalResolvable && totalResolvable > 0) endRun("complete");
+  }
+
+  function buildCracks(a) {
+    const cracks = [];
+    const n = 3 + Math.floor(Math.random() * 2);
+    for (let i = 0; i < n; i++) {
+      const pts = [];
+      let ang = Math.random() * TAU, rad = 0;
+      for (let s = 0; s < 4; s++) {
+        pts.push([Math.cos(ang) * rad, Math.sin(ang) * rad]);
+        rad += 0.3 + Math.random() * 0.2;
+        ang += (Math.random() - 0.5) * 1.1;
+      }
+      cracks.push(pts);
+    }
+    a.cracks = cracks;
+  }
+
+  // =====================================================================
+  //  ART PIPELINE
+  // =====================================================================
+
+  const SUPPORTS_FILTER = (function () {
+    const c = document.createElement("canvas").getContext("2d");
+    try { c.filter = "blur(2px)"; return c.filter === "blur(2px)"; }
+    catch (e) { return false; }
+  })();
+
+  function makeCanvas(w, h) {
+    const c = document.createElement("canvas");
+    c.width = Math.max(1, Math.ceil(w));
+    c.height = Math.max(1, Math.ceil(h));
+    return c;
+  }
+
+  // --- atom sprites ----------------------------------------------------
+  // Every atom is a shaded sphere: a key light from the upper left, a rim
+  // light wrapping the lower right, one specular hit, and a crisp edge.
+  // Baking that into a cached sprite means the expensive part happens once
+  // per (element, radius) pair instead of 152 times a frame.
+  const spriteCache = new Map();
+
+  function atomSprite(art, r) {
+    const key = `${art.core}|${art.rim}|${Math.round(r)}`;
+    let s = spriteCache.get(key);
+    if (s) return s;
+
+    const pad = Math.ceil(r * 0.75) + 6;
+    const size = Math.ceil((r + pad) * 2);
+    const c = makeCanvas(size, size);
+    const g = c.getContext("2d");
+    const cx = size / 2, cy = size / 2;
+
+    // ambient occlusion pool under the sphere — separates it from the fog
+    const sh = g.createRadialGradient(cx, cy + r * 0.18, r * 0.55, cx, cy + r * 0.18, r * 1.55);
+    sh.addColorStop(0, "rgba(2,5,10,0.5)");
+    sh.addColorStop(1, "rgba(2,5,10,0)");
+    g.fillStyle = sh;
+    g.fillRect(0, 0, size, size);
+
+    g.save();
+    g.beginPath(); g.arc(cx, cy, r, 0, TAU); g.clip();
+
+    const body = g.createRadialGradient(cx - r * 0.34, cy - r * 0.4, r * 0.05, cx, cy, r * 1.16);
+    body.addColorStop(0, art.core);
+    body.addColorStop(0.36, art.mid);
+    body.addColorStop(1, art.edge);
+    g.fillStyle = body;
+    g.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+    g.globalCompositeOperation = "lighter";
+    const rim = g.createRadialGradient(cx + r * 0.6, cy + r * 0.64, r * 0.04, cx + r * 0.6, cy + r * 0.64, r * 0.98);
+    rim.addColorStop(0, rgba(art.rim, 0.5));
+    rim.addColorStop(0.5, rgba(art.rim, 0.15));
+    rim.addColorStop(1, rgba(art.rim, 0));
+    g.fillStyle = rim;
+    g.fillRect(cx - r, cy - r, r * 2, r * 2);
+
+    const spec = g.createRadialGradient(cx - r * 0.34, cy - r * 0.42, 0, cx - r * 0.34, cy - r * 0.42, r * 0.38);
+    spec.addColorStop(0, "rgba(255,255,255,0.85)");
+    spec.addColorStop(0.35, "rgba(235,250,255,0.22)");
+    spec.addColorStop(1, "rgba(220,245,255,0)");
+    g.fillStyle = spec;
+    g.fillRect(cx - r, cy - r, r * 2, r * 2);
+    g.globalCompositeOperation = "source-over";
+    g.restore();
+
+    const lw = Math.max(1, r * 0.055);
+    g.strokeStyle = rgba(art.rim, 0.32);
+    g.lineWidth = lw;
+    g.beginPath(); g.arc(cx, cy, r - lw * 0.5, 0, TAU); g.stroke();
+
+    s = { canvas: c, off: size / 2 };
+    spriteCache.set(key, s);
+    return s;
+  }
+
+  const haloCache = new Map();
+  function haloSprite(glow, r, strength) {
+    const key = `${glow}|${Math.round(r)}|${strength.toFixed(2)}`;
+    let s = haloCache.get(key);
+    if (s) return s;
+    const R = r * 3.4;
+    const size = Math.ceil(R * 2);
+    const c = makeCanvas(size, size);
+    const g = c.getContext("2d");
+    const grad = g.createRadialGradient(R, R, r * 0.15, R, R, R);
+    grad.addColorStop(0, `rgba(${glow},${0.55 * strength})`);
+    grad.addColorStop(0.28, `rgba(${glow},${0.2 * strength})`);
+    grad.addColorStop(0.6, `rgba(${glow},${0.055 * strength})`);
+    grad.addColorStop(1, `rgba(${glow},0)`);
+    g.fillStyle = grad;
+    g.fillRect(0, 0, size, size);
+    s = { canvas: c, off: R };
+    haloCache.set(key, s);
+    return s;
   }
 
   // ---------------------------------------------------------------------
@@ -546,54 +1507,152 @@
   // resolves, so the goal is literally seeing the hidden picture emerge —
   // not a numeric meter. Swap targetCanvas's rendering for a real
   // reconstruction image once one is available.
+  //
+  // It is built the way a phase image actually looks: a scalar field
+  // accumulated from per-column Gaussians plus the bonding network between
+  // neighbours, run through a false-colour lookup table, then softened by
+  // the upsample so it reads as a finite-resolution measurement.
   // ---------------------------------------------------------------------
-  function hexToRgb(hex) {
-    const n = parseInt(hex.slice(1), 16);
-    return `${(n >> 16) & 255},${(n >> 8) & 255},${n & 255}`;
+  const targetCanvas = makeCanvas(worldWidth, worldHeight);
+
+  function buildPhaseLUT() {
+    const lut = new Uint8Array(256 * 3);
+    for (let i = 0; i < 256; i++) {
+      const t = i / 255;
+      let a = PHASE_RAMP[0], b = PHASE_RAMP[PHASE_RAMP.length - 1];
+      for (let s = 0; s < PHASE_RAMP.length - 1; s++) {
+        if (t >= PHASE_RAMP[s][0] && t <= PHASE_RAMP[s + 1][0]) { a = PHASE_RAMP[s]; b = PHASE_RAMP[s + 1]; break; }
+      }
+      const span = Math.max(1e-6, b[0] - a[0]);
+      const f = Math.min(1, Math.max(0, (t - a[0]) / span));
+      lut[i * 3] = a[1] + (b[1] - a[1]) * f;
+      lut[i * 3 + 1] = a[2] + (b[2] - a[2]) * f;
+      lut[i * 3 + 2] = a[3] + (b[3] - a[3]) * f;
+    }
+    return lut;
   }
 
-  const targetCanvas = document.createElement("canvas");
-  targetCanvas.width = worldWidth;
-  targetCanvas.height = worldHeight;
   (function renderTargetImage() {
     const tctx = targetCanvas.getContext("2d");
-    const g = tctx.createLinearGradient(0, 0, 0, worldHeight);
-    g.addColorStop(0, "#0a1830");
-    g.addColorStop(1, "#031018");
-    tctx.fillStyle = g;
-    tctx.fillRect(0, 0, worldWidth, worldHeight);
+    const S = 0.6; // the phase field is accumulated at reduced resolution,
+                   // then upsampled — which is also what gives it the soft,
+                   // band-limited look of a real reconstruction.
+    const fw = Math.ceil(worldWidth * S), fh = Math.ceil(worldHeight * S);
+    const field = makeCanvas(fw, fh);
+    const f = field.getContext("2d");
+    f.fillStyle = "#000";
+    f.fillRect(0, 0, fw, fh);
+    f.globalCompositeOperation = "lighter";
 
-    for (const a of world) {
-      const rad = a.dopantDef ? a.r * 5 : a.r * 3.4;
-      const rg = tctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, rad);
-      if (a.dopantDef) {
-        const rgb = hexToRgb(a.dopantDef.color[0]);
-        rg.addColorStop(0, `rgba(${rgb},0.95)`);
-        rg.addColorStop(1, `rgba(${rgb},0)`);
-      } else {
-        rg.addColorStop(0, "rgba(120,220,255,0.55)");
-        rg.addColorStop(1, "rgba(120,220,255,0)");
+    // bonding network: faint bridges between nearest neighbours, which is
+    // what makes the revealed image read as a lattice rather than dots
+    const BOND = WORLD_SCALE * 1.15;
+    f.lineCap = "round";
+    for (let i = 0; i < world.length; i++) {
+      for (let j = i + 1; j < world.length; j++) {
+        const dx = world[j].x - world[i].x, dy = world[j].y - world[i].y;
+        const d = Math.hypot(dx, dy);
+        if (d > BOND) continue;
+        f.strokeStyle = `rgba(255,255,255,${0.16 * (1 - d / BOND) + 0.05})`;
+        f.lineWidth = 7 * S;
+        f.beginPath();
+        f.moveTo(world[i].x * S, world[i].y * S);
+        f.lineTo(world[j].x * S, world[j].y * S);
+        f.stroke();
       }
-      tctx.fillStyle = rg;
-      tctx.beginPath();
-      tctx.arc(a.x, a.y, rad, 0, Math.PI * 2);
-      tctx.fill();
     }
 
-    // fine speckle texture for a scanned-image feel
-    tctx.fillStyle = "rgba(255,255,255,0.035)";
-    for (let i = 0; i < 2200; i++) {
-      tctx.fillRect(Math.random() * worldWidth, Math.random() * worldHeight, 1, 1);
+    // atomic columns as Gaussian-ish peaks; heavier columns peak higher
+    for (const a of world) {
+      const art = ELEMENT_ART[a.element] || ELEMENT_ART.C;
+      const rad = (a.dopant ? a.r * 2.9 : a.r * 2.2) * S;
+      const peak = Math.min(1, (0.6 + a.intensity * 0.28) * Math.min(1.35, art.z));
+      const g = f.createRadialGradient(a.x * S, a.y * S, 0, a.x * S, a.y * S, rad);
+      g.addColorStop(0, `rgba(255,255,255,${peak})`);
+      g.addColorStop(0.26, `rgba(255,255,255,${peak * 0.58})`);
+      g.addColorStop(0.58, `rgba(255,255,255,${peak * 0.17})`);
+      g.addColorStop(1, "rgba(255,255,255,0)");
+      f.fillStyle = g;
+      f.beginPath();
+      f.arc(a.x * S, a.y * S, rad, 0, TAU);
+      f.fill();
     }
+    f.globalCompositeOperation = "source-over";
+
+    // false-colour the scalar field, with a little detector noise mixed in
+    const lut = buildPhaseLUT();
+    const img = f.getImageData(0, 0, fw, fh);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const v = d[i];
+      const n = (Math.random() - 0.5) * 11;
+      d[i]     = Math.max(0, Math.min(255, lut[v * 3] + n));
+      d[i + 1] = Math.max(0, Math.min(255, lut[v * 3 + 1] + n));
+      d[i + 2] = Math.max(0, Math.min(255, lut[v * 3 + 2] + n));
+      d[i + 3] = 255;
+    }
+    f.putImageData(img, 0, 0);
+
+    tctx.imageSmoothingEnabled = true;
+    tctx.imageSmoothingQuality = "high";
+    tctx.drawImage(field, 0, 0, worldWidth, worldHeight);
+
+    // dopants keep their own colour on top of the ramp — a real elemental
+    // contrast map would do the same thing
+    tctx.globalCompositeOperation = "lighter";
+    for (const a of world) {
+      if (!a.dopant) continue;
+      const art = ELEMENT_ART[a.element] || ELEMENT_ART.C;
+      const rad = a.r * 4.2;
+      const g = tctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, rad);
+      g.addColorStop(0, `rgba(${art.glow},0.5)`);
+      g.addColorStop(0.4, `rgba(${art.glow},0.14)`);
+      g.addColorStop(1, `rgba(${art.glow},0)`);
+      tctx.fillStyle = g;
+      tctx.beginPath(); tctx.arc(a.x, a.y, rad, 0, TAU); tctx.fill();
+    }
+    tctx.globalCompositeOperation = "source-over";
+
+    // scan-raster striping: real STEM frames carry line-to-line noise
+    tctx.fillStyle = "rgba(0,0,0,0.055)";
+    for (let y = 0; y < worldHeight; y += 3) tctx.fillRect(0, y, worldWidth, 1);
   })();
 
-  const fogCanvas = document.createElement("canvas");
-  fogCanvas.width = worldWidth;
-  fogCanvas.height = worldHeight;
+  // --- fog -------------------------------------------------------------
+  // Unresolved territory is not empty, it is *unconverged*: dark speckle
+  // and coarse blotches, the look of a phase retrieval that has not been
+  // fed enough scan positions yet.
+  const fogCanvas = makeCanvas(worldWidth, worldHeight);
   const fogCtx = fogCanvas.getContext("2d");
+
+  const fogTile = (function () {
+    const T = 256;
+    const c = makeCanvas(T, T);
+    const g = c.getContext("2d");
+    g.fillStyle = "#060a12";
+    g.fillRect(0, 0, T, T);
+    for (let i = 0; i < 26; i++) {
+      const x = Math.random() * T, y = Math.random() * T, r = 22 + Math.random() * 58;
+      const grad = g.createRadialGradient(x, y, 0, x, y, r);
+      const warm = Math.random() < 0.35;
+      grad.addColorStop(0, warm ? "rgba(30,26,44,0.5)" : "rgba(16,32,50,0.55)");
+      grad.addColorStop(1, "rgba(0,0,0,0)");
+      g.fillStyle = grad;
+      g.fillRect(x - r, y - r, r * 2, r * 2);
+    }
+    const img = g.getImageData(0, 0, T, T);
+    const d = img.data;
+    for (let i = 0; i < d.length; i += 4) {
+      const n = (Math.random() - 0.5) * 13;
+      d[i] += n; d[i + 1] += n; d[i + 2] += n * 1.15;
+    }
+    g.putImageData(img, 0, 0);
+    return c;
+  })();
+
   function resetFog() {
     fogCtx.globalCompositeOperation = "source-over";
-    fogCtx.fillStyle = "#05070a";
+    fogCtx.fillStyle = fogCtx.createPattern(fogTile, "repeat");
     fogCtx.fillRect(0, 0, worldWidth, worldHeight);
   }
   resetFog();
@@ -606,189 +1665,759 @@
     rg.addColorStop(1, "rgba(0,0,0,0)");
     fogCtx.fillStyle = rg;
     fogCtx.beginPath();
-    fogCtx.arc(a.x, a.y, rad, 0, Math.PI * 2);
+    fogCtx.arc(a.x, a.y, rad, 0, TAU);
     fogCtx.fill();
   }
   eraseFogAt(world[SPAWN_ATOM_INDEX]);
 
-  // ---------------------------------------------------------------------
-  // Rendering
-  // ---------------------------------------------------------------------
-  const camera = { x: 0, y: 0 };
+  function paintThumbnail() {
+    const tw = 960; // 2x the on-card width, so the recovered image stays sharp
+    const th = Math.round(tw * worldHeight / worldWidth);
+    thumb.width = tw; thumb.height = th;
+    const t = thumb.getContext("2d");
+    t.imageSmoothingEnabled = true;
+    t.fillStyle = "#04070d";
+    t.fillRect(0, 0, tw, th);
+    t.drawImage(targetCanvas, 0, 0, tw, th);
+    t.drawImage(fogCanvas, 0, 0, tw, th);
+    const vg = t.createLinearGradient(0, th * 0.55, 0, th);
+    vg.addColorStop(0, "rgba(4,7,13,0)");
+    vg.addColorStop(1, "rgba(4,7,13,0.62)");
+    t.fillStyle = vg;
+    t.fillRect(0, 0, tw, th);
+  }
+
+  // --- screen-space buffers (rebuilt on resize) ------------------------
+  const GLOW_SCALE = 0.25;   // bloom is accumulated small and upsampled;
+                             // the upscale is most of the blur, for free
+  let glowCanvas, gctx, bokeh, scanPattern, grainTiles = [];
+
+  function buildBokeh() {
+    // a plane of the crystal sitting far out of focus, for parallax depth
+    const w = Math.max(640, VW), h = VH + 260;
+    bokeh = makeCanvas(w, h);
+    const g = bokeh.getContext("2d");
+    g.globalCompositeOperation = "lighter";
+    const n = Math.round(w * h / 26000);
+    for (let i = 0; i < n; i++) {
+      const x = Math.random() * w, y = Math.random() * h;
+      const r = 26 + Math.random() * 78;
+      const warm = Math.random() < 0.14;
+      const col = warm ? "255,200,120" : "70,160,225";
+      const grad = g.createRadialGradient(x, y, 0, x, y, r);
+      grad.addColorStop(0, `rgba(${col},${0.05 + Math.random() * 0.05})`);
+      grad.addColorStop(0.55, `rgba(${col},0.014)`);
+      grad.addColorStop(1, `rgba(${col},0)`);
+      g.fillStyle = grad;
+      g.fillRect(x - r, y - r, r * 2, r * 2);
+      // ring the brighter ones so they read as defocused discs, not blobs
+      if (r > 70) {
+        g.strokeStyle = `rgba(${col},0.03)`;
+        g.lineWidth = 1.5;
+        g.beginPath(); g.arc(x, y, r * 0.72, 0, TAU); g.stroke();
+      }
+    }
+    return bokeh;
+  }
+
+  function buildScreenBuffers() {
+    glowCanvas = makeCanvas(VW * GLOW_SCALE, VH * GLOW_SCALE);
+    gctx = glowCanvas.getContext("2d");
+    buildBokeh();
+
+    if (!scanPattern) {
+      const c = makeCanvas(1, 4);
+      const g = c.getContext("2d");
+      g.fillStyle = "rgba(0,0,0,0.34)";
+      g.fillRect(0, 0, 1, 1);
+      scanPattern = ctx.createPattern(c, "repeat");
+    }
+    if (!grainTiles.length) {
+      for (let t = 0; t < 4; t++) {
+        const T = 180;
+        const c = makeCanvas(T, T);
+        const g = c.getContext("2d");
+        const img = g.createImageData(T, T);
+        const d = img.data;
+        for (let i = 0; i < d.length; i += 4) {
+          const v = Math.random() * 255;
+          d[i] = d[i + 1] = d[i + 2] = v;
+          d[i + 3] = Math.random() * 90;
+        }
+        g.putImageData(img, 0, 0);
+        grainTiles.push(g.createPattern(c, "repeat"));
+      }
+    }
+  }
+  resize();
+
+  // --- beam streaks ----------------------------------------------------
+  // Electrons falling down the illumination cone. Parameterised along the
+  // cone (t = 0 at the aperture, 1 at the focal spot) so they visibly
+  // converge, which is the entire point of a probe-forming lens.
+  const beamStreaks = [];
+  for (let i = 0; i < 22; i++) {
+    beamStreaks.push({
+      t: Math.random(),
+      off: (Math.random() * 2 - 1),
+      speed: 1.5 + Math.random() * 1.6,
+      len: 0.08 + Math.random() * 0.13,
+    });
+  }
+  const transStreaks = [];
+  for (let i = 0; i < 12; i++) {
+    transStreaks.push({
+      t: Math.random(),
+      off: (Math.random() * 2 - 1),
+      speed: 1.7 + Math.random() * 1.4,
+      len: 0.1 + Math.random() * 0.14,
+    });
+  }
+  function updateBeamStreaks(dt) {
+    if (!beamOn) return;
+    for (const s of beamStreaks) {
+      s.t += s.speed * dt;
+      if (s.t > 1) { s.t -= 1; s.off = Math.random() * 2 - 1; }
+    }
+    for (const s of transStreaks) {
+      s.t += s.speed * dt;
+      if (s.t > 1) { s.t -= 1; s.off = Math.random() * 2 - 1; }
+    }
+  }
+
+  // --- camera ----------------------------------------------------------
+  // Smoothed, with look-ahead proportional to velocity so the player sees
+  // where they are going instead of where they are.
+  const camera = { x: 0, y: 0, init: false };
+  function updateCamera(dt) {
+    const tx = player.x + player.vx * 0.26 - VW / 2;
+    const ty = player.y + player.vy * 0.07 - VH / 2;
+    const cx = Math.max(0, Math.min(Math.max(0, worldWidth - VW), tx));
+    const cy = Math.max(0, Math.min(Math.max(0, worldHeight - VH + 200), ty));
+    if (!camera.init) { camera.x = cx; camera.y = cy; camera.init = true; return; }
+    const k = 1 - Math.pow(0.0009, dt);
+    camera.x += (cx - camera.x) * k;
+    camera.y += (cy - camera.y) * k;
+  }
+
+  // =====================================================================
+  //  RENDER
+  // =====================================================================
+  let viewX = 0, viewY = 0;
+  function inView(x, y, m) {
+    return x > viewX - m && x < viewX + VW + m
+        && y > viewY - m && y < viewY + VH + m;
+  }
 
   function draw() {
-    camera.x = Math.max(0, Math.min(worldWidth - canvas.width, player.x - canvas.width / 2));
-    camera.y = Math.max(0, Math.min(worldHeight - canvas.height + 200, player.y - canvas.height / 2));
+    const sx = shake ? (Math.random() - 0.5) * shake : 0;
+    const sy = shake ? (Math.random() - 0.5) * shake : 0;
+    viewX = camera.x + sx;
+    viewY = camera.y + sy;
 
-    ctx.fillStyle = "#05070a";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    drawBackground();
 
-    // faint scan-line grid background
-    ctx.strokeStyle = "rgba(120,200,255,0.05)";
-    ctx.lineWidth = 1;
-    const gridStep = 60;
-    for (let gx = -((camera.x) % gridStep); gx < canvas.width; gx += gridStep) {
-      ctx.beginPath(); ctx.moveTo(gx, 0); ctx.lineTo(gx, canvas.height); ctx.stroke();
-    }
-    for (let gy = -((camera.y) % gridStep); gy < canvas.height; gy += gridStep) {
-      ctx.beginPath(); ctx.moveTo(0, gy); ctx.lineTo(canvas.width, gy); ctx.stroke();
-    }
+    // bloom buffer shares the world transform so everything lines up
+    gctx.setTransform(1, 0, 0, 1, 0, 0);
+    gctx.clearRect(0, 0, glowCanvas.width, glowCanvas.height);
+    gctx.setTransform(GLOW_SCALE, 0, 0, GLOW_SCALE, -viewX * GLOW_SCALE, -viewY * GLOW_SCALE);
+    gctx.globalCompositeOperation = "lighter";
 
     ctx.save();
-    ctx.translate(-camera.x, -camera.y);
+    ctx.translate(-viewX, -viewY);
 
     // the true reconstruction, masked by fog until scanned
     ctx.drawImage(targetCanvas, 0, 0);
+    // a hair under opaque, so the out-of-focus plane behind still reads as
+    // depth without giving away the reconstruction
+    ctx.globalAlpha = 0.94;
     ctx.drawImage(fogCanvas, 0, 0);
+    ctx.globalAlpha = 1;
 
-    // ground
-    ctx.fillStyle = "#0c1420";
-    ctx.fillRect(0, GROUND_Y, worldWidth, worldHeight - GROUND_Y + 400);
+    drawGround();
+    drawUnresolved();
+    drawResolved();
+    drawDoseRings();
+    drawParticles();
+    drawProbe();
 
-    // atoms
+    ctx.restore();
+
+    compositeGlow();
+    drawPost();
+  }
+
+  function drawBackground() {
+    const g = ctx.createLinearGradient(0, 0, 0, VH);
+    g.addColorStop(0, "#070d1a");
+    g.addColorStop(0.55, "#050912");
+    g.addColorStop(1, "#03060c");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, 0, VW, VH);
+
+    // out-of-focus crystal plane, drifting slower than the world
+    const bw = bokeh.width;
+    let ox = -((viewX * 0.14) % bw);
+    if (ox > 0) ox -= bw;
+    const oy = -Math.min(240, viewY * 0.06);
+    ctx.globalCompositeOperation = "lighter";
+    for (let x = ox; x < VW; x += bw) ctx.drawImage(bokeh, x, oy);
+    ctx.globalCompositeOperation = "source-over";
+
+    // crystal planes: faint tilted rules suggesting lattice directions
+    ctx.save();
+    ctx.globalAlpha = 0.5;
+    ctx.strokeStyle = "rgba(110,190,255,0.045)";
+    ctx.lineWidth = 1;
+    ctx.translate(VW / 2, VH / 2);
+    ctx.rotate(-0.52);
+    const step = 86, reach = Math.hypot(VW, VH);
+    const drift = -((viewX * 0.3) % step);
+    for (let x = -reach + drift; x < reach; x += step) {
+      ctx.beginPath(); ctx.moveTo(x, -reach); ctx.lineTo(x, reach); ctx.stroke();
+    }
+    ctx.restore();
+
+  }
+
+  function drawGround() {
+    if (GROUND_Y > viewY + VH) return;
+    const h = worldHeight - GROUND_Y + 400;
+    const g = ctx.createLinearGradient(0, GROUND_Y, 0, GROUND_Y + h);
+    g.addColorStop(0, "#091421");
+    g.addColorStop(0.2, "#060e19");
+    g.addColorStop(1, "#03060c");
+    ctx.fillStyle = g;
+    ctx.fillRect(0, GROUND_Y, worldWidth, h);
+
+    // detector plane: the surface the transmitted cone is aimed at. It gets a
+    // soft bloom above the rule so the horizon is a lit edge, not a cut.
+    const lip = ctx.createLinearGradient(0, GROUND_Y - 40, 0, GROUND_Y + 26);
+    lip.addColorStop(0, "rgba(90,190,255,0)");
+    lip.addColorStop(0.62, "rgba(90,190,255,0.05)");
+    lip.addColorStop(1, "rgba(90,190,255,0)");
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = lip;
+    ctx.fillRect(viewX, GROUND_Y - 40, VW, 66);
+    ctx.globalCompositeOperation = "source-over";
+
+    ctx.strokeStyle = "rgba(120,210,255,0.26)";
+    ctx.lineWidth = 1.2;
+    ctx.beginPath(); ctx.moveTo(0, GROUND_Y); ctx.lineTo(worldWidth, GROUND_Y); ctx.stroke();
+
+    ctx.strokeStyle = "rgba(120,210,255,0.09)";
+    ctx.lineWidth = 1;
+    const step = 40;
+    const start = Math.max(0, Math.floor((viewX - step) / step) * step);
+    const end = Math.min(worldWidth, viewX + VW + step);
+    for (let x = start; x < end; x += step) {
+      const tall = (x / step) % 5 === 0;
+      ctx.beginPath();
+      ctx.moveTo(x, GROUND_Y + 2);
+      ctx.lineTo(x, GROUND_Y + (tall ? 13 : 7));
+      ctx.stroke();
+    }
+  }
+
+  // Unresolved sites: a speckle cloud that collapses onto the column as the
+  // reconstruction converges, ringed by a progress arc. Drift-hazard sites
+  // stretch their cloud vertically and carry a dashed track, so the hazard
+  // is telegraphed by motion language rather than by an arbitrary colour.
+  function drawUnresolved() {
     for (const a of world) {
-      if (!a.resolved) {
-        // unscanned/partially-scanned: faint ghost outline, not solid,
-        // filling in as resolveProgress builds. Wobble atoms telegraph
-        // their drift hazard with a violet tint before they're ever solid.
-        const ghostHue = a.wobble ? "200,140,255" : "120,180,220";
-        ctx.strokeStyle = `rgba(${ghostHue},${0.15 + a.resolveProgress * 0.5})`;
-        ctx.setLineDash(a.resolveProgress > 0 ? [] : [3, 4]);
-        ctx.lineWidth = 1 + a.resolveProgress * 2;
+      if (a.resolved) continue;
+      if (!inView(a.x, a.y, 120)) continue;
+      const art = ELEMENT_ART[a.element] || ELEMENT_ART.C;
+      const p = a.resolveProgress;
+      const spread = 1 - p;
+
+      if (a.wobble) {
+        ctx.strokeStyle = "rgba(190,215,255,0.14)";
+        ctx.setLineDash([2, 6]);
+        ctx.lineWidth = 1;
         ctx.beginPath();
-        ctx.arc(a.x, a.y, a.r, 0, Math.PI * 2);
+        ctx.moveTo(a.x, a.y - a.r * 2.1);
+        ctx.lineTo(a.x, a.y + a.r * 2.1);
         ctx.stroke();
         ctx.setLineDash([]);
+      }
+
+      // a soft core so the site reads as standable geometry from a distance —
+      // it is a ghost, but the player still has to route around it
+      const core = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, a.r * 1.25);
+      core.addColorStop(0, `rgba(${art.glow},${0.14 + p * 0.4})`);
+      core.addColorStop(0.55, `rgba(${art.glow},${0.05 + p * 0.18})`);
+      core.addColorStop(1, `rgba(${art.glow},0)`);
+      ctx.fillStyle = core;
+      ctx.beginPath(); ctx.arc(a.x, a.y, a.r * 1.25, 0, TAU); ctx.fill();
+
+      ctx.fillStyle = `rgba(${art.glow},${0.34 + p * 0.45})`;
+      for (const s of a.speckle) {
+        const d = a.r * (0.5 + s.dist * spread);
+        const ang = s.ang + simTime * 0.3 * s.dir;
+        const sx = a.x + Math.cos(ang) * d;
+        const sy = a.y + Math.sin(ang) * d * (a.wobble ? 1.7 : 1);
+        ctx.fillRect(sx - s.size / 2, sy - s.size / 2, s.size, s.size);
+      }
+
+      ctx.strokeStyle = `rgba(${art.glow},${0.3 + p * 0.35})`;
+      ctx.lineWidth = 1;
+      if (p < 0.02) ctx.setLineDash([3, 5]);
+      ctx.beginPath();
+      ctx.arc(a.x, a.y, a.r * (1.3 - p * 0.3), 0, TAU);
+      ctx.stroke();
+      ctx.setLineDash([]);
+
+      if (p > 0.02) {
+        ctx.strokeStyle = rgba(art.rim, 0.85);
+        ctx.lineWidth = 2.4;
+        ctx.lineCap = "round";
+        ctx.beginPath();
+        ctx.arc(a.x, a.y, a.r * 1.3, -Math.PI / 2, -Math.PI / 2 + TAU * p);
+        ctx.stroke();
+        ctx.lineCap = "butt";
+      }
+      const h = haloSprite(art.glow, a.r * 0.7, 0.16 + p * 0.5);
+      gctx.drawImage(h.canvas, a.x - h.off, a.y - h.off);
+    }
+  }
+
+  function drawResolved() {
+    const probeX = player.x + player.w / 2, probeY = player.y + player.h / 2;
+    for (const a of world) {
+      if (!a.resolved) continue;
+      if (!inView(a.x, a.y, 140)) continue;
+      const ay = a.y + a.wobbleOffset;
+      const art = a.damaged ? DAMAGED_ART : (ELEMENT_ART[a.element] || ELEMENT_ART.C);
+
+      // an emptied site: not a ghost waiting to be resolved, a hole in the
+      // lattice that stays a hole. Cool and hollow, so it never reads as
+      // something the beam might still bring back.
+      if (a.gone) {
+        ctx.fillStyle = "rgba(4,7,13,0.5)";
+        ctx.beginPath(); ctx.arc(a.x, ay, a.r * 0.92, 0, TAU); ctx.fill();
+        ctx.strokeStyle = rgba(DAMAGED_ART.rim, 0.26);
+        ctx.setLineDash([2, 5]);
         ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(a.x, ay, a.r, 0, TAU); ctx.stroke();
+        ctx.setLineDash([]);
         continue;
       }
 
-      const ay = a.y + a.wobbleOffset;
-      const alpha = a.damaged ? (a.solidNow ? 1 : 0.25) : 1;
-      ctx.globalAlpha = alpha;
-
-      const grad = ctx.createRadialGradient(a.x, ay, a.r * 0.1, a.x, ay, a.r);
-      if (a.dopantDef) {
-        grad.addColorStop(0, a.dopantDef.color[0]);
-        grad.addColorStop(1, a.dopantDef.color[1]);
-      } else if (a.damaged) {
-        grad.addColorStop(0, "#ffb4b4");
-        grad.addColorStop(1, "#c24949");
-      } else if (a.wobble) {
-        grad.addColorStop(0, "#e3c9ff");
-        grad.addColorStop(1, "#8a5fd6");
-      } else {
-        grad.addColorStop(0, "#bfe9ff");
-        grad.addColorStop(1, "#3aa0d0");
+      // mid-collapse and currently flickered out: still on its way out, so it
+      // stays warm — the read has to be instant
+      if (a.damaged && !a.solidNow) {
+        ctx.strokeStyle = rgba(DAMAGED_ART.rim, 0.4);
+        ctx.setLineDash([3, 4]);
+        ctx.lineWidth = 1.2;
+        ctx.beginPath(); ctx.arc(a.x, ay, a.r, 0, TAU); ctx.stroke();
+        ctx.setLineDash([]);
+        continue;
       }
-      ctx.fillStyle = grad;
-      ctx.beginPath();
-      ctx.arc(a.x, ay, a.r, 0, Math.PI * 2);
-      ctx.fill();
-      ctx.globalAlpha = 1;
-    }
 
-    // dose rings — drawn in their own pass so unresolved atoms show them too
-    // (the beam damages what it's still trying to resolve, which is the point)
+      // resolve "snap": the column overshoots slightly as it locks in
+      const pop = a.popIn;
+      const scale = pop < 1 ? 1 + Math.sin(pop * Math.PI) * 0.22 : 1;
+      const r = a.r * scale;
+
+      const strength = Math.min(1.6, art.z) * (a.damaged ? 0.85 : 1);
+      const halo = haloSprite(art.glow, r, 0.42 * strength);
+      gctx.drawImage(halo.canvas, a.x - halo.off, ay - halo.off);
+
+      const sp = atomSprite(art, r);
+      ctx.drawImage(sp.canvas, a.x - sp.off, ay - sp.off);
+
+      // the standable surface. The collision box top sits at r*0.45 above
+      // centre, which is not where the eye expects it on a sphere — so the
+      // contact plane is drawn explicitly. It only fades in near the probe:
+      // drawn on every column it stops being an affordance and starts
+      // looking like a scratch across the art.
+      const standing = player.standingOn === a;
+      const near = 1 - Math.min(1, Math.hypot(a.x - probeX, ay - probeY) / 260);
+      if (standing || near > 0.01) {
+        const pw = (a.dopant ? a.r * 2.6 : a.r * 2.3) * 0.38;
+        const topY = ay - a.r * 0.45;
+        ctx.strokeStyle = standing ? rgba(art.core, 0.8) : rgba(art.rim, 0.16 * near);
+        ctx.lineWidth = standing ? 2 : 1.1;
+        ctx.beginPath();
+        ctx.moveTo(a.x - pw, topY);
+        ctx.quadraticCurveTo(a.x, topY - a.r * 0.14, a.x + pw, topY);
+        ctx.stroke();
+      }
+
+      if (a.dopant) {
+        // dopants carry an extra orbital ring so they stand out from the
+        // base lattice even before the fact toast fires
+        ctx.strokeStyle = rgba(art.rim, 0.3);
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(a.x, ay, r * 1.32, 0, TAU); ctx.stroke();
+        ctx.strokeStyle = rgba(art.rim, 0.55);
+        ctx.beginPath();
+        ctx.arc(a.x, ay, r * 1.32, simTime * 0.6, simTime * 0.6 + 0.9);
+        ctx.stroke();
+      }
+
+      if (a.damaged && a.cracks) {
+        ctx.strokeStyle = "rgba(28,6,2,0.6)";
+        ctx.lineWidth = Math.max(1, r * 0.09);
+        for (const pts of a.cracks) {
+          ctx.beginPath();
+          for (let i = 0; i < pts.length; i++) {
+            const px = a.x + pts[i][0] * r, py = ay + pts[i][1] * r;
+            if (i === 0) ctx.moveTo(px, py); else ctx.lineTo(px, py);
+          }
+          ctx.stroke();
+        }
+      }
+
+      if (a.wobble) {
+        // motion smear: a ghost of where the column just was
+        ctx.globalAlpha = 0.22;
+        ctx.drawImage(sp.canvas, a.x - sp.off, ay - sp.off - Math.sign(a.wobbleOffset || 1) * a.wobbleAmp * driftScaleEff * 0.5);
+        ctx.globalAlpha = 1;
+      }
+    }
+  }
+
+  // Dose reads as an arc winding around the column — a gauge filling toward
+  // knock-out, on unresolved atoms too, because the beam damages what it is
+  // still trying to reveal.
+  function drawDoseRings() {
     for (const a of world) {
       if (a.damaged) continue;
       const frac = a.dose / a.doseLimit;
       if (frac <= DOSE_WARN_FRAC) continue;
+      if (!inView(a.x, a.y, 120)) continue;
       const t = (frac - DOSE_WARN_FRAC) / (1 - DOSE_WARN_FRAC);
-      ctx.strokeStyle = `rgba(255,140,90,${0.35 + t * 0.55})`;
-      ctx.lineWidth = 1 + t * 2;
-      ctx.beginPath();
-      ctx.arc(a.x, a.y + a.wobbleOffset, a.r + 4 + t * 3, 0, Math.PI * 2);
-      ctx.stroke();
-      ctx.lineWidth = 1;
-    }
+      const ay = a.y + a.wobbleOffset;
+      const rr = a.r + 7 + t * 2;
+      const pulse = frac > 0.85 ? 0.55 + 0.45 * Math.sin(simTime * 14) : 1;
 
-    // -------------------------------------------------------------------
-    // The probe. Drawn as the ray diagram it actually is: a cone of
-    // electrons converging from the column above down to a focal spot, and
-    // the transmitted cone diverging below toward the detector. The rig
-    // leans with velocity and squashes with speed so it reads as a
-    // character rather than a cursor — and it runs hot (orange) whenever
-    // it's about to knock something out.
-    // -------------------------------------------------------------------
+      ctx.strokeStyle = `rgba(255,140,90,${0.12 + t * 0.14})`;
+      ctx.lineWidth = 2.6;
+      ctx.beginPath(); ctx.arc(a.x, ay, rr, 0, TAU); ctx.stroke();
+
+      ctx.strokeStyle = `rgba(255,${Math.round(190 - t * 90)},${Math.round(120 - t * 70)},${(0.55 + t * 0.45) * pulse})`;
+      ctx.lineWidth = 2.6;
+      ctx.lineCap = "round";
+      ctx.beginPath();
+      ctx.arc(a.x, ay, rr, -Math.PI / 2, -Math.PI / 2 + TAU * Math.min(1, frac));
+      ctx.stroke();
+      ctx.lineCap = "butt";
+
+      const h = haloSprite("255,120,60", a.r, t * 0.5 * pulse);
+      gctx.drawImage(h.canvas, a.x - h.off, ay - h.off);
+    }
+  }
+
+  function drawParticles() {
+    ctx.globalCompositeOperation = "lighter";
+    for (const p of particles) {
+      const a = Math.max(0, p.life / p.maxLife);
+      ctx.fillStyle = `rgba(${p.glow},${a})`;
+      const s = p.size * (0.4 + a * 0.6);
+      ctx.fillRect(p.x - s / 2, p.y - s / 2, s, s);
+      gctx.fillStyle = `rgba(${p.glow},${a * 0.5})`;
+      gctx.beginPath(); gctx.arc(p.x, p.y, s * 2.6, 0, TAU); gctx.fill();
+    }
+    for (const r of rings) {
+      const t = 1 - r.life / r.maxLife;
+      const rad = r.r0 + (r.r1 - r.r0) * (1 - Math.pow(1 - t, 3));
+      ctx.strokeStyle = `rgba(${r.glow},${(1 - t) * 0.65})`;
+      ctx.lineWidth = r.width * (1 - t * 0.6);
+      ctx.beginPath(); ctx.arc(r.x, r.y, rad, 0, TAU); ctx.stroke();
+    }
+    ctx.globalCompositeOperation = "source-over";
+  }
+
+  // -------------------------------------------------------------------
+  // The probe. Drawn as the ray diagram it actually is: a cone of
+  // electrons converging from the column above down to a focal spot, and
+  // the transmitted cone diverging below toward the detector. The rig
+  // leans with velocity and squashes with speed so it reads as a
+  // character rather than a cursor — and it runs hot (orange) whenever
+  // it's about to knock something out.
+  // -------------------------------------------------------------------
+  function drawProbe() {
     const px = player.x + player.w / 2, py = player.y + player.h / 2;
+    const hot = beamOn ? probeHeat : 0;
+    const warm = hot > 0.55;
+    const beamCol = warm ? "255,170,110" : "150,235,255";
+    const coreCol = warm ? "255,205,150" : "198,243,255";
 
     // illumination footprint — the area currently taking dose. Gone entirely
     // when blanked, which is the whole read: no circle means no cost.
     if (beamOn) {
-      const glow = ctx.createRadialGradient(px, py, 0, px, py, RESOLVE_RADIUS);
-      glow.addColorStop(0, `rgba(${probeHeat > 0.55 ? "255,150,90" : "80,200,255"},${0.10 + probeHeat * 0.08})`);
-      glow.addColorStop(1, "rgba(80,200,255,0)");
+      const glow = ctx.createRadialGradient(px, py, 0, px, py, resolveRadiusEff);
+      glow.addColorStop(0, `rgba(${beamCol},${0.11 + hot * 0.1})`);
+      glow.addColorStop(0.6, `rgba(${beamCol},${0.035 + hot * 0.04})`);
+      glow.addColorStop(1, `rgba(${beamCol},0)`);
       ctx.fillStyle = glow;
-      ctx.beginPath();
-      ctx.arc(px, py, RESOLVE_RADIUS, 0, Math.PI * 2);
-      ctx.fill();
+      ctx.beginPath(); ctx.arc(px, py, resolveRadiusEff, 0, TAU); ctx.fill();
+
+      // a crisp rotating edge so the dose boundary is a readable instrument,
+      // not a vague haze
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.rotate(simTime * 0.35);
+      ctx.strokeStyle = `rgba(${beamCol},${0.16 + hot * 0.2})`;
+      ctx.lineWidth = 1;
+      ctx.setLineDash([5, 13]);
+      ctx.beginPath(); ctx.arc(0, 0, resolveRadiusEff - 2, 0, TAU); ctx.stroke();
+      ctx.setLineDash([]);
+      ctx.restore();
     }
 
-    const hot = beamOn ? probeHeat : 0;
-    const beamR = hot > 0.55 ? 255 : 150, beamG = hot > 0.55 ? 170 : 235;
+    // comet trail
+    ctx.globalCompositeOperation = "lighter";
+    for (let i = 0; i < player.trail.length; i++) {
+      const t = i / player.trail.length;
+      const p = player.trail[i];
+      ctx.fillStyle = `rgba(${beamCol},${t * t * 0.2})`;
+      ctx.beginPath(); ctx.arc(p.x, p.y, 2 + t * 7, 0, TAU); ctx.fill();
+    }
+    ctx.globalCompositeOperation = "source-over";
+
     const lean = Math.max(-0.3, Math.min(0.3, (player.vx / MOVE_SPEED) * 0.28));
-    const sp = Math.min(0.2, Math.abs(player.vy) / 2600);
+    const sp = Math.min(0.2, Math.abs(player.vy) / 2600) + player.landSquash * 0.28;
 
     ctx.save();
     ctx.translate(px, py);
     ctx.rotate(lean);
 
-    const coneH = 46, coneW = 24;
+    const coneH = 52, coneW = 26;
     if (beamOn) {
       // incoming (illumination) cone — the probe's "body"
       const up = ctx.createLinearGradient(0, -coneH, 0, 0);
-      up.addColorStop(0, `rgba(${beamR},${beamG},255,0)`);
-      up.addColorStop(1, `rgba(${beamR},${beamG},255,${0.4 + hot * 0.4})`);
+      up.addColorStop(0, `rgba(${beamCol},0)`);
+      up.addColorStop(0.35, `rgba(${beamCol},${0.13 + hot * 0.14})`);
+      up.addColorStop(0.8, `rgba(${beamCol},${0.3 + hot * 0.24})`);
+      up.addColorStop(1, `rgba(${beamCol},${0.55 + hot * 0.4})`);
       ctx.fillStyle = up;
       ctx.beginPath();
       ctx.moveTo(-coneW, -coneH); ctx.lineTo(coneW, -coneH); ctx.lineTo(0, 2);
       ctx.closePath(); ctx.fill();
 
+      // aperture edges, so the convergence angle is legible
+      ctx.strokeStyle = `rgba(${beamCol},${0.3 + hot * 0.3})`;
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(-coneW, -coneH); ctx.lineTo(0, 1);
+      ctx.moveTo(coneW, -coneH); ctx.lineTo(0, 1);
+      ctx.stroke();
+
+      // electrons falling down the cone and converging on the spot
+      ctx.globalCompositeOperation = "lighter";
+      ctx.lineWidth = 1.4;
+      ctx.lineCap = "round";
+      for (const s of beamStreaks) {
+        const t0 = s.t, t1 = Math.min(1, s.t + s.len);
+        const y0 = -coneH * (1 - t0), y1 = -coneH * (1 - t1);
+        const x0 = s.off * coneW * (1 - t0), x1 = s.off * coneW * (1 - t1);
+        ctx.strokeStyle = `rgba(${coreCol},${0.1 + t0 * 0.5})`;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      }
+
       // transmitted cone, heading for the detector
-      const down = ctx.createLinearGradient(0, 0, 0, coneH * 0.75);
-      down.addColorStop(0, `rgba(${beamR},${beamG},255,${0.26 + hot * 0.3})`);
-      down.addColorStop(1, `rgba(${beamR},${beamG},255,0)`);
+      const dh = coneH * 0.8;
+      const down = ctx.createLinearGradient(0, 0, 0, dh);
+      down.addColorStop(0, `rgba(${beamCol},${0.26 + hot * 0.28})`);
+      down.addColorStop(1, `rgba(${beamCol},0)`);
+      ctx.globalCompositeOperation = "source-over";
       ctx.fillStyle = down;
       ctx.beginPath();
       ctx.moveTo(0, -2);
-      ctx.lineTo(-coneW * 0.7, coneH * 0.75); ctx.lineTo(coneW * 0.7, coneH * 0.75);
+      ctx.lineTo(-coneW * 0.78, dh); ctx.lineTo(coneW * 0.78, dh);
       ctx.closePath(); ctx.fill();
+
+      ctx.globalCompositeOperation = "lighter";
+      for (const s of transStreaks) {
+        const t0 = s.t, t1 = Math.min(1, s.t + s.len);
+        const y0 = dh * t0, y1 = dh * t1;
+        const x0 = s.off * coneW * 0.78 * t0, x1 = s.off * coneW * 0.78 * t1;
+        ctx.strokeStyle = `rgba(${coreCol},${(1 - t0) * 0.35})`;
+        ctx.beginPath(); ctx.moveTo(x0, y0); ctx.lineTo(x1, y1); ctx.stroke();
+      }
+      ctx.lineCap = "butt";
+      ctx.globalCompositeOperation = "source-over";
     } else {
-      // blanked: the column is still there, the electrons aren't. Faint
-      // dashed outline so the probe reads as switched off, not vanished.
-      ctx.strokeStyle = "rgba(150,200,230,0.22)";
-      ctx.setLineDash([3, 4]);
-      ctx.lineWidth = 1;
+      // blanked: the column is still there, the electrons aren't. A dashed
+      // outline plus a closed-aperture ring, bright enough that the avatar
+      // never gets lost against the lattice — switched off, not vanished.
+      ctx.strokeStyle = "rgba(165,215,240,0.45)";
+      ctx.setLineDash([3, 5]);
+      ctx.lineWidth = 1.2;
       ctx.beginPath();
       ctx.moveTo(-coneW, -coneH); ctx.lineTo(0, 2); ctx.lineTo(coneW, -coneH);
       ctx.stroke();
+      ctx.beginPath();
+      ctx.moveTo(-coneW * 0.78, coneH * 0.8); ctx.lineTo(0, -2); ctx.lineTo(coneW * 0.78, coneH * 0.8);
+      ctx.stroke();
       ctx.setLineDash([]);
+      ctx.strokeStyle = "rgba(190,232,255,0.7)";
+      ctx.lineWidth = 1.4;
+      ctx.beginPath(); ctx.arc(0, 0, 10.5, 0, TAU); ctx.stroke();
+    }
+
+    // Airy rings: a focused probe is a diffraction pattern, not a dot
+    if (beamOn) {
+      ctx.globalCompositeOperation = "lighter";
+      for (let i = 1; i <= 2; i++) {
+        const rr = 15 + i * 9 + Math.sin(simTime * 3 + i) * 1.2;
+        ctx.strokeStyle = `rgba(${beamCol},${0.16 / i})`;
+        ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.arc(0, 0, rr, 0, TAU); ctx.stroke();
+      }
+      ctx.globalCompositeOperation = "source-over";
     }
 
     // focal spot — squashes and stretches with speed; shrinks when blanked
     ctx.save();
     ctx.scale(1 - sp * 0.7, 1 + sp);
     const bodyR = beamOn ? 13 : 7;
-    const body = ctx.createRadialGradient(0, 0, 1, 0, 0, bodyR);
+    const body = ctx.createRadialGradient(0, 0, 0.5, 0, 0, bodyR);
     body.addColorStop(0, beamOn ? "#ffffff" : "#9fc4d8");
-    body.addColorStop(0.4, hot > 0.55 ? "#ffcda0" : beamOn ? "#c6f3ff" : "#5d8399");
-    body.addColorStop(1, `rgba(${beamR},${beamG},255,0)`);
+    body.addColorStop(0.38, beamOn ? `rgb(${coreCol})` : "#5d8399");
+    body.addColorStop(1, `rgba(${beamCol},0)`);
     ctx.fillStyle = body;
-    ctx.beginPath(); ctx.arc(0, 0, bodyR, 0, Math.PI * 2); ctx.fill();
+    ctx.beginPath(); ctx.arc(0, 0, bodyR, 0, TAU); ctx.fill();
     ctx.restore();
 
     ctx.restore();
+
+    // anamorphic flare through the spot — the cheapest possible read of
+    // "this thing is very bright"
+    if (beamOn) {
+      ctx.save();
+      ctx.translate(px, py);
+      ctx.globalCompositeOperation = "lighter";
+      const fl = 42 + hot * 26;
+      const h1 = ctx.createLinearGradient(-fl, 0, fl, 0);
+      h1.addColorStop(0, `rgba(${beamCol},0)`);
+      h1.addColorStop(0.5, `rgba(${beamCol},${0.4 + hot * 0.3})`);
+      h1.addColorStop(1, `rgba(${beamCol},0)`);
+      ctx.fillStyle = h1;
+      ctx.fillRect(-fl, -1, fl * 2, 2);
+      const v1 = ctx.createLinearGradient(0, -fl * 0.55, 0, fl * 0.55);
+      v1.addColorStop(0, `rgba(${beamCol},0)`);
+      v1.addColorStop(0.5, `rgba(${beamCol},${0.3 + hot * 0.25})`);
+      v1.addColorStop(1, `rgba(${beamCol},0)`);
+      ctx.fillStyle = v1;
+      ctx.fillRect(-1, -fl * 0.55, 2, fl * 1.1);
+      ctx.restore();
+    }
+
+    // bloom contribution for the spot
+    const spotHalo = haloSprite(beamCol, beamOn ? 15 : 9, beamOn ? 1.1 : 0.6);
+    gctx.drawImage(spotHalo.canvas, px - spotHalo.off, py - spotHalo.off);
 
     // eye, drawn unrotated so it always looks level — it tracks where the
     // probe is headed, which is the cheapest way to give it intent
-    const eyeX = px + player.facing * 3.2;
-    ctx.fillStyle = "#06212f";
-    ctx.beginPath(); ctx.ellipse(eyeX, py - 1, 2.5, 3.3, 0, 0, Math.PI * 2); ctx.fill();
-    ctx.fillStyle = "rgba(255,255,255,0.92)";
-    ctx.beginPath(); ctx.arc(eyeX + player.facing * 0.9, py - 2.4, 0.9, 0, Math.PI * 2); ctx.fill();
+    const eyeX = px + player.facing * 3.4;
+    ctx.fillStyle = "#04161f";
+    ctx.beginPath(); ctx.ellipse(eyeX, py - 1, 2.6, 3.4, 0, 0, TAU); ctx.fill();
+    ctx.fillStyle = "rgba(255,255,255,0.95)";
+    ctx.beginPath(); ctx.arc(eyeX + player.facing * 0.9, py - 2.5, 0.95, 0, TAU); ctx.fill();
+  }
 
+  function compositeGlow() {
+    ctx.save();
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    ctx.globalCompositeOperation = "lighter";
+    ctx.imageSmoothingEnabled = true;
+    ctx.imageSmoothingQuality = "high";
+    if (SUPPORTS_FILTER) ctx.filter = "blur(3px)";
+    ctx.globalAlpha = 0.95;
+    ctx.drawImage(glowCanvas, 0, 0, VW, VH);
+    ctx.filter = "none";
+    ctx.globalAlpha = 1;
     ctx.restore();
+    ctx.globalCompositeOperation = "source-over";
+  }
+
+  // Post: a slow raster sweep (this is a scanning microscope, after all),
+  // scanlines, grain, and a vignette that warms up as the specimen cooks.
+  // Dust rides above the world layer: the fog sheet covers the whole lattice,
+  // so parallax drawn underneath it would never be seen.
+  function drawMotes() {
+    ctx.globalCompositeOperation = "lighter";
+    for (const m of motes) {
+      const px = ((m.x * VW - viewX * m.depth * 0.5) % VW + VW) % VW;
+      const py = ((m.y * VH - viewY * m.depth * 0.5 + Math.sin(simTime * m.speed * 12 + m.phase) * 12)
+                  % VH + VH) % VH;
+      const a = (0.14 + m.depth * 0.3) * (0.55 + 0.45 * Math.sin(simTime * 1.6 + m.phase));
+      ctx.fillStyle = `rgba(160,220,255,${a})`;
+      ctx.fillRect(px, py, m.size, m.size);
+    }
+    ctx.globalCompositeOperation = "source-over";
+  }
+
+  let grainIdx = 0;
+  function drawPost() {
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    drawMotes();
+
+    // the raster line sweeps down and leaves a decaying trail behind it, the
+    // way a slow-scan frame builds up
+    const sweepY = ((simTime * 0.085) % 1) * (VH + 400) - 200;
+    const bandH = 230;
+    const sw = ctx.createLinearGradient(0, sweepY - bandH, 0, sweepY);
+    sw.addColorStop(0, "rgba(120,220,255,0)");
+    sw.addColorStop(0.55, "rgba(120,220,255,0.016)");
+    sw.addColorStop(0.88, "rgba(150,235,255,0.042)");
+    sw.addColorStop(1, "rgba(190,245,255,0.075)");
+    ctx.globalCompositeOperation = "lighter";
+    ctx.fillStyle = sw;
+    ctx.fillRect(0, sweepY - bandH, VW, bandH);
+    ctx.fillStyle = "rgba(200,248,255,0.05)";
+    ctx.fillRect(0, sweepY - 1, VW, 1.5);
+
+    grainIdx = (grainIdx + 1) % (grainTiles.length * 3);
+    ctx.globalAlpha = 0.035;
+    ctx.fillStyle = grainTiles[grainIdx % grainTiles.length];
+    ctx.save();
+    ctx.translate(-(grainIdx * 37) % 180, -(grainIdx * 53) % 180);
+    ctx.fillRect(0, 0, VW + 180, VH + 180);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+    ctx.globalCompositeOperation = "source-over";
+
+    // scanlines are drawn on the device pixel grid: scaled by DPR they turn
+    // into venetian blinds across the atoms instead of a fine raster
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.globalAlpha = 0.26;
+    ctx.fillStyle = scanPattern;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+    ctx.globalAlpha = 1;
+
+    const cx = VW / 2, cy = VH / 2;
+    const R = Math.hypot(cx, cy);
+    const vg = ctx.createRadialGradient(cx, cy, R * 0.55, cx, cy, R);
+    vg.addColorStop(0, "rgba(2,4,9,0)");
+    vg.addColorStop(1, "rgba(2,4,9,0.6)");
+    ctx.fillStyle = vg;
+    ctx.fillRect(0, 0, VW, VH);
+
+    // the specimen is cooking / the budget is nearly gone — warn at the
+    // edge of vision rather than with another number on the panel
+    const doseFrac = 1 - doseSpent / doseBudgetEff;
+    const heatAlpha = probeHeat > DOSE_WARN_FRAC
+      ? (probeHeat - DOSE_WARN_FRAC) / (1 - DOSE_WARN_FRAC) * 0.3 : 0;
+    const lowAlpha = doseFrac < 0.22 && !runOver
+      ? (1 - doseFrac / 0.22) * 0.22 * (0.55 + 0.45 * Math.sin(simTime * 5)) : 0;
+    const alarm = Math.max(heatAlpha, lowAlpha);
+    if (alarm > 0.001) {
+      const wg = ctx.createRadialGradient(cx, cy, R * 0.3, cx, cy, R);
+      wg.addColorStop(0, "rgba(255,90,40,0)");
+      wg.addColorStop(1, `rgba(255,90,40,${alarm})`);
+      ctx.globalCompositeOperation = "lighter";
+      ctx.fillStyle = wg;
+      ctx.fillRect(0, 0, VW, VH);
+      ctx.globalCompositeOperation = "source-over";
+    }
   }
 
   function loop(now) {
