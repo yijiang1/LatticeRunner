@@ -58,13 +58,22 @@ This is deliberately not instant — it's the "cost" that turns exploration into
 Visually an unresolved site is a *speckle cloud that has not converged*: a ring of dots scattered around the column, collapsing onto it as `resolveProgress` builds, wrapped by an arc that fills to show the dwell. Completing it snaps the sphere in with an overshoot, a spark burst and an expanding ring. Nothing about the site is a placeholder dashed circle any more — it is a reconstruction mid-convergence.
 
 ### Dose (self-inflicted risk)
-The probe deposits dose into **every** atom within its radius, not just the one it's standing on, at a rate falling off with distance the way a real beam profile does:
+The probe deposits dose into **every** atom within its radius, not just the one it's standing on, at a rate falling off with distance the way a real beam profile does. Deposition and annealing both run all the time, and what the arc shows is the net:
 
 ```
-rate = DOSE_PEAK / (1 + d² / DOSE_FALLOFF²)
+d² = dx² + (dy · DOSE_DEFOCUS)²
+rate = DOSE_PEAK / (1 + d² / DOSE_FALLOFF²) - DOSE_ANNEAL
 ```
 
-Standing on an atom is simply the closest you can physically get, so it cooks fastest (~2s for carbon); a neighbour one lattice spacing away still takes dose, at roughly 1/2.5 the rate. Dose anneals back off slowly (`DOSE_ANNEAL`) once the atom is out of the beam.
+Standing on an atom is simply the closest you can physically get, so it cooks fastest (1.97s measured for carbon); a neighbour one lattice spacing away still takes dose, at roughly 1/3 the rate.
+
+Two details in that formula are load-bearing, and both were added to fix the same bug.
+
+**Annealing is unconditional.** It used to apply only *outside* the probe field, which made the gauge a ratchet: anywhere inside the 150px radius the arc could climb but never fall, and it flipped sign at a hard edge — an atom at 149px gained dose, one at 151px lost it. Backing off did nothing you could see until you crossed that line. Now moving away registers on the ring immediately, and far enough away the arc winds back down with the beam still on.
+
+**Vertical distance counts double.** The probe is focused *in* the specimen plane; leaving that plane defocuses it, and a defocused probe spreads the same current over a much larger disc, so the dose density on any one column collapses. `DOSE_DEFOCUS` (2.0) is the factor vertical offset counts for. Without it the entire 0.62s jump arc stays inside the beam's waist — apex is only 114px up, against a 70px falloff — so the gauge you are jumping to escape keeps filling while you are airborne. Measured on a carbon at the warning threshold, a jump straight up used to add **+0.126** of the limit and could knock the column out from under the probe mid-flight; it now adds **+0.004**, and the arc visibly stalls and dips at the apex.
+
+The asymmetry is deliberate rather than incidental: horizontal collateral is the mechanic the balance rests on (see the sweep-speed table below), so it is left alone, while vertical escape is the one verb the player has besides blanking. `DOSE_PEAK` was raised 1.1 → 1.7 to hold the standing knock-out time at the designed ~2s once the anneal term became unconditional.
 
 Past its tolerance an atom **knocks out**, and knock-out is permanent. The column flickers for `DAMAGE_COLLAPSE / vib` seconds — long enough to feel it go, and to give anyone standing on it a moment to leave — and then it is gone for the rest of the run. A displaced atom does not return to its site, so the lattice you damage stays damaged: the platform is not coming back, and the hole you made is now part of the level.
 
@@ -138,8 +147,10 @@ Speed matters because the budget is a clock: the same two-row sweep costs 55
 electrons at 70 px/s and 20 at 200 px/s.
 
 **Knock-out only punishes lingering.** Sweeping a row at top speed (~120 px/s)
-destroys nothing. At 90 px/s it costs 4 columns; at 70 px/s, 45. The dose model
-therefore reads as "keep scanning, don't hover", which is the intended lesson.
+destroys nothing. At 90 px/s it costs nothing either; at 70 px/s it costs 36
+columns. The dose model therefore reads as "keep scanning, don't hover", which
+is the intended lesson — and the net-rate change above deliberately did not
+soften it, because the punishment is horizontal and the change is vertical.
 
 **Difficulty is gap geometry, not input forgiveness.** Columns sit on a 90px
 pitch. At the original collision width (`r · 2.3` ≈ 40px) the gaps were 50px —
@@ -168,18 +179,24 @@ are noisy), driven by a route-following bot at a fixed timestep:
 
 | Bot | Reconstructed | Electrons | Knock-outs | Falls | Endings (of 7) |
 |---|---|---|---|---|---|
-| routed, blanking | 84% | 91 | 0 | 4 | solved 2, exhausted 2, lost 1, route ran out 2 |
-| routed, beam always on | 76% | 100 | 8 | 3 | exhausted 5, lost 2 |
-| loose jump timing, blanking | 86% | 90 | 0 | 4 | **solved 6**, exhausted 1 |
-| loose timing, beam always on | 58% | 96 | 23 | 3 | lost 6, exhausted 1 |
-| random inputs (n=200) | 7% | 94 | — | 7 | lost 189, exhausted 11 |
+| routed, blanking | 86% | 89 | 0 | 4 | **solved 7** |
+| routed, beam always on | 80% | 94 | 2 | 3 | lost 3, solved 2, exhausted 2 |
+| loose jump timing, blanking | 86% | 79 | 0 | 3 | **solved 7** |
+| loose timing, beam always on | 56% | 95 | 20 | 2 | lost 7 |
+| random inputs (n=200) | 5% | 94 | — | 7 | lost 178, exhausted 22 |
 
-Two things fall out of this. Blanking is worth roughly 25 percentage points and
-about twenty columns of the specimen, which is the lesson the game exists to
-teach. And a bot that falls four times has spent 48 of its 100 electrons on
+Two things fall out of this. Blanking is worth roughly 30 percentage points and
+twenty columns of the specimen, which is the lesson the game exists to teach.
+And a bot that falls four times has spent 48 of its 100 electrons on
 re-alignment — the end card says so in as many words, because "you lost the
 probe four times, 48 of those electrons went on re-aligning it rather than on
 looking at anything" is the whole feedback loop in one line.
+
+The unconditional-anneal change moved these: the routed rows gained 2–4 points
+and the routed-with-blanking bot went from solving 2 runs in 7 to solving all 7.
+That is the cost of making the gauge honest, and it lands entirely on players
+who are already routing well. The unblanked rows barely moved, so the gap the
+game is built around survived intact.
 
 Before the change, the same panel was 100% *Probe lost* at 14–53s with 60–80
 electrons still in the tank. Now the endings are a real mix and every run uses
@@ -379,7 +396,7 @@ near the spawn.
 - **Field notes are logged but barely surfaced.** Dopant facts now persist across sessions and the end card carries a Notes count, but there is no place to re-read one you have already found.
 - **`DOSE_BUDGET` is measured against a bot, not a player.** 100 comes from headless simulation of routed sweeps and of naive edge-running (see **Balance**). Both are proxies; no human has played against the new number.
 - **A bad run still reads as *Probe lost*, because it is.** Stage re-insertion moved the pressure onto the budget — routed play now ends on *solved* or *beam exhausted* — but a random-input run falls seven times, spends 84 of its 94 electrons on re-alignment, and then hits the detector with nothing left to pay with. That ending is accurate and the card explains it, but the underlying precision demand of the platforming is untouched: unconverged lattice is not solid and cannot be converged on the way past (0.5s of dwell needed, under 0.3s in range at fall speed). Widening the columns further is the measured lever if playtesting says it is still too steep.
-- **85% may now be too *easy* a win bar for a good player.** The bar was moved down from all 152 columns because nothing could reach it; a routed bot on a base instrument now solves the lattice in about half its attempts, before spending a single upgrade. Whether that leaves the draft enough to do is unmeasured, and pushing the bar back up is a one-constant change.
+- **85% is now too *easy* a win bar for a good player.** The bar was moved down from all 152 columns because nothing could reach it. A routed bot on a base instrument used to solve about half its attempts; since dose became a net rate it solves **all seven of seven**, before spending a single upgrade. Two rows ridden end to end cover 86% for 33 of the 100 electrons, so the ceiling is structural: a player who knows the route has nothing left to spend the budget on. Raising `WIN_FRAC` is a one-constant change, but the honest fix is a lattice whose coverage is not saturated by two horizontal sweeps.
 - **The upgrade curve is untuned.** Step sizes, the 40%/70% pick thresholds and 21 total picks are estimates, not playtest results. A fully upgraded instrument may trivialise the single level.
 - **Nothing to spend picks on once maxed.** With every line at level 3 the draft is over and further sessions give no progression — the medium-term answer is more levels, not more upgrade tiers.
 - **Blanking is still taught by text, just at a better moment.** The prompt now fires the first time the beam has spent three seconds with nothing new in range and 15 electrons already gone, and only once across all sessions. The beam hum cutting out on SHIFT teaches the same thing by ear. Neither is the "level 1-1" geometry the principle below actually asks for.

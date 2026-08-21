@@ -644,9 +644,17 @@
   // ---------------------------------------------------------------------
   // Tuned so standing on a carbon knocks it out in ~2s (matching the old
   // dwell timer), while a neighbour one lattice spacing away takes ~5s.
-  const DOSE_PEAK = 1.1;        // dose/sec delivered at the focal spot
+  const DOSE_PEAK = 1.7;        // dose/sec delivered at the focal spot
   const DOSE_FALLOFF = 70;      // px; intensity is halved around here
-  const DOSE_ANNEAL = 0.25;     // dose/sec bleeding off once the probe leaves
+  const DOSE_ANNEAL = 0.25;     // dose/sec bleeding off, always, everywhere
+  // The probe is focused *in* the specimen plane. Leaving that plane
+  // defocuses it, and a defocused probe spreads the same current over a much
+  // larger disc, so the dose density on any one column drops fast. Vertical
+  // distance therefore counts for more than horizontal: this is the factor it
+  // counts for. It is also the only reason jumping off a column works as an
+  // escape — without it the whole 0.6s arc stays inside the beam's waist and
+  // the gauge you are trying to outrun keeps filling while you are airborne.
+  const DOSE_DEFOCUS = 2.0;     // vertical px count this much toward the falloff
   const DOSE_LIMIT = 2.0;       // carbon's knock-out threshold; heavier atoms scale up
   const DOSE_WARN_FRAC = 0.55;  // fraction of the limit that starts the warning ring
   const DAMAGE_COLLAPSE = 0.5;  // sec a carbon column survives after knock-out
@@ -1638,10 +1646,19 @@
     for (const a of world) {
       const ddx = a.x - cx, ddy = (a.y + a.wobbleOffset) - cy;
       const d2 = ddx * ddx + ddy * ddy;
-      if (beamOn && d2 < resolveRadiusEff * resolveRadiusEff) {
-        a.dose += (DOSE_PEAK / (1 + d2 / (DOSE_FALLOFF * DOSE_FALLOFF))) * dt;
-      } else if (!a.damaged && a.dose > 0) {
-        a.dose = Math.max(0, a.dose - doseAnnealEff * dt);
+      // Deposition and annealing both run all the time, and the arc shows the
+      // net. The old model only annealed *outside* the probe field, which made
+      // the gauge a ratchet: anywhere inside 150px it could climb but never
+      // fall, so backing off did nothing until you crossed a hard edge. Now
+      // moving away is visible on the ring immediately, and far enough away
+      // the arc winds back down while the beam is still on.
+      if (!a.damaged) {
+        const dd2 = ddx * ddx + (ddy * DOSE_DEFOCUS) * (ddy * DOSE_DEFOCUS);
+        let rate = -doseAnnealEff;
+        if (beamOn && d2 < resolveRadiusEff * resolveRadiusEff) {
+          rate += DOSE_PEAK / (1 + dd2 / (DOSE_FALLOFF * DOSE_FALLOFF));
+        }
+        a.dose = Math.max(0, a.dose + rate * dt);
       }
 
       if (!a.damaged) {

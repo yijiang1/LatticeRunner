@@ -6,6 +6,8 @@ You play a scanning probe crossing an atomic lattice. Atom columns are your plat
 
 The catch is the central bargain of electron microscopy: **to see an atom you have to hit it with electrons, and the electrons knock it out.** Proximity is what resolves an atom and proximity is what destroys it — the same act, two consequences. You carry one specimen's worth of dose, and how much of the picture you get to see before the beam runs out is the score.
 
+The orange arc around a column is a net gauge: dose going in, minus the damage annealing back out. Getting away winds it down, and getting away vertically works best, because the probe is focused in the specimen plane and jumping defocuses it. So the arc filling under your feet is something you can actually outrun — jump, and it stalls.
+
 Knock-out is permanent. A column you overexpose collapses out of its site and does not come back, so the platform you were standing on can become the hole you fall through — and below the lattice there is only the detector.
 
 Falling isn't the end of the session, though. A real operator who loses the probe retracts the stage, re-inserts, and re-finds focus, and that costs beam time; so does this. You get put back on the nearest column still standing, twelve electrons lighter. The run only ends down there when there is nothing left to pay with.
@@ -72,9 +74,9 @@ Synthesised at runtime — no samples, still one file. The only continuous sound
 
 The tuning is measured rather than guessed, by driving the shipped game headlessly at a fixed timestep. Riding one row end to end converges half the lattice for 20 electrons; rows 1 and 4 together solve it for 33. That's the floor. A bot that actually has to jump spends about 90 and falls four times on the way, which is 48 electrons gone on re-alignment rather than on looking at anything — the end card says so in as many words.
 
-Leaving the beam on costs roughly 25 percentage points and twenty destroyed columns against the same route played with blanking. That gap is the game.
+Leaving the beam on costs roughly 30 percentage points and twenty destroyed columns against the same route played with blanking. That gap is the game.
 
-Sweeping at full speed destroys nothing. Slow to 90 px/s and it costs four columns; slow to 70 and it costs forty-five. Hovering is the only thing the dose model punishes, which is the point.
+Sweeping at full speed destroys nothing, and neither does 90 px/s. Slow to 70 and it costs thirty-six columns. Hovering is the only thing the dose model punishes, which is the point.
 
 One fix worth calling out: horizontal damping used to be applied per frame rather than per second, so the probe's top speed depended on your refresh rate — 237 px/s at 30 Hz, 118 at 60, 49 at 144. Above about 90 Hz it could no longer clear a gap in the lattice, which made the game close to unplayable on a 120 Hz display. Top speed is now ~120 px/s on any monitor.
 
