@@ -6,7 +6,9 @@ You play a scanning probe crossing an atomic lattice. Atom columns are your plat
 
 The catch is the central bargain of electron microscopy: **to see an atom you have to hit it with electrons, and the electrons knock it out.** Proximity is what resolves an atom and proximity is what destroys it — the same act, two consequences. You carry one specimen's worth of dose, and how much of the picture you get to see before the beam runs out is the score.
 
-Knock-out is permanent. A column you overexpose collapses out of its site and does not come back, so the platform you were standing on can become the hole you fall through — and below the lattice there is only the detector, which ends the session.
+Knock-out is permanent. A column you overexpose collapses out of its site and does not come back, so the platform you were standing on can become the hole you fall through — and below the lattice there is only the detector.
+
+Falling isn't the end of the session, though. A real operator who loses the probe retracts the stage, re-inserts, and re-finds focus, and that costs beam time; so does this. You get put back on the nearest column still standing, twelve electrons lighter. The run only ends down there when there is nothing left to pay with.
 
 ## Play
 
@@ -16,11 +18,11 @@ It also runs inside the [PtychoHub](https://ptychohub.com) Kids section, which f
 
 ## Runs and upgrades
 
-A session ends when the electrons run out or the lattice is fully phased — then you draft. Three instruments are offered, you keep one, and it carries into every session after. How much of the picture you recovered decides how many picks you get: one always, two at 40%, three at 70%. Abandoning a run with **R** earns nothing.
+A session ends when the electrons run out or the reconstruction is solved — 85% of the lattice, which is where a real reconstruction stops being ambiguous — and then you draft. Three instruments are offered, you keep one, and it carries into every session after. How much of the picture you recovered decides how many picks you get: one always, two at 40%, three at 70%. Abandoning a run with **R** earns nothing.
 
 Every upgrade is a real technique for getting more picture out of fewer electrons — an 80 kV column that sits under carbon's knock-on threshold, mixed-state reconstruction, a direct electron detector, a fast blanker, wide-field scan coils, a cryo stage, sparse scanning. Seven lines, three levels each. Progress is kept in `localStorage`; if that's unavailable the game still runs, it just won't remember.
 
-This is also the answer to a problem the base game had: on a stock instrument, 100 electrons make a full reconstruction hard to reach. The full clear is something the rig earns over several sessions.
+On a stock instrument a solved reconstruction is reachable but tight — it leaves room for about three falls and not much sloppy routing. The rig is what makes it comfortable.
 
 ## Controls
 
@@ -29,6 +31,7 @@ This is also the answer to a problem the base game had: on a stock instrument, 1
 | ← → / A D | Move |
 | Space / ↑ / W | Jump — coyote time and jump buffering are on, so it forgives near-misses |
 | Shift (hold) | Blank the beam: no dose spent, no resolving, atoms cool off |
+| M | Mute / unmute |
 | R | Abandon the run and restart (earns no upgrade) |
 
 Blanking is the whole skill. Crossing ground you've already scanned costs nothing if the beam is off, so a good run is mostly about routing — not about moving fast.
@@ -61,9 +64,15 @@ Colour carries one meaning each: hue is element identity, and anything warm mean
 
 Under it: cached sphere sprites, a quarter-res additive bloom pass, three parallax layers, a false-colour phase LUT with the bonding network baked into the hidden image, device-pixel scanlines, film grain, and a DPR-aware canvas so none of it is soft on a retina display. Still one file, still no dependencies.
 
+## Sound
+
+Synthesised at runtime — no samples, still one file. The only continuous sound is the beam hum, and its filter opens as the probe heats up, so a column starting to cook is audible before the warning appears. It stops the instant you blank. That's the whole lesson of blanking, delivered by ear.
+
 ## Balance
 
-The tuning is measured rather than guessed. Riding one row end to end converges half the lattice for 20 electrons; rows 1 and 4 together reach 100% for 38. Running right and jumping at every edge — which drifts diagonally down the lattice and re-scans ground it has already covered — costs about 1.1 electrons per percent, so ~110 for the same picture. The budget of 100 sits between those two on purpose: sloppy routing runs out short, and row discipline plus blanking are what close the gap.
+The tuning is measured rather than guessed, by driving the shipped game headlessly at a fixed timestep. Riding one row end to end converges half the lattice for 20 electrons; rows 1 and 4 together solve it for 33. That's the floor. A bot that actually has to jump spends about 90 and falls four times on the way, which is 48 electrons gone on re-alignment rather than on looking at anything — the end card says so in as many words.
+
+Leaving the beam on costs roughly 25 percentage points and twenty destroyed columns against the same route played with blanking. That gap is the game.
 
 Sweeping at full speed destroys nothing. Slow to 90 px/s and it costs four columns; slow to 70 and it costs forty-five. Hovering is the only thing the dose model punishes, which is the point.
 

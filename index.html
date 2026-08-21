@@ -86,6 +86,14 @@
     box-shadow: inset 0 0 0 1px rgba(255,255,255,0.045);
   }
   .track .fill { height: 100%; width: 0; border-radius: 4px; }
+  /* the win bar, drawn on the track: "reconstructed" needs somewhere to
+     be heading, and a percentage in a sentence on the end card is not a
+     goal you can see from inside the run */
+  .track .goal {
+    position: absolute; top: 0; bottom: 0; width: 2px;
+    background: var(--mint); box-shadow: 0 0 9px var(--mint);
+    border-radius: 2px; opacity: 0.9;
+  }
   .track .ticks {
     position: absolute; inset: 0; pointer-events: none;
     background-image: repeating-linear-gradient(90deg,
@@ -220,11 +228,11 @@
     color: #9fbdd0; max-width: 52ch;
   }
   .stats {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px;
     background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.07);
     border-radius: 11px; overflow: hidden; margin: 20px 0 16px;
   }
-  .stats div { background: #0a1220; padding: 12px 8px; text-align: center; }
+  .stats div { background: #0a1220; padding: 12px 5px; text-align: center; }
   .stats .n {
     font: 300 22px/1 var(--sans); color: var(--ice);
     font-variant-numeric: tabular-nums;
@@ -389,11 +397,11 @@
       <span class="k">Reconstructed</span>
       <span class="v" id="meterPct">0<i>%</i></span>
     </div>
-    <div class="track"><div class="fill" id="meterFill"></div><div class="ticks"></div></div>
+    <div class="track"><div class="fill" id="meterFill"></div><div class="ticks"></div><div class="goal" id="meterGoal"></div></div>
 
     <div class="readout">
       <span class="k">Dose remaining</span>
-      <span class="v small" id="doseVal">130</span>
+      <span class="v small" id="doseVal">100</span>
     </div>
     <div class="track"><div class="fill" id="doseFill"></div><div class="ticks"></div></div>
 
@@ -410,6 +418,7 @@
   <span class="grp"><kbd>A</kbd><kbd>D</kbd> move</span>
   <span class="grp"><kbd>Space</kbd> jump</span>
   <span class="grp hl"><kbd>Shift</kbd> blank the beam</span>
+  <span class="grp"><kbd>M</kbd> sound</span>
   <span class="grp"><kbd>R</kbd> abandon run</span>
 </div>
 
@@ -430,7 +439,8 @@
         <div><div class="n" id="statPct">0<small>%</small></div><div class="l">Resolved</div></div>
         <div><div class="n" id="statDose">0</div><div class="l">Dose spent</div></div>
         <div><div class="n" id="statKo">0</div><div class="l">Knocked out</div></div>
-        <div><div class="n" id="statAtoms">0</div><div class="l">Atoms</div></div>
+        <div><div class="n" id="statRe">0</div><div class="l">Re-inserts</div></div>
+        <div><div class="n" id="statNotes">0</div><div class="l">Notes</div></div>
       </div>
       <div id="thumbWrap"><canvas id="thumb"></canvas><span>Recovered phase image</span></div>
       <div id="earned">
@@ -474,7 +484,8 @@
   const restartBtn = el("restartBtn"), warningEl = el("warning"), warnText = el("warnText");
   const toastEl = el("toast"), toastChip = el("toastChip"), toastText = el("toastText"), toastKind = el("toastKind");
   const hintsEl = el("hints"), thumb = el("thumb");
-  const statPct = el("statPct"), statDose = el("statDose"), statKo = el("statKo"), statAtoms = el("statAtoms");
+  const statPct = el("statPct"), statDose = el("statDose"), statKo = el("statKo");
+  const statRe = el("statRe"), statNotes = el("statNotes"), meterGoal = el("meterGoal");
   const card = el("card"), reportEyebrow = el("reportEyebrow"), rigEl = el("rig");
   const earnVal = el("earnVal"), earnUnit = el("earnUnit"), earnBrk = el("earnBrk");
   const labTitle = el("labTitle"), labText = el("labText"), pickLeft = el("pickLeft");
@@ -528,6 +539,10 @@
     130: { symbol: "O", r: 18,
       fact: "O — oxygen dopants are light and hard to see with X-rays, but electron ptychography can resolve them directly." },
   };
+
+  const DOPANT_DEFS_BY_SYMBOL = {};
+  for (const k of Object.keys(DOPANT_DEFS)) DOPANT_DEFS_BY_SYMBOL[DOPANT_DEFS[k].symbol] = DOPANT_DEFS[k];
+  const FIELD_NOTES_TOTAL = Object.keys(DOPANT_DEFS_BY_SYMBOL).length;
 
   // "Wobble" atoms drift once resolved — an environmental scan-drift hazard,
   // distinct from the dose damage you inflict yourself by lingering.
@@ -654,6 +669,32 @@
   const DOSE_BUDGET = 100;      // units; 1 unit = 1 second of beam-on time
   const BEAM_DRAIN = 1.0;       // units/sec while unblanked
 
+  // Falling off the lattice used to end the session outright, and that was
+  // the single worst thing about the balance: every measured run, at every
+  // skill level the harness could model, ended on "probe lost" with 75+
+  // electrons still unspent. The resource the whole game is about was never
+  // the thing that ran out.
+  //
+  // A real operator who loses the probe does not throw the specimen away.
+  // They retract the stage, re-insert, and re-find focus — and that costs
+  // beam time. So does this. Falling is now expensive instead of terminal,
+  // and the cost lands on the dose budget, which is where the pressure was
+  // always supposed to live. The run still ends down there if there is not
+  // enough beam left to re-align, or nothing left standing to re-align onto.
+  // 12 is measured. Below it a routed player clears the win bar without ever
+  // feeling the falls; above it even a clean route runs the budget dry. At 12
+  // a routed run solves the lattice on 77-88 of its 100 electrons, the same
+  // route with the beam left on lands at 80% — just short — and a sloppy
+  // unblanked run lands near 50%. Falling is what those runs spend on.
+  const REALIGN_COST = 12;      // electrons burned retracting and re-focusing
+  const REALIGN_GRACE = 0.7;    // sec of blanked beam while the stage settles
+
+  // A reconstruction is not called solved when every column is perfect; it
+  // is called solved when the structure is unambiguous. Requiring all 152
+  // columns made "complete" a bar the base instrument could not clear at any
+  // skill level, which turned the win state into decoration.
+  const WIN_FRAC = 0.85;
+
   const RESOLVE_RADIUS = 150;      // must be this close to build resolve progress
   const RESOLVE_TIME = 0.5;        // seconds of continuous presence to fully resolve
   const RESOLVE_DECAY_MULT = 2.2;  // progress bleeds off faster than it builds when you leave
@@ -719,7 +760,7 @@
   // localStorage is unavailable in private mode and in some sandboxed
   // iframes. The game has to run there too — just without carrying progress.
   const SAVE_KEY = "latticeRunner.v1";
-  const save = { sessions: 0, picks: 0, best: 0, levels: {} };
+  const save = { sessions: 0, picks: 0, best: 0, levels: {}, found: {}, muted: false, taughtBlank: 0 };
   (function loadSave() {
     try {
       const raw = window.localStorage.getItem(SAVE_KEY);
@@ -729,6 +770,13 @@
         save.picks = Math.max(0, p.picks | 0);
         save.best = Math.max(0, Math.min(100, p.best | 0));
         if (p.levels && typeof p.levels === "object") Object.assign(save.levels, p.levels);
+        // the dopant facts are the one thing worth carrying between runs that
+        // isn't an upgrade — a field notebook, not a score
+        if (p.found && typeof p.found === "object") {
+          for (const k of Object.keys(p.found)) if (DOPANT_DEFS_BY_SYMBOL[k]) save.found[k] = 1;
+        }
+        save.muted = !!p.muted;
+        save.taughtBlank = p.taughtBlank ? 1 : 0;
       }
     } catch (e) { /* no persistence here; play on */ }
     for (const u of UPGRADES) {
@@ -738,6 +786,141 @@
   function writeSave() {
     try { window.localStorage.setItem(SAVE_KEY, JSON.stringify(save)); } catch (e) {}
   }
+
+  // ---------------------------------------------------------------------
+  // Sound. Synthesised on the fly, because a single self-contained file has
+  // nowhere to put a sample and no build step to inline one. Everything
+  // below is an oscillator or a burst of noise through a filter, which
+  // suits the subject: the continuous sound is the beam being on, and it
+  // stops the instant SHIFT goes down. That is the blanking lesson taught
+  // by ear, which is closer to teach-through-geometry than a line of text.
+  //
+  // Nothing is constructed until the first key press — browsers refuse to
+  // start an AudioContext without a gesture — so on a page nobody has
+  // touched, and in the headless balance harness, every call here is a
+  // no-op against a null context.
+  // ---------------------------------------------------------------------
+  const sfx = (function () {
+    let AC = window.AudioContext || window.webkitAudioContext;
+    let ac = null, master = null, humGain = null, humLP = null, noiseBuf = null;
+    const VOLUME = 0.45;
+
+    function ensure() {
+      if (ac || !AC) return ac;
+      try { ac = new AC(); } catch (e) { AC = null; return null; }
+      master = ac.createGain();
+      master.gain.value = save.muted ? 0 : VOLUME;
+      master.connect(ac.destination);
+
+      // the beam hum: detuned saws under a low-pass, so it reads as
+      // instrument noise rather than a musical note
+      humGain = ac.createGain(); humGain.gain.value = 0;
+      humLP = ac.createBiquadFilter(); humLP.type = "lowpass"; humLP.frequency.value = 260;
+      humGain.connect(humLP); humLP.connect(master);
+      for (const f of [55, 82.5, 110.7]) {
+        const o = ac.createOscillator();
+        o.type = f > 100 ? "triangle" : "sawtooth";
+        o.frequency.value = f;
+        const g = ac.createGain(); g.gain.value = f > 100 ? 0.3 : 0.5;
+        o.connect(g); g.connect(humGain); o.start();
+      }
+
+      const n = Math.floor(ac.sampleRate * 0.6);
+      noiseBuf = ac.createBuffer(1, n, ac.sampleRate);
+      const d = noiseBuf.getChannelData(0);
+      for (let i = 0; i < n; i++) d[i] = Math.random() * 2 - 1;
+      return ac;
+    }
+
+    // a pitched one-shot with a pluck envelope and an optional sweep.
+    // Never calls ensure(): until a gesture has built the context there is
+    // nothing to play into, and silently doing nothing is the correct
+    // behaviour both on an untouched page and in the headless harness.
+    function tone(freq, dur, o2) {
+      const c = ac; if (!c) return;
+      const t = c.currentTime, o = c.createOscillator(), g = c.createGain();
+      o.type = o2.type || "sine";
+      o.frequency.setValueAtTime(freq, t);
+      if (o2.to) o.frequency.exponentialRampToValueAtTime(Math.max(20, o2.to), t + dur);
+      const peak = o2.gain != null ? o2.gain : 0.2;
+      g.gain.setValueAtTime(0.0001, t);
+      g.gain.exponentialRampToValueAtTime(peak, t + Math.min(0.02, dur * 0.3));
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      o.connect(g); g.connect(master);
+      o.start(t); o.stop(t + dur + 0.03);
+    }
+
+    // a filtered noise burst — impacts, cracks, the stage moving
+    function burst(dur, o2) {
+      const c = ac; if (!c) return;
+      const t = c.currentTime;
+      const src = c.createBufferSource(); src.buffer = noiseBuf;
+      const f = c.createBiquadFilter(), g = c.createGain();
+      f.type = o2.type || "bandpass";
+      f.frequency.setValueAtTime(o2.freq, t);
+      if (o2.to) f.frequency.exponentialRampToValueAtTime(Math.max(40, o2.to), t + dur);
+      f.Q.value = o2.q || 1.2;
+      g.gain.setValueAtTime(o2.gain != null ? o2.gain : 0.18, t);
+      g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
+      src.connect(f); f.connect(g); g.connect(master);
+      src.start(t); src.stop(t + dur + 0.03);
+    }
+
+    return {
+      // called from the first keydown and the first click; both are gestures
+      unlock() {
+        const c = ensure();
+        if (c && c.state === "suspended") { try { c.resume(); } catch (e) {} }
+      },
+      toggle() {
+        save.muted = !save.muted;
+        writeSave();
+        const c = ensure();
+        if (c) master.gain.setTargetAtTime(save.muted ? 0 : VOLUME, c.currentTime, 0.02);
+        return !save.muted;
+      },
+      get muted() { return save.muted; },
+      // the hum follows the beam, and its low-pass opens as the probe heats
+      // up — so cooking a column is audible before the warning ever fires
+      beam(on, heat) {
+        if (!ac) return;
+        const t = ac.currentTime;
+        humGain.gain.setTargetAtTime(on ? 0.17 : 0, t, 0.045);
+        humLP.frequency.setTargetAtTime(240 + heat * heat * 1400, t, 0.1);
+      },
+      jump() { tone(300, 0.15, { type: "triangle", to: 540, gain: 0.13 }); },
+      land(v) {
+        tone(122, 0.15, { type: "sine", to: 52, gain: Math.min(0.28, 0.07 + v / 4600) });
+        burst(0.08, { type: "lowpass", freq: 700, to: 190, gain: 0.09 });
+      },
+      // pitch tracks vibration, so heavy columns land lower than light ones —
+      // the same sqrt(mass) that drives everything else about them
+      resolve(vib) {
+        const k = 0.55 + vib * 0.45;
+        tone(660 * k, 0.32, { type: "sine", gain: 0.1 });
+        tone(990 * k, 0.2, { type: "sine", gain: 0.045 });
+      },
+      dopant() {
+        tone(784, 0.5, { type: "triangle", gain: 0.1 });
+        tone(1176, 0.44, { type: "sine", gain: 0.055 });
+      },
+      knockout() {
+        burst(0.4, { type: "bandpass", freq: 2600, to: 170, q: 0.8, gain: 0.26 });
+        tone(92, 0.38, { type: "sawtooth", to: 40, gain: 0.15 });
+      },
+      realign() {
+        tone(150, 0.5, { type: "sine", to: 620, gain: 0.15 });
+        burst(0.32, { type: "highpass", freq: 320, to: 2600, gain: 0.07 });
+      },
+      low() { tone(560, 0.09, { type: "square", gain: 0.06 }); },
+      over(kind) {
+        const root = kind === "complete" ? 392 : kind === "lost" ? 156 : 208;
+        const ratios = kind === "lost" ? [1, 0.84, 0.67] : [1, 1.26, 1.5];
+        ratios.forEach((r, i) => setTimeout(
+          () => tone(root * r, 0.75, { type: "triangle", gain: 0.12 }), i * 135));
+      },
+    };
+  })();
 
   function levelOf(u) { return save.levels[u.id] | 0; }
   function valueAt(u, level) { return level > 0 ? u.steps[level - 1] : u.identity; }
@@ -827,12 +1010,20 @@
   const SPECIMEN_RIGHT = Math.max(...world.map(a => a.x)) - 10;
 
   const totalResolvable = world.length;
+  // what "solved" means, in columns rather than in a percentage
+  const WIN_COUNT = Math.max(1, Math.ceil(totalResolvable * WIN_FRAC));
   let resolvedCount = SEEDED.size; // the columns the survey scan already has
   let doseSpent = 0;     // against DOSE_BUDGET
   let damagedCount = 0;
   let probeHeat = 0;     // 0..1, how close the worst-hit nearby atom is to knocking out
   let beamOn = true;     // false while SHIFT is held
   let runOver = false;   // budget exhausted or lattice fully resolved
+  let realignCount = 0;  // times the stage had to be retracted and re-inserted
+  let realignGrace = 0;  // sec left of blanked beam while the stage settles
+  let lastSafeAtom = null;
+  let lowWarned = false; // the one-shot beep when the budget gets thin
+  let wastedBeam = 0;    // sec of beam spent with nothing new in range
+  let blankedEver = false;
 
   // ---------------------------------------------------------------------
   // Player (the scanning probe)
@@ -863,11 +1054,20 @@
   let hintsFading = 0, hintsArmed = false;
   window.addEventListener("keydown", (e) => {
     const k = e.key.toLowerCase();
+    sfx.unlock(); // an AudioContext needs a gesture; this is the first one
     if (!e.repeat && JUMP_KEYS.has(k)) player.jumpBufferTimer = JUMP_BUFFER_TIME;
     if (MOVE_KEYS.has(k)) hintsArmed = true;
     keys[k] = true;
     if (k === "r") resetGame();
+    if (k === "m" && !e.repeat) {
+      const on = sfx.toggle();
+      showNote(on ? "Sound on" : "Sound off",
+        on ? "The hum is the beam. It stops when you blank."
+           : "Muted for this browser — press M again to bring it back.",
+        on ? "\u266a" : "\u2013", "#bff0ff", "#5ad4ff", "150,225,255");
+    }
   });
+  window.addEventListener("pointerdown", () => sfx.unlock(), { once: true });
   window.addEventListener("keyup", (e) => { keys[e.key.toLowerCase()] = false; });
   // losing focus mid-hold would otherwise leave the beam blanked forever
   window.addEventListener("blur", () => { for (const k in keys) keys[k] = false; });
@@ -894,6 +1094,9 @@
     resolvedCount = SEEDED.size;
     doseSpent = 0; damagedCount = 0; probeHeat = 0;
     beamOn = true; runOver = false;
+    realignCount = 0; realignGrace = 0; lastSafeAtom = null;
+    lowWarned = false; wastedBeam = 0; blankedEver = false;
+    camera.init = false;
     particles.length = 0; rings.length = 0; shake = 0;
     // skipping a draft banks the picks but must not lock in that offer —
     // the next session rolls a fresh three
@@ -911,6 +1114,51 @@
   });
   beginBtn.addEventListener("click", resetGame);
 
+  // ---------------------------------------------------------------------
+  // Losing the probe. Where to put it back: the nearest column still standing
+  // to where the probe went down, not the spawn. Falling is meant to cost
+  // electrons, not progress — sending the player back across specimen they
+  // have already paid to scan would charge them twice for one mistake.
+  // ---------------------------------------------------------------------
+  function recoveryAtom(x) {
+    let best = null, bestD = Infinity;
+    for (const a of world) {
+      if (!a.resolved || a.damaged) continue;
+      const d = Math.abs(a.x - x);
+      if (d < bestD) { bestD = d; best = a; }
+    }
+    if (best) return best;
+    return (lastSafeAtom && lastSafeAtom.resolved && !lastSafeAtom.damaged) ? lastSafeAtom : null;
+  }
+
+  function recoverProbe(x) {
+    const home = recoveryAtom(x);
+    // Two ways the retract genuinely cannot happen: nothing left standing to
+    // re-insert onto, or not enough beam left to re-find focus. Both end the
+    // session down here, and the card says which.
+    if (!home || doseBudgetEff - doseSpent < REALIGN_COST) { endRun("lost"); return; }
+
+    doseSpent = Math.min(doseBudgetEff, doseSpent + REALIGN_COST);
+    realignCount++;
+    player.x = home.x - player.w / 2;
+    player.y = (home.y + home.wobbleOffset) - home.r * 0.45 - player.h - 1;
+    player.vx = 0; player.vy = 0;
+    player.onGround = true; player.standingOn = home;
+    player.coyoteTimer = COYOTE_TIME; player.jumpBufferTimer = 0;
+    player.trail.length = 0;
+    realignGrace = REALIGN_GRACE;
+    camera.init = false; // snap, rather than sweeping the whole specimen
+    emitRing(home.x, home.y, 8, 150, 0.55, "150,225,255", 2.4);
+    emit(home.x, home.y, 14,
+      { ang: -Math.PI / 2, spread: 2.4, speed: 150, life: 0.6, size: 1.8,
+        glow: "150,225,255", drag: 0.9 });
+    sfx.realign();
+    const left = Math.round(doseBudgetEff - doseSpent);
+    showNote("Stage re-inserted",
+      `Retracting and re-finding focus cost ${REALIGN_COST} electrons. ${left} left.`,
+      "\u21ba", "#bff0ff", "#5ad4ff", "150,225,255");
+  }
+
   // Two ways a run ends: the lattice is fully phased, or the budget is gone.
   // Neither is a failure screen — the score is how much of the specimen you
   // got to see, and what you spent to see it.
@@ -926,29 +1174,37 @@
     const dmg = damagedCount === 0
       ? "not one atom knocked out"
       : `${damagedCount} atom${damagedCount > 1 ? "s" : ""} knocked out`;
+    const spentOnFalling = realignCount * REALIGN_COST;
+    const fellLine = realignCount === 0 ? "" :
+      ` You lost the probe ${realignCount} time${realignCount > 1 ? "s" : ""} — ` +
+      `${spentOnFalling} of those electrons went on re-aligning it, not on looking at anything.`;
     if (kind === "complete") {
-      overlayTitle.textContent = "Reconstruction complete";
+      overlayTitle.textContent = "Reconstruction solved";
       overlayTitle.style.color = "#7dffc4";
       overlayText.textContent =
-        `Fully phased on ${doseSpent.toFixed(0)} of ${doseBudgetEff.toFixed(0)} electrons, ${dmg}. ` +
-        `Every electron you didn't spend is specimen that survived — that is the whole game of low-dose imaging.`;
+        `${pct}% of the lattice phased on ${doseSpent.toFixed(0)} of ${doseBudgetEff.toFixed(0)} electrons, ${dmg}. ` +
+        `Past ${Math.round(WIN_FRAC * 100)}% the structure is unambiguous — a real reconstruction is called solved there, ` +
+        `not at every last column. Every electron you didn't spend is specimen that survived.` + fellLine;
     } else if (kind === "lost") {
       overlayTitle.textContent = "Probe lost";
       overlayTitle.style.color = "#ff8f6b";
       overlayText.textContent =
-        `The probe dropped past the last atom column and struck the detector at ${pct}% resolved, ${dmg}. ` +
-        `Nothing below the lattice is close enough to climb back onto — down there the session is already over.`;
+        `The probe struck the detector at ${pct}% resolved, ${dmg}, with too little beam left to retract the stage ` +
+        `and re-find focus. Falling is survivable — ${REALIGN_COST} electrons a time — right up until it isn't.` + fellLine;
     } else {
       overlayTitle.textContent = "Beam exhausted";
       overlayTitle.style.color = "#ffc078";
       overlayText.textContent =
         `${pct}% of the lattice resolved before the electrons ran out, ${dmg}. ` +
-        `Blank the beam (SHIFT) across ground you have already scanned and the same budget goes much further.`;
+        `Blank the beam (SHIFT) across ground you have already scanned and the same budget goes much further.` + fellLine;
     }
     statPct.innerHTML = pct + "<small>%</small>";
     statDose.textContent = doseSpent.toFixed(0);
     statKo.textContent = String(damagedCount);
-    statAtoms.textContent = `${resolvedCount}/${totalResolvable}`;
+    statRe.textContent = String(realignCount);
+    statNotes.textContent = `${Object.keys(save.found).length}/${FIELD_NOTES_TOTAL}`;
+    sfx.beam(false, 0);
+    sfx.over(kind);
     paintThumbnail();
 
     save.sessions++;
@@ -1095,6 +1351,7 @@
     }
   }
   renderRig();
+  meterGoal.style.left = Math.round(WIN_FRAC * 100) + "%";
 
   function aabbOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
     return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
@@ -1103,17 +1360,32 @@
   let lastTime = performance.now();
   let simTime = 0;
 
+  // One toast, three jobs now: dopant facts, the stage re-insertion receipt,
+  // and the single blanking prompt a player ever sees.
   let toastTimer = null;
-  function showFact(atom) {
-    const art = ELEMENT_ART[atom.element] || ELEMENT_ART.C;
-    toastChip.textContent = atom.element;
-    toastChip.style.background = `linear-gradient(160deg, ${art.core}, ${art.mid})`;
-    toastChip.style.boxShadow = `0 0 18px rgba(${art.glow},0.45)`;
-    toastKind.textContent = atom.dopant ? "Dopant resolved" : "Site resolved";
-    toastText.textContent = atom.dopantDef.fact.replace(/^[A-Za-z]{1,2}\s+—\s+/, "");
+  function showNote(kind, text, chip, colA, colB, glow) {
+    toastChip.textContent = chip;
+    toastChip.style.background = `linear-gradient(160deg, ${colA}, ${colB})`;
+    toastChip.style.boxShadow = `0 0 18px rgba(${glow},0.45)`;
+    toastKind.textContent = kind;
+    toastText.textContent = text;
     toastEl.classList.add("on");
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => { toastEl.classList.remove("on"); }, 5200);
+  }
+
+  // Dopant facts are the one thing worth carrying between sessions that
+  // isn't an upgrade, so the notebook persists: a symbol you have already
+  // logged says so rather than pretending to be news.
+  function showFact(atom) {
+    const art = ELEMENT_ART[atom.element] || ELEMENT_ART.C;
+    const known = !!save.found[atom.element];
+    if (!known) { save.found[atom.element] = 1; writeSave(); }
+    const n = Object.keys(save.found).length;
+    showNote(
+      known ? `${atom.element} re-confirmed` : `Field note ${n} of ${FIELD_NOTES_TOTAL}`,
+      atom.dopantDef.fact.replace(/^[A-Za-z]{1,2}\s+—\s+/, ""),
+      atom.element, art.core, art.mid, art.glow);
   }
 
   // ---------------------------------------------------------------------
@@ -1181,7 +1453,11 @@
     simTime += dt;
 
     // --- beam state + global budget --------------------------------------
-    beamOn = !runOver && !keys["shift"];
+    // the beam stays off while the stage settles after a re-insertion, so
+    // you are never charged for the frames you didn't choose to be there
+    realignGrace = Math.max(0, realignGrace - dt);
+    if (keys["shift"]) blankedEver = true;
+    beamOn = !runOver && !keys["shift"] && realignGrace <= 0;
     if (beamOn) {
       doseSpent = Math.min(doseBudgetEff, doseSpent + BEAM_DRAIN * dt);
       if (doseSpent >= doseBudgetEff) { beamOn = false; endRun("exhausted"); }
@@ -1206,6 +1482,7 @@
       player.onGround = false;
       player.coyoteTimer = 0;
       player.jumpBufferTimer = 0;
+      sfx.jump();
       emit(player.x + player.w / 2, player.y + player.h, 5,
         { ang: Math.PI / 2, spread: 1.5, speed: 90, life: 0.3, size: 1.6, glow: "150,220,255", drag: 0.86 });
     }
@@ -1220,6 +1497,7 @@
     player.vy += GRAVITY * (player.vy > 0 ? FALL_GRAVITY_MULT : 1) * dt;
     if (player.vy > 1600) player.vy = 1600;
 
+    const prevBottom = player.y + player.h;
     player.x += player.vx * dt;
     player.y += player.vy * dt;
     const wasAirborne = !player.onGround;
@@ -1228,11 +1506,13 @@
 
     // --- build / decay resolve progress based on probe proximity ---
     const cx = player.x + player.w / 2, cy = player.y + player.h / 2;
+    let scanningSomething = false;
     for (const a of world) {
       if (a.resolved) { a.popIn = Math.min(1, a.popIn + dt * 5); continue; }
       const dx = a.x - cx, dy = a.y - cy;
       const near = beamOn && (dx * dx + dy * dy) < resolveRadiusEff * resolveRadiusEff;
       if (near) {
+        scanningSomething = true;
         a.resolveProgress = Math.min(1, a.resolveProgress + dt / resolveTimeEff);
         eraseFogAt(a);
         if (a.resolveProgress >= 1 && !a.resolved) {
@@ -1242,6 +1522,7 @@
           emit(a.x, a.y, a.dopant ? 16 : 9,
             { speed: 130, life: 0.55, size: 1.9, glow: art.glow, drag: 0.9 });
           emitRing(a.x, a.y, a.r * 0.7, a.r * (a.dopant ? 4.4 : 3.2), 0.5, art.glow, 2.2);
+          if (a.dopant) sfx.dopant(); else sfx.resolve(a.vib);
           if (a.dopantDef && !a.factShown) {
             a.factShown = true;
             showFact(a);
@@ -1250,6 +1531,22 @@
       } else if (a.resolveProgress > 0) {
         a.resolveProgress = Math.max(0, a.resolveProgress - dt / resolveTimeEff * decayMultEff);
       }
+    }
+
+    // Blanking is the one mechanic geometry cannot teach on its own: nothing
+    // on screen looks different when the beam is burning through ground the
+    // scan already has. So it is taught at the moment it first costs
+    // something — and once ever, across all sessions, not once per run.
+    if (beamOn && !scanningSomething) wastedBeam += dt;
+    else wastedBeam = Math.max(0, wastedBeam - dt * 2);
+    // not in the first seconds of a first session — the lesson only means
+    // anything once there is a spent budget to point at
+    if (!save.taughtBlank && !blankedEver && wastedBeam > 3 && doseSpent > 15) {
+      save.taughtBlank = 1; writeSave();
+      showNote("Beam on, nothing new in range",
+        "You are spending electrons on lattice the scan already has. Hold SHIFT to blank the beam \u2014 " +
+        "crossing ground you have already resolved costs nothing.",
+        "\u21e7", "#bff0ff", "#5ad4ff", "150,225,255");
     }
 
     // --- drifting hazard atoms bob once resolved and undamaged ---
@@ -1277,6 +1574,19 @@
       const pw = a.dopant ? a.r * 3.0 : a.r * 2.7;
       const ph = a.r * 0.9;
       const bx = a.x - pw / 2, by = ay - ph / 2;
+      // Swept landing test. A column top is only ~24px tall, and at terminal
+      // fall speed a single 33ms frame carries the probe 53px — clean through
+      // it, with a discrete overlap test seeing nothing at either end. If the
+      // probe started the frame above the top and finished it below, it
+      // landed, whatever the boxes say now.
+      if (player.vy > 0 && prevBottom <= by + 1 && player.y + player.h > by &&
+          player.x < bx + pw && player.x + player.w > bx) {
+        player.y = by - player.h;
+        player.vy = 0;
+        player.onGround = true;
+        player.standingOn = a;
+        continue;
+      }
       if (aabbOverlap(player.x, player.y, player.w, player.h, bx, by, pw, ph)) {
         const overlapX = Math.min(player.x + player.w - bx, bx + pw - player.x);
         const overlapY = Math.min(player.y + player.h - by, by + ph - player.y);
@@ -1304,11 +1614,20 @@
       }
     }
 
+    // where a re-inserted probe gets put back: the last column that actually
+    // held it, captured before the beam has a chance to take that column out
+    if (player.standingOn && player.standingOn.resolved && !player.standingOn.damaged) {
+      lastSafeAtom = player.standingOn;
+    }
+
     // landing juice: squash the focal spot and kick a little scatter out
-    if (player.onGround && wasAirborne && fallSpeedBefore > 420) {
-      player.landSquash = Math.min(1, fallSpeedBefore / 1300);
-      emit(player.x + player.w / 2, player.y + player.h, 6,
-        { ang: 0, spread: TAU, speed: 110, life: 0.28, size: 1.5, glow: "160,225,255", drag: 0.85 });
+    if (player.onGround && wasAirborne) {
+      if (fallSpeedBefore > 420) {
+        player.landSquash = Math.min(1, fallSpeedBefore / 1300);
+        emit(player.x + player.w / 2, player.y + player.h, 6,
+          { ang: 0, spread: TAU, speed: 110, life: 0.28, size: 1.5, glow: "160,225,255", drag: 0.85 });
+      }
+      if (fallSpeedBefore > 120) sfx.land(fallSpeedBefore);
     }
     player.landSquash = Math.max(0, player.landSquash - dt * 4.5);
 
@@ -1335,6 +1654,7 @@
             { speed: 200, life: 0.8, size: 2.1, glow: "255,130,70", grav: 240, drag: 0.93 });
           emitRing(a.x, a.y + a.wobbleOffset, a.r * 0.8, a.r * 5.5, 0.6, "255,120,60", 2.6);
           shake = Math.min(9, shake + 6);
+          sfx.knockout();
         }
       } else if (!a.gone) {
         // A displaced atom does not come back. The column flickers while it
@@ -1381,8 +1701,10 @@
 
     // --- the detector plane is the bottom of the world --------------------
     // The lattice's lowest row sits ~470px above it and a full jump clears
-    // ~114px, so there is no climbing back: reaching the detector is the end
-    // of the session, not a ledge to stand on.
+    // ~114px, so there is no climbing back out of here under your own power.
+    // Hitting it retracts the stage and re-inserts the probe over the lattice
+    // at a real cost in electrons; the session only ends down here when there
+    // is no beam left to pay it, or no column left to come back to.
     if (player.y + player.h > GROUND_Y) {
       const impactX = player.x + player.w / 2;
       player.y = GROUND_Y - player.h;
@@ -1394,7 +1716,7 @@
             glow: "150,225,255", grav: 420, drag: 0.93 });
         emitRing(impactX, GROUND_Y, 6, 190, 0.7, "150,225,255", 3);
         shake = 12;
-        endRun("lost");
+        recoverProbe(impactX);
       }
     }
 
@@ -1422,12 +1744,16 @@
     const left = doseBudgetEff - doseSpent;
     doseVal.textContent = left.toFixed(0);
     doseFill.style.width = (left / doseBudgetEff * 100) + "%";
-    panel.classList.toggle("low", left / doseBudgetEff < 0.22);
-    beamState.innerHTML = '<i class="dot"></i>' + (runOver ? "Beam off" : beamOn ? "Beam on" : "Beam blanked");
+    const lowNow = left / doseBudgetEff < 0.22;
+    panel.classList.toggle("low", lowNow);
+    if (lowNow && !lowWarned && !runOver) { lowWarned = true; sfx.low(); setTimeout(() => sfx.low(), 140); }
+    beamState.innerHTML = '<i class="dot"></i>' + (runOver ? "Beam off"
+      : realignGrace > 0 ? "Stage settling" : beamOn ? "Beam on" : "Beam blanked");
     beamState.className = beamOn ? "" : "blanked";
     dmgVal.textContent = String(damagedCount);
+    sfx.beam(beamOn, probeHeat);
 
-    if (resolvedCount >= totalResolvable && totalResolvable > 0) endRun("complete");
+    if (resolvedCount >= WIN_COUNT) endRun("complete");
   }
 
   function buildCracks(a) {

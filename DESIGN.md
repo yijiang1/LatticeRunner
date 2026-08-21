@@ -8,7 +8,7 @@ A 2D platformer where the player controls a scanning probe moving across an atom
 
 The goal is not a numeric completion percentage. A true reconstruction image sits behind a fog layer; resolving atoms punches holes in the fog, so the payoff is literally watching the hidden picture emerge as you play.
 
-The tension comes from the central bargain of electron microscopy: **to see an atom you must hit it with electrons, and the electrons destroy it.** You carry one specimen's worth of dose. Proximity is what resolves an atom and proximity is what knocks it out — the same act, two consequences — so there is no separate "hazard" system bolted on. How much of the picture you get to see before the beam runs out is the score.
+The tension comes from the central bargain of electron microscopy: **to see an atom you must hit it with electrons, and the electrons destroy it.** You carry one specimen's worth of dose, and everything that goes wrong — including falling off the lattice — is paid for out of it. Proximity is what resolves an atom and proximity is what knocks it out — the same act, two consequences — so there is no separate "hazard" system bolted on. How much of the picture you get to see before the beam runs out is the score.
 
 Inspired by the research pass on platformer design (Celeste, Super Mario Bros, Spelunky, Hollow Knight, Braid — see conversation history / commit context): movement forgiveness is the invisible foundation, goals should be concrete rather than an abstract meter, and risk/reward needs to be tightly coupled rather than decorative.
 
@@ -41,6 +41,12 @@ matters here (sweeping coyote from 0.08s to 0.35s moved unpractised survival by
 less than the noise). What decides whether a jump lands is the gap geometry,
 not the input window — see **Balance** below.
 
+Landing uses a **swept** test rather than a discrete overlap. A column top is
+only ~24px tall and at terminal fall speed a single 33ms frame carries the probe
+53px — clean through it, with a box test seeing nothing at either end. If the
+probe started the frame above the top and finished below it, it landed,
+whatever the boxes say now.
+
 ### Resolve-by-proximity
 Each unresolved atom has a `resolveProgress` (0–1) that:
 - builds while the probe is within `RESOLVE_RADIUS` (150px), taking `RESOLVE_TIME` (0.5s) of continuous presence to complete
@@ -65,16 +71,45 @@ Past its tolerance an atom **knocks out**, and knock-out is permanent. The colum
 This is dynamic, not pre-scripted — any atom can become a hazard, including one the probe is still trying to resolve. Dose renders as an arc winding around the column, a gauge filling toward knock-out, and it renders on unresolved atoms too, so you can watch yourself damaging the thing you're mid-way through revealing. Knock-out cracks the sphere, kicks a shockwave and embers out of it, and shakes the frame. Mid-collapse the column reads warm and dashed; once emptied it goes cool and hollow, so "still going" and "gone for good" never look alike.
 
 ### The dose budget
-A run carries `DOSE_BUDGET` (100) units of dose, before instrument upgrades. A real beam runs at fixed current, so total electrons spent is just beam-on time — the budget is a clock, but one the player controls rather than one that runs regardless.
+A run carries `DOSE_BUDGET` (100) units of dose, before instrument upgrades. A real beam runs at fixed current, so total electrons spent is just beam-on time — the budget is a clock, but one the player controls rather than one that runs regardless. It is also what falling is paid out of, which is what finally made it the binding constraint.
 
 100 is measured, not estimated — see **Balance** below.
 
 A run ends one of three ways, none of which is a failure screen — the report and the upgrade pick are earned by what the scan recovered, however it stopped:
-- **Reconstruction complete** — every atom resolved; the card reports what it cost.
+- **Reconstruction solved** — `WIN_FRAC` (85%) of the lattice phased; the card reports what it cost.
 - **Beam exhausted** — the electrons ran out; the card reports how much of the lattice you got, and points at blanking.
-- **Probe lost** — the probe dropped past the lattice and struck the detector.
+- **Probe lost** — the probe struck the detector with too little beam left to recover.
 
-The third one is the only ending the player can walk into by mistake, and it exists because the geometry leaves no alternative: the lowest atom row sits ~470px above the detector plane and a full jump clears ~114px, so there is no climbing back. Before it was added, landing down there was an unrecoverable soft-lock — you walked around the detector until the beam ran out. Knocking out a column you are standing on is now a real way to fall, which is what ties the dose model to the platforming.
+### Losing the probe, and getting it back
+The lowest atom row sits ~470px above the detector plane and a full jump clears
+~110px, so there is no climbing back out under your own power. Falling used to
+end the session outright, and that turned out to be the single worst thing about
+the balance: **every** measured run, at every skill level the harness could
+model, ended on *Probe lost* with 75+ of its 100 electrons unspent. The resource
+the entire game is about was never the thing that ran out.
+
+A real operator who loses the probe does not throw the specimen away. They
+retract the stage, re-insert, re-find focus — and that costs beam time. So does
+this. Hitting the detector spends `REALIGN_COST` (12) electrons and puts the
+probe back over the **nearest column still standing to where it went down**,
+not the spawn: falling is meant to cost electrons, not progress, and sending
+the player back across specimen they have already paid to scan would charge
+them twice for one mistake. The beam stays blanked for `REALIGN_GRACE` (0.7s)
+while the stage settles, so you are never billed for frames you did not choose.
+
+The session still ends down there in two cases, and the card says which: there
+is not enough beam left to pay for the re-align, or there is no resolved,
+undamaged column left to come back to. Knocking out the column you are standing
+on is a real way to fall, which is what ties the dose model to the platforming —
+it is now expensive rather than terminal.
+
+### What counts as solved
+A reconstruction is not called solved when every column is perfect; it is called
+solved when the structure is unambiguous. Requiring all 152 columns made
+"complete" a bar the base instrument could not clear at any skill level, which
+turned the win state into decoration. `WIN_FRAC` is 0.85, drawn on the HUD
+meter as a tick so the goal is visible from inside the run rather than being a
+percentage in a sentence on the end card.
 
 ### Balance (measured)
 
@@ -87,19 +122,20 @@ row up and one row down:
 
 | Route | Reconstructed | Electrons |
 |---|---|---|
-| row 1, end to end | 49% | 20 |
+| row 1, end to end | 49% | 21 |
 | row 4, end to end | 55% | 20 |
-| rows 1 then 4 | **100%** | **38** |
-| rows 1, 3, 5 | 100% | 58 |
-| every row | 100% | 59 |
+| rows 1 then 4 | **86% — solved** | **33** |
+| rows 1, 3, 5 | 86% | 41 |
+| rows 0, 2, 4 | 86% | 50 |
 
-So a perfectly routed full clear costs 38 electrons. Naive play — running right
-and jumping at every edge, which drifts diagonally down the lattice and re-scans
-ground it has already covered — costs about 1.1 electrons per percent, so ~110
-for the same result. `DOSE_BUDGET` of 100 sits deliberately between the two:
-sloppy routing tops out short of a complete reconstruction, and row discipline
-and blanking are what close the gap. At the old 130 even naive play cleared the
-lattice with headroom, which made the game's central resource inert.
+So the theoretical floor for a solved reconstruction is 33 electrons: two rows,
+ridden end to end, at speed. That is the number `DOSE_BUDGET` of 100 is set
+against — it leaves room for about three falls and a lot of imperfect routing,
+and no more. At the old 130 even naive play cleared the lattice with headroom,
+which made the game's central resource inert.
+
+Speed matters because the budget is a clock: the same two-row sweep costs 55
+electrons at 70 px/s and 20 at 200 px/s.
 
 **Knock-out only punishes lingering.** Sweeping a row at top speed (~120 px/s)
 destroys nothing. At 90 px/s it costs 4 columns; at 70 px/s, 45. The dose model
@@ -125,13 +161,64 @@ and the standable top stays inside the glow already drawn around each sphere.
 There is clearly more room to move here if playtesting says the opening is
 still too steep.
 
-**Where runs actually end.** Every measured run ends on *Probe lost*, not on
-*Beam exhausted* — a weak run spends 8–25 of its 100 electrons before falling.
-The budget only becomes the binding constraint once a player can reliably stay
-on the lattice. That is the honest state of the difficulty curve.
+**Falling is now what the budget is spent on.** With stage re-insertion in, the
+same routes play out completely differently. Each row below is the median of 7
+page loads (the three drift atoms take a random phase per load, so single runs
+are noisy), driven by a route-following bot at a fixed timestep:
+
+| Bot | Reconstructed | Electrons | Knock-outs | Falls | Endings (of 7) |
+|---|---|---|---|---|---|
+| routed, blanking | 84% | 91 | 0 | 4 | solved 2, exhausted 2, lost 1, route ran out 2 |
+| routed, beam always on | 76% | 100 | 8 | 3 | exhausted 5, lost 2 |
+| loose jump timing, blanking | 86% | 90 | 0 | 4 | **solved 6**, exhausted 1 |
+| loose timing, beam always on | 58% | 96 | 23 | 3 | lost 6, exhausted 1 |
+| random inputs (n=200) | 7% | 94 | — | 7 | lost 189, exhausted 11 |
+
+Two things fall out of this. Blanking is worth roughly 25 percentage points and
+about twenty columns of the specimen, which is the lesson the game exists to
+teach. And a bot that falls four times has spent 48 of its 100 electrons on
+re-alignment — the end card says so in as many words, because "you lost the
+probe four times, 48 of those electrons went on re-aligning it rather than on
+looking at anything" is the whole feedback loop in one line.
+
+Before the change, the same panel was 100% *Probe lost* at 14–53s with 60–80
+electrons still in the tank. Now the endings are a real mix and every run uses
+most of its budget.
+
+**Frame-rate independence still holds** after the swept-collision change, at a
+flat 0.63s of airtime from 30Hz to 144Hz:
+
+| fps | terminal vx | jump reach | rise |
+|---|---|---|---|
+| 30 | 107 px/s | 68 px | 103 px |
+| 60 | 118 px/s | 75 px | 109 px |
+| 90 | 123 px/s | 78 px | 110 px |
+| 120 | 125 px/s | 79 px | 111 px |
+| 144 | 126 px/s | 80 px | 112 px |
 
 ### Beam blanking
 Holding **SHIFT** blanks the beam: no budget drain, no dose deposited, no resolving, and atoms anneal while it's off. Blanking is a standard technique for beam-sensitive specimens, and it turns the budget from pure pressure into a routing decision — cross ground you've already scanned for free, unblank when you actually want to see something. The illumination circle vanishing is the whole visual read: no circle, no cost.
+
+### Sound
+Synthesised at runtime with WebAudio — a single self-contained file has nowhere
+to put a sample and no build step to inline one, so everything is an oscillator
+or a burst of noise through a filter. That suits the subject.
+
+The only continuous sound is the **beam hum**: three detuned oscillators under a
+low-pass, and its cutoff opens with `probeHeat`, so a column starting to cook is
+audible before the warning panel ever fires. It stops the instant SHIFT goes
+down. That is the blanking lesson delivered by ear, which is closer to
+teach-through-geometry than a line of text is.
+
+One-shots cover jump, landing (pitched by impact speed), resolve, knock-out,
+stage re-insertion, the low-budget warning and the three end cards. Resolve
+pitch tracks `vib`, so a heavy column lands lower than a light one — the same
+sqrt(mass) that already drives wobble, flicker and dose tolerance.
+
+Nothing is constructed until a real gesture: browsers refuse to start an
+AudioContext without one, and one-shots deliberately never call the constructor
+themselves. On an untouched page, and in the headless balance harness, every
+call is a silent no-op against a null context. **M** mutes, and that persists.
 
 ### Wobble hazard (scan-drift)
 A subset of atoms drift vertically once resolved. They are telegraphed in motion language rather than by hue: before they are ever solid their speckle cloud is stretched vertically and a dashed vertical track runs through the site, and once solid they carry a ghosted motion smear of where they just were. Colour stays reserved for element identity, which is what frees violet for the nitrogen dopant. Distinct from overexposure damage — this is environmental, not caused by the player.
@@ -171,7 +258,7 @@ How much of the lattice a run recovered decides how many picks it earns:
 
 One pick is guaranteed so a bad run still moves you forward, and the thresholds mean the reward for playing well is *more choices*, not a bigger number. Picks bank in the save file, so closing the tab mid-draft doesn't lose them.
 
-Abandoning a run with **R** earns nothing — credits only settle when the beam actually runs out or the lattice is fully phased. Without that, resolving the ten easy atoms near spawn and restarting would out-earn playing a full session.
+Abandoning a run with **R** earns nothing — credits only settle when the beam actually runs out, the probe is lost for good, or the lattice is solved. Without that, resolving the ten easy atoms near spawn and restarting would out-earn playing a full session.
 
 ### The upgrades
 Seven lines, three levels each — 21 picks to max the instrument, so roughly 8–15 sessions. Every one is a real technique, because "how do you get more picture out of fewer electrons" is the actual subject of the game and the draft is where it gets taught.
@@ -189,10 +276,10 @@ Seven lines, three levels each — 21 picks to max the instrument, so roughly 8�
 FOV is the only one with a genuine downside, and the card says so: a wider field irradiates everything it takes in. That is the trade a real operator makes.
 
 ### What this fixes
-`DOSE_BUDGET` at 130 made "reconstruction complete" close to unreachable — a known limitation below. The upgrade path is what makes it reachable: early sessions end in *beam exhausted* and the full clear is something the instrument eventually earns, rather than a win condition that was mis-set from the start.
+The win state used to be out of reach on a base instrument, and the upgrade path was the intended answer to that. Two of the three fixes since have come from elsewhere — `WIN_FRAC` at 85% and stage re-insertion — so the draft is no longer load-bearing for reachability. It is now what makes a *comfortable* clear, and what a player spends bad runs earning. Whether that is enough for it to do is unmeasured.
 
 ### Persistence
-`localStorage` under `latticeRunner.v1`, holding session count, banked picks, best percentage and upgrade levels. Reads and writes are wrapped — private mode and sandboxed iframes throw on access, and the game has to run there too, just without carrying progress. Levels are clamped on load, so a corrupted or hand-edited save can't put the instrument out of range.
+`localStorage` under `latticeRunner.v1`, holding session count, banked picks, best percentage, upgrade levels, the dopant facts already logged (`found`), the mute setting, and whether the blanking prompt has been shown (`taughtBlank`). Reads and writes are wrapped — private mode and sandboxed iframes throw on access, and the game has to run there too, just without carrying progress. Levels are clamped on load, so a corrupted or hand-edited save can't put the instrument out of range.
 
 ---
 
@@ -262,6 +349,10 @@ Single hand-tuned level: a 26×6 atom grid with a gentle sine-wave vertical undu
 - 3 dopants (Au, N, O) spread early/mid/late across the level
 - 3 wobble (drift) hazard atoms
 
+The survey patch is also where a fall usually returns you, since re-insertion
+picks the nearest standing column to the impact point and early falls happen
+near the spawn.
+
 ---
 
 ## Controls
@@ -272,6 +363,7 @@ Single hand-tuned level: a 26×6 atom grid with a gentle sine-wave vertical undu
 | → / D | Move right |
 | Space / ↑ / W | Jump (buffered + coyote-time forgiving) |
 | Shift (hold) | Blank the beam — no dose spent, no resolving |
+| M | Mute / unmute (persists) |
 | R | Restart |
 
 ---
@@ -280,28 +372,29 @@ Single hand-tuned level: a 26×6 atom grid with a gentle sine-wave vertical undu
 
 - **Single synthetic level.** No real reconstruction data yet; geometry, hazard placement, and difficulty are hand-tuned guesses, not derived from actual material structure.
 - **Fixed camera framing.** Smoothing and velocity look-ahead are in, but there is no zoom; the framing works for one screen-sized level and is untested at larger world sizes.
-- **Renderer cost is untested on low-end hardware.** Bloom, parallax, particles and post all run every frame. Headless software rasterisation holds ~8ms/frame, which leaves room on real GPUs, but there is no quality toggle if a weak machine can't keep 60fps.
+- **Renderer cost is still untested on low-end hardware, and cannot be tested here.** What *is* measured: a full `draw()` costs **0.5ms of JavaScript**, and the 152 atoms, their halos, the speckle clouds, the probe rig and the bloom composite are all free to the millisecond. Everything expensive is a full-screen fill — post, the parallax background, and the two full-world `drawImage` calls for the reconstruction and the fog over it. That is fill rate, which a software rasteriser punishes (100ms/frame at 2880x1800 headless) and any real GPU handles without noticing. An adaptive quality system that sheds those passes was written and then reverted: on the only instrument available it produced no measurable saving, so shipping it would have been guesswork wearing a measurement's clothes. If a real weak machine ever turns up, the ablation ranking above says exactly what to cut first.
 - **No mobile/touch controls.** Keyboard only.
-- **Potential tunneling at high fall speed.** Simple discrete AABB collision could in principle skip through a thin platform if the frame rate drops and fall velocity is high; not yet observed but not hardened against either. A related case *was* observed and fixed: a column knocking out under the probe flickers, so the probe sank into it on non-solid frames and was then read as a side hit and ejected sideways off the column. A collapsing column now only ever holds the probe up.
-- **No sound.** No audio feedback for resolve, damage, or the win state — the only sense that hasn't had a pass.
-- **Toast facts aren't tracked.** Re-triggering the same dopant fact on restart is fine, but there's no persistent "discovered" log across sessions.
+- ~~**Potential tunneling at high fall speed.**~~ Fixed: landing is a swept test now, so a frame that carries the probe clean past a column top still lands it. Two related cases were fixed earlier — a collapsing column ejecting the probe sideways, and frame-rate-dependent damping.
+- **Sound is unmixed and unheard.** A full WebAudio pass is in (see **Sound**), but every level, filter cutoff and envelope in it was chosen by reading the code, not by listening — this environment has no audio device. Expect the balance between the hum and the one-shots to need real ears.
+- **Field notes are logged but barely surfaced.** Dopant facts now persist across sessions and the end card carries a Notes count, but there is no place to re-read one you have already found.
 - **`DOSE_BUDGET` is measured against a bot, not a player.** 100 comes from headless simulation of routed sweeps and of naive edge-running (see **Balance**). Both are proxies; no human has played against the new number.
-- **Runs still end by falling, not by running out of electrons.** Every measured run, at every skill level the harness can model, ends on *Probe lost*. Unconverged lattice is not solid and cannot be converged while falling through it, so a single missed platform is unrecoverable. The fixes so far removed the unfair versions of this (frame-rate-dependent movement, the spawn trap, being ejected sideways by a collapsing column, walking off the end of the specimen); the underlying precision demand is untouched and is the next thing to look at.
-- **100% may be an unreasonable win bar on a *base* instrument.** Requiring all 152 atoms means early sessions almost always end on "beam exhausted." The upgrade path is the intended answer — the full clear is something the rig earns over several sessions — but whether that arc lands is unmeasured.
+- **A bad run still reads as *Probe lost*, because it is.** Stage re-insertion moved the pressure onto the budget — routed play now ends on *solved* or *beam exhausted* — but a random-input run falls seven times, spends 84 of its 94 electrons on re-alignment, and then hits the detector with nothing left to pay with. That ending is accurate and the card explains it, but the underlying precision demand of the platforming is untouched: unconverged lattice is not solid and cannot be converged on the way past (0.5s of dwell needed, under 0.3s in range at fall speed). Widening the columns further is the measured lever if playtesting says it is still too steep.
+- **85% may now be too *easy* a win bar for a good player.** The bar was moved down from all 152 columns because nothing could reach it; a routed bot on a base instrument now solves the lattice in about half its attempts, before spending a single upgrade. Whether that leaves the draft enough to do is unmeasured, and pushing the bar back up is a one-constant change.
 - **The upgrade curve is untuned.** Step sizes, the 40%/70% pick thresholds and 21 total picks are estimates, not playtest results. A fully upgraded instrument may trivialise the single level.
 - **Nothing to spend picks on once maxed.** With every line at level 3 the draft is over and further sessions give no progression — the medium-term answer is more levels, not more upgrade tiers.
-- **Blanking is undiscoverable without the instruction line.** It's currently taught by text, which violates the teach-through-geometry principle below.
+- **Blanking is still taught by text, just at a better moment.** The prompt now fires the first time the beam has spent three seconds with nothing new in range and 15 electrons already gone, and only once across all sessions. The beam hum cutting out on SHIFT teaches the same thing by ear. Neither is the "level 1-1" geometry the principle below actually asks for.
 
 ---
 
 ## Roadmap
 
 ### Near-term
-- **Tune the upgrade curve from playtesting** — step sizes, the pick thresholds, and whether 21 picks is the right length for the arc.
-- **Tune `DOSE_BUDGET` from playtesting**, then `DOSE_PEAK`, `DOSE_ANNEAL`, `RESOLVE_TIME`, wobble amplitude. The budget is the dial that decides whether the game is tense or hopeless.
-- **Reconsider the win threshold** — likely a percentage (85%?) rather than all 152 atoms, so "complete" is reachable and partial runs still resolve into a real ending.
-- **Teach blanking and the resolve mechanic through geometry** — a "level 1-1" opening with a long stretch of pre-resolved ground where blanking is obviously free, before any dose pressure. No text.
-- **Sound/juice pass** — landing thud, resolve chime, knock-out crackle, a hum that cuts out when the beam blanks.
+- **Put it in front of a human.** Everything below the top of this file is measured against bots. `DOSE_BUDGET`, `REALIGN_COST` and `WIN_FRAC` are the three constants that a single playtest would settle, and all three are one-line changes.
+- **Tune the upgrade curve from playtesting** — step sizes, the pick thresholds, and whether 21 picks is the right length for the arc. Untouched by any of the balance work so far.
+- **Mix the audio with real ears.** Levels and cutoffs were chosen by reading, not listening.
+- **Teach blanking through geometry** — a "level 1-1" opening with a long stretch of pre-resolved ground where blanking is obviously free, before any dose pressure. The contextual prompt and the hum are stand-ins for this, not replacements.
+- ~~Reconsider the win threshold~~ — done, `WIN_FRAC` is 0.85 with a tick on the HUD meter.
+- ~~Sound/juice pass~~ — done, see **Sound**.
 
 ### Medium-term
 - **Swap in a real reconstruction.** Once recon data is available (owner is sourcing it separately), replace `generateSyntheticLattice()` output and `renderTargetImage()` with the real dataset — the `{x, y, element, intensity}` contract should make this a drop-in.
