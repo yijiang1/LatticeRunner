@@ -763,6 +763,25 @@
       blurb: "A smarter scan pattern keeps partial information instead of discarding it, so leaving a column half-solved costs less.",
       steps: [0.65, 0.45, 0.3],
       effect: (v) => `Partial progress decays ${Math.round((1 - v) * 100)}% slower` },
+
+    // The three below buy handling rather than picture. They are the only
+    // lines that change what the probe can physically reach, which makes them
+    // the ones that open routes the base instrument cannot take at all — the
+    // row two above you, the gap three columns wide. Everything else makes a
+    // route cheaper; these make a route exist.
+    { id: "scan", code: "SCAN", name: "High-speed scan generator", identity: 1,
+      blurb: "Driving the deflectors at a higher slew rate moves the probe between positions faster, so the same route takes less beam time.",
+      steps: [1.16, 1.3, 1.45],
+      effect: (v) => `Probe traverses ${Math.round((v - 1) * 100)}% faster` },
+    { id: "piezo", code: "PZT", name: "Piezo focal stage", identity: 1,
+      blurb: "A piezo-driven objective steps the focal plane out of the specimen and back in milliseconds, so the probe can pull much further off the lattice.",
+      steps: [1.12, 1.24, 1.36],
+      // apex is v²/2g, so the useful number to quote is the square
+      effect: (v) => `Jumps reach ${Math.round((v * v - 1) * 100)}% higher` },
+    { id: "shift", code: "SHFT", name: "Beam-shift deflectors", identity: 1,
+      blurb: "Dedicated shift coils translate the probe sideways without touching focus, so it keeps travelling while it is out of the plane.",
+      steps: [1.2, 1.45, 1.7],
+      effect: (v) => `${Math.round((v - 1) * 100)}% more reach while airborne` },
   ];
 
   // localStorage is unavailable in private mode and in some sandboxed
@@ -940,7 +959,8 @@
   // Effective tuning for the current run. Rebuilt whenever an upgrade lands
   // so a pick takes effect on the very next session.
   let doseLimitEff, resolveTimeEff, resolveRadiusEff, doseBudgetEff,
-      doseAnnealEff, decayMultEff, driftScaleEff;
+      doseAnnealEff, decayMultEff, driftScaleEff,
+      moveSpeedEff, jumpBoostEff, airControlEff;
   function applyUpgrades() {
     doseLimitEff     = DOSE_LIMIT * currentValue("volt");
     resolveTimeEff   = RESOLVE_TIME * currentValue("recon");
@@ -949,6 +969,11 @@
     resolveRadiusEff = RESOLVE_RADIUS + currentValue("fov");
     driftScaleEff    = currentValue("cryo");
     decayMultEff     = RESOLVE_DECAY_MULT * currentValue("sparse");
+    // these three are plain multipliers applied at the use site: the physics
+    // constants they scale are declared further down, after this first call
+    moveSpeedEff     = currentValue("scan");
+    jumpBoostEff     = currentValue("piezo");
+    airControlEff    = currentValue("shift");
   }
   applyUpgrades();
 
@@ -1471,14 +1496,20 @@
       if (doseSpent >= doseBudgetEff) { beamOn = false; endRun("exhausted"); }
     }
     // --- horizontal input ---
-    if (keys["arrowleft"] || keys["a"]) { player.vx -= MOVE_SPEED * dt * 6; player.facing = -1; }
-    if (keys["arrowright"] || keys["d"]) { player.vx += MOVE_SPEED * dt * 6; player.facing = 1; }
+    // Top speed is the scan generator's slew rate; once the probe is out of
+    // the specimen plane it is the shift deflectors carrying it sideways, so
+    // airborne authority is its own dial. Acceleration and cap scale together
+    // — friction settles top speed at accel/drag, so raising the cap alone
+    // would just mean a ceiling the probe never reaches.
+    const speedCap = MOVE_SPEED * moveSpeedEff * (player.onGround ? 1 : airControlEff);
+    if (keys["arrowleft"] || keys["a"]) { player.vx -= speedCap * dt * 6; player.facing = -1; }
+    if (keys["arrowright"] || keys["d"]) { player.vx += speedCap * dt * 6; player.facing = 1; }
     // damping has to be resolved per second, not per frame: a raw `vx *= 0.82`
     // makes the probe's top speed a function of refresh rate (237 px/s at 30 Hz,
     // 118 at 60, 49 at 144), and above ~90 Hz the probe can no longer clear a
     // lattice gap at all. Same idiom the particle drag already uses.
     player.vx *= Math.pow(FRICTION, dt * 60);
-    if (Math.abs(player.vx) > MOVE_SPEED) player.vx = MOVE_SPEED * Math.sign(player.vx);
+    if (Math.abs(player.vx) > speedCap) player.vx = speedCap * Math.sign(player.vx);
 
     // --- coyote time + jump buffering ---
     if (player.onGround) player.coyoteTimer = COYOTE_TIME;
@@ -1486,7 +1517,7 @@
     player.jumpBufferTimer = Math.max(0, player.jumpBufferTimer - dt);
 
     if (player.jumpBufferTimer > 0 && player.coyoteTimer > 0) {
-      player.vy = -JUMP_VELOCITY;
+      player.vy = -JUMP_VELOCITY * jumpBoostEff;
       player.onGround = false;
       player.coyoteTimer = 0;
       player.jumpBufferTimer = 0;
@@ -1496,8 +1527,11 @@
     }
 
     // --- variable jump height: releasing early clamps upward speed ---
-    if (player.vy < -JUMP_CUT_SPEED && !isJumpHeld()) {
-      player.vy = -JUMP_CUT_SPEED;
+    // the short-hop clamp scales with the jump it clamps, or a tapped jump
+    // would stay the same height on every instrument while a held one grew
+    const jumpCut = JUMP_CUT_SPEED * jumpBoostEff;
+    if (player.vy < -jumpCut && !isJumpHeld()) {
+      player.vy = -jumpCut;
     }
 
     // --- gravity, heavier while falling for a snappier arc ---

@@ -22,7 +22,9 @@ It also runs inside the [PtychoHub](https://ptychohub.com) Kids section, which f
 
 A session ends when the electrons run out or the reconstruction is solved — 85% of the lattice, which is where a real reconstruction stops being ambiguous — and then you draft. Three instruments are offered, you keep one, and it carries into every session after. How much of the picture you recovered decides how many picks you get: one always, two at 40%, three at 70%. Abandoning a run with **R** earns nothing.
 
-Every upgrade is a real technique for getting more picture out of fewer electrons — an 80 kV column that sits under carbon's knock-on threshold, mixed-state reconstruction, a direct electron detector, a fast blanker, wide-field scan coils, a cryo stage, sparse scanning. Seven lines, three levels each. Progress is kept in `localStorage`; if that's unavailable the game still runs, it just won't remember.
+Every upgrade is a real technique for getting more picture out of fewer electrons — an 80 kV column that sits under carbon's knock-on threshold, mixed-state reconstruction, a direct electron detector, a fast blanker, wide-field scan coils, a cryo stage, sparse scanning. Three more buy handling rather than picture: a faster scan generator to slew the probe between positions, a piezo focal stage that steps further out of the specimen plane — which is what a jump is here — and beam-shift deflectors to carry the probe sideways while it's up there. Ten lines, three levels each. Progress is kept in `localStorage`; if that's unavailable the game still runs, it just won't remember.
+
+Fully rigged, those three take the probe from 117 to 163 px/s, from a 109px jump to a 203px one, and from clearing one 90px lattice gap to clearing two and a half. They're the only upgrades that change which routes exist rather than what a route costs.
 
 On a stock instrument a solved reconstruction is reachable but tight — it leaves room for about three falls and not much sloppy routing. The rig is what makes it comfortable.
 

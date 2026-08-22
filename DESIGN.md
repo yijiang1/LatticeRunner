@@ -33,8 +33,12 @@ per second (`vx *= FRICTION ** (dt·60)`), not per frame. A raw per-frame
 `vx *= 0.82` made top speed a function of refresh rate — 237 px/s at 30 Hz,
 118 at 60, 49 at 144 — and above about 90 Hz the probe could no longer clear a
 lattice gap at all, so the game was quietly unplayable on a 120 Hz display.
-Top speed is now ~120 px/s from 30 Hz to 144 Hz. Note that `MOVE_SPEED` (260)
-is the *clamp*, not the speed: damping settles the probe at about half of it.
+Top speed is now ~120 px/s from 30 Hz to 144 Hz — 117 px/s measured. Note that
+`MOVE_SPEED` (260) is the *clamp*, not the speed: damping settles the probe at
+about half of it, so the clamp and the acceleration have to be scaled together
+or an upgrade that raises one is invisible. Both the clamp and the acceleration
+also take an airborne multiplier, which is the only lever the beam-shift
+deflectors pull — see **The upgrades**.
 
 Coyote time and jump buffering are both in, and measurement says neither one
 matters here (sweeping coyote from 0.08s to 0.35s moved unpractised survival by
@@ -173,16 +177,18 @@ There is clearly more room to move here if playtesting says the opening is
 still too steep.
 
 **Falling is now what the budget is spent on.** With stage re-insertion in, the
-same routes play out completely differently. Each row below is the median of 7
+same routes play out completely differently. Each row below is the median of 15
 page loads (the three drift atoms take a random phase per load, so single runs
-are noisy), driven by a route-following bot at a fixed timestep:
+are noisy — noisier than the earlier 7-load samples made it look, which is why
+this table is quoted with its spread), driven by a route-following bot at a
+fixed timestep:
 
-| Bot | Reconstructed | Electrons | Knock-outs | Falls | Endings (of 7) |
+| Bot | Reconstructed | Electrons | Knock-outs | Falls | Endings (of 15) |
 |---|---|---|---|---|---|
-| routed, blanking | 86% | 89 | 0 | 4 | **solved 7** |
-| routed, beam always on | 80% | 94 | 2 | 3 | lost 3, solved 2, exhausted 2 |
-| loose jump timing, blanking | 86% | 79 | 0 | 3 | **solved 7** |
-| loose timing, beam always on | 56% | 95 | 20 | 2 | lost 7 |
+| routed, blanking | 84% (60–86) | 90 | 0 | 4 | solved 5, route ran out 6, lost 2, exhausted 2 |
+| routed, beam always on | 76% (57–80) | 94 | 2 | 3 | lost 12, exhausted 3 |
+| loose jump timing, blanking | 86% (77–86) | 78 | 0 | 3 | **solved 13**, exhausted 2 |
+| loose timing, beam always on | 57% (51–63) | 96 | 20 | 2 | lost 14, exhausted 1 |
 | random inputs (n=200) | 5% | 94 | — | 7 | lost 178, exhausted 22 |
 
 Two things fall out of this. Blanking is worth roughly 30 percentage points and
@@ -278,7 +284,7 @@ One pick is guaranteed so a bad run still moves you forward, and the thresholds 
 Abandoning a run with **R** earns nothing — credits only settle when the beam actually runs out, the probe is lost for good, or the lattice is solved. Without that, resolving the ten easy atoms near spawn and restarting would out-earn playing a full session.
 
 ### The upgrades
-Seven lines, three levels each — 21 picks to max the instrument, so roughly 8–15 sessions. Every one is a real technique, because "how do you get more picture out of fewer electrons" is the actual subject of the game and the draft is where it gets taught.
+Ten lines, three levels each — 30 picks to max the instrument, so roughly 12–20 sessions. Every one is a real technique, because "how do you get more picture out of fewer electrons" is the actual subject of the game and the draft is where it gets taught.
 
 | Code | Instrument | Scales | Why it's real |
 |------|-----------|--------|---------------|
@@ -289,8 +295,40 @@ Seven lines, three levels each — 21 picks to max the instrument, so roughly 8�
 | FOV | Wide-field scan coils | `RESOLVE_RADIUS` +26 → +88 | More columns per position — and more of them irradiated |
 | CRYO | Cryogenic stage | wobble amplitude ×0.7 → ×0.3 | Cooling suppresses the thermal motion the drift hazard models |
 | SPRS | Sparse scan strategy | `RESOLVE_DECAY_MULT` ×0.65 → ×0.3 | Smarter scan patterns keep partial information instead of discarding it |
+| SCAN | High-speed scan generator | `MOVE_SPEED` ×1.16 → ×1.45 | A higher slew rate moves the probe between positions faster |
+| PZT | Piezo focal stage | `JUMP_VELOCITY` ×1.12 → ×1.36 | A piezo objective steps the focal plane out of the specimen in milliseconds |
+| SHFT | Beam-shift deflectors | airborne speed ×1.2 → ×1.7 | Shift coils translate the probe laterally without touching focus |
 
 FOV is the only one with a genuine downside, and the card says so: a wider field irradiates everything it takes in. That is the trade a real operator makes.
+
+**The last three buy handling, not picture.** Every other line makes a route
+cheaper; these three change which routes exist at all. They also fall straight
+out of the fiction rather than being bolted onto it — the jump *is* the probe
+leaving the specimen plane, so the thing that makes it go higher is a focal
+stage, and the thing that carries it sideways while it is up there is a set of
+shift deflectors. Measured on the shipped build, from a standing launch:
+
+| Instrument | Ground speed | Jump apex | Airtime | Horizontal reach |
+|---|---|---|---|---|
+| base | 117 px/s | 109 px | 0.62 s | 66 px |
+| SCAN 3 | 163 px/s | 109 px | 0.62 s | 96 px |
+| PZT 3 | 117 px/s | 203 px | 0.85 s | 94 px |
+| SHFT 3 | 117 px/s | 109 px | 0.62 s | 111 px |
+| all three at 3 | 163 px/s | 203 px | 0.85 s | 229 px |
+
+Against a 90 px lattice pitch that is the difference between clearing one gap
+and clearing two and a half, and between reaching one row up and reaching two.
+SCAN widens jumps as well as speeding up walking, because the cap it raises
+applies in the air too — a faster probe is thrown further, which is the right
+answer physically and the one that keeps the three from feeling redundant.
+SHFT is the only line that touches nothing on the ground.
+
+Two knock-on effects worth stating. PZT compounds with the net dose model: the
+arc is the escape from a column that is cooking, and a 203 px apex spends far
+more of it out of the beam's waist than a 109 px one does. And all three are
+identity at level 0, so every measured balance number below is unchanged by
+their existence — they cost picks that would otherwise have bought DED or BLNK,
+which is the only way they can make a base run worse.
 
 ### What this fixes
 The win state used to be out of reach on a base instrument, and the upgrade path was the intended answer to that. Two of the three fixes since have come from elsewhere — `WIN_FRAC` at 85% and stage re-insertion — so the draft is no longer load-bearing for reachability. It is now what makes a *comfortable* clear, and what a player spends bad runs earning. Whether that is enough for it to do is unmeasured.
@@ -396,8 +434,8 @@ near the spawn.
 - **Field notes are logged but barely surfaced.** Dopant facts now persist across sessions and the end card carries a Notes count, but there is no place to re-read one you have already found.
 - **`DOSE_BUDGET` is measured against a bot, not a player.** 100 comes from headless simulation of routed sweeps and of naive edge-running (see **Balance**). Both are proxies; no human has played against the new number.
 - **A bad run still reads as *Probe lost*, because it is.** Stage re-insertion moved the pressure onto the budget — routed play now ends on *solved* or *beam exhausted* — but a random-input run falls seven times, spends 84 of its 94 electrons on re-alignment, and then hits the detector with nothing left to pay with. That ending is accurate and the card explains it, but the underlying precision demand of the platforming is untouched: unconverged lattice is not solid and cannot be converged on the way past (0.5s of dwell needed, under 0.3s in range at fall speed). Widening the columns further is the measured lever if playtesting says it is still too steep.
-- **85% is now too *easy* a win bar for a good player.** The bar was moved down from all 152 columns because nothing could reach it. A routed bot on a base instrument used to solve about half its attempts; since dose became a net rate it solves **all seven of seven**, before spending a single upgrade. Two rows ridden end to end cover 86% for 33 of the 100 electrons, so the ceiling is structural: a player who knows the route has nothing left to spend the budget on. Raising `WIN_FRAC` is a one-constant change, but the honest fix is a lattice whose coverage is not saturated by two horizontal sweeps.
-- **The upgrade curve is untuned.** Step sizes, the 40%/70% pick thresholds and 21 total picks are estimates, not playtest results. A fully upgraded instrument may trivialise the single level.
+- **85% is close to too *easy* a win bar for a good player.** The bar was moved down from all 152 columns because nothing could reach it. Over 15 page loads on a base instrument the loose-timing blanking bot now solves **13 of 15**, and the tightly routed one 5 of 15 — a 7-load sample taken right after the dose change read 7 of 7 and overstated it, which is what the wider sample is for. Two rows ridden end to end still cover 86% for 33 of the 100 electrons, so the ceiling is structural: a player who knows the route has nothing left to spend the budget on. Raising `WIN_FRAC` is a one-constant change, but the honest fix is a lattice whose coverage is not saturated by two horizontal sweeps.
+- **The upgrade curve is untuned.** Step sizes, the 40%/70% pick thresholds and 30 total picks are estimates, not playtest results. A fully upgraded instrument may trivialise the single level — and the three handling lines sharpen that risk, since a 229px reach clears gaps the lattice was laid out to make you think about.
 - **Nothing to spend picks on once maxed.** With every line at level 3 the draft is over and further sessions give no progression — the medium-term answer is more levels, not more upgrade tiers.
 - **Blanking is still taught by text, just at a better moment.** The prompt now fires the first time the beam has spent three seconds with nothing new in range and 15 electrons already gone, and only once across all sessions. The beam hum cutting out on SHIFT teaches the same thing by ear. Neither is the "level 1-1" geometry the principle below actually asks for.
 
@@ -407,7 +445,7 @@ near the spawn.
 
 ### Near-term
 - **Put it in front of a human.** Everything below the top of this file is measured against bots. `DOSE_BUDGET`, `REALIGN_COST` and `WIN_FRAC` are the three constants that a single playtest would settle, and all three are one-line changes.
-- **Tune the upgrade curve from playtesting** — step sizes, the pick thresholds, and whether 21 picks is the right length for the arc. Untouched by any of the balance work so far.
+- **Tune the upgrade curve from playtesting** — step sizes, the pick thresholds, and whether 30 picks is the right length for the arc. Untouched by any of the balance work so far.
 - **Mix the audio with real ears.** Levels and cutoffs were chosen by reading, not listening.
 - **Teach blanking through geometry** — a "level 1-1" opening with a long stretch of pre-resolved ground where blanking is obviously free, before any dose pressure. The contextual prompt and the hum are stand-ins for this, not replacements.
 - ~~Reconsider the win threshold~~ — done, `WIN_FRAC` is 0.85 with a tick on the HUD meter.
