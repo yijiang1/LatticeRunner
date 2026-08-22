@@ -374,6 +374,9 @@ The renderer is deliberately layered so that art direction and game logic stay s
 | N | Dopant | 14.007 | 0.93 | 2.2 | "A single substituted nitrogen atom can change how an entire 2D material conducts electricity." |
 | O | Dopant | 15.999 | 0.87 | 2.3 | "Oxygen dopants are light and hard to see with X-rays, but electron ptychography can resolve them directly." |
 | Au | Dopant | 196.97 | 0.25 | 8.1 | Effectively a rest stop — 4× carbon's tolerance. "Gold sits far heavier than carbon; dense atoms scatter electrons more strongly and glow brighter in a real STEM image." |
+| O | Perovskite oxygen | 15.999 | 0.87 | 2.3 | Same element, entirely different job: in the scandate it is structural, not a curiosity. Small platform, drifts 3× the cations, dies first. |
+| Sc | B-site cation | 44.956 | 0.52 | 3.9 | The broad lone platform at each cell centre. Sits on an inversion centre and never splits |
+| Pr | A-site cation | 140.91 | 0.29 | 6.8 | The safe ground. Two columns 16 px apart fusing into one wide pad — a resolved dumbbell |
 
 `vibrationFactor(element) = √(ATOMIC_MASS.C / ATOMIC_MASS[element])`, defined once and reused for wobble kinematics, flicker rate, and dose tolerance.
 
@@ -381,23 +384,34 @@ The renderer is deliberately layered so that art direction and game logic stay s
 
 ## Data Contract
 
-The lattice is generated synthetically today (`generateSyntheticLattice()`), but the shape a real ptychography reconstruction export should match to drop in without touching game logic is:
+Specimens live in the `SPECIMENS` array. Each declares an id, display copy, the index of the column the probe spawns onto, and a `build()` that emits the lattice:
 
 ```js
-{ x, y, element, intensity }
+{ x, y, element, intensity, r?, wobble?, dopant?, dopantDef? }
 ```
 
 - `x, y` — lattice-unit coordinates, scaled to world pixels via `WORLD_SCALE`
 - `element` — symbol string, looked up in `ATOMIC_MASS` for vibration behavior (unknown symbols fall back to a neutral factor of 1)
-- `intensity` — 0–1, used as a rough proxy for platform size on non-dopant atoms
+- `intensity` — 0–1 measured column brightness; drives visual weight in the reveal image, and platform size when `r` is absent
+- `r` — explicit platform radius, when the site hierarchy is the level design rather than a by-product of brightness
+- `wobble` — whether this column drifts once resolved
+- `dopantDef` — `{ symbol, r, fact }` for a column worth a field note
 
-The `targetCanvas` reveal image (currently a procedurally rendered false-color composite) is the other swap point — once a real reconstruction image exists, it replaces the canvas drawing in `renderTargetImage()`.
+`loadSpecimen(id)` rebuilds the lattice, everything derived from it (world geometry, ground plane, scan-field edges, win count, spawn), the hidden phase image and the fog sheet over it. Nothing in the game holds a reference across that call, so swapping specimens mid-session is safe and is exactly what the picker on the between-sessions card does.
+
+`renderTargetImage()` draws the false-colour reveal from the specimen's own columns, so a specimen brings its hidden picture with it rather than needing a matching bitmap.
+
+Field notes are keyed `"<specimen id>:<symbol>"`, so oxygen found as a dopant in the carbon sheet and oxygen found as structure in the perovskite are two different notes.
 
 ---
 
-## Current Level
+## Specimens
 
-Single hand-tuned level: a 26×6 atom grid with a gentle sine-wave vertical undulation (so it reads as terrain, not a flat strip) rather than a real reconstruction. Contains:
+Two, chosen from the between-sessions card. The instrument carries across both, which is the reason to have two: a rig tuned on light carbon meets an oxide that punishes the same habits differently.
+
+### 1. Doped 2D lattice (synthetic)
+
+Hand-tuned: a 26×6 atom grid with a gentle sine-wave vertical undulation (so it reads as terrain, not a flat strip) rather than a real reconstruction. Contains:
 - A seeded survey scan: every column within `RESOLVE_RADIUS · 1.25` of the spawn (6 of 152) starts converged. One pre-resolved column was not enough — the first second of a run used to be unsurvivable in both directions. Step off the single spawn column and the probe fell through six rows of unconverged speckle to the detector; stand on it long enough to converge the row below and the column under you knocked out instead. The survey patch gives the opening both ground to step onto and ground to fall back to.
 - Hard scan-field edges at the outermost columns, so the probe cannot run off the end of the specimen into empty frame
 - 4 vacancy gaps (one is a 2-wide chasm)
@@ -407,6 +421,39 @@ Single hand-tuned level: a 26×6 atom grid with a gentle sine-wave vertical undu
 The survey patch is also where a fall usually returns you, since re-insertion
 picks the nearest standing column to the impact point and early falls happen
 near the spawn.
+
+### 2. Perovskite scandate (measured)
+
+Not designed. Traced off `obj_phase_roi_sum_Niter200.tiff` — a 277×277 px electron ptychography phase reconstruction at 200 iterations.
+
+**What was measured.** 253 column peaks located to sub-pixel precision by 5×5 local-maximum detection with a centroid refinement. Peak brightness falls into three cleanly separated populations (0.94 / 0.93 / 0.32, with a fourth at 0.08 that is the noise floor). The lattice fitted through the bright ones is a near-perfect square cell, **a = 43.20 px, b = 42.98 px, interior angle 91.8°**; every site in it lands with a standard deviation under 0.012 of a cell edge. The 1.8° of shear is scan distortion, not crystallography.
+
+**What the cell contains** — the textbook ABO₃ perovskite projection down a pseudo-cubic ⟨100⟩ axis:
+
+| Site | Fractional | Measured |
+|------|-----------|----------|
+| A-site cation | (0, 0) | Split into a resolved dumbbell, 5.2 px apart along 127°. A two-Gaussian fit beats a one-Gaussian fit by 13% on residual. This is the antipolar A displacement of an orthorhombic (Pbnm) tilt system |
+| B-site cation | (½, ½) | Unsplit, same peak height. It sits on an inversion centre — the one site in the cell that the tilt does not move |
+| Oxygen ×2 | (0, ½), (½, 0) | 0.34× the cations' peak height. Neither is on its edge midpoint: each is displaced **4.54 px** off it, and in **100% of the 83 columns measured** the direction is set by the parity of the cell indices. That is an antiphase octahedral tilt, and it is also what puts the half-order reflections in the FFT — a superlattice at 30 px, 45° off the cell axes |
+
+Column σ is 2.0–2.6 px, so the information limit sits well inside a single cell: this reconstruction resolves the splitting, which is the entire reason a phase image is worth retrieving. If the pseudo-cubic edge is ~4.0 Å, the pixel is 0.093 Å, the field of view is 2.6 nm, the A-site dumbbell is 0.48 Å across and the oxygen displacement is 0.42 Å.
+
+**The one assumption.** Calling the site classes Pr / Sc / O is the rare-earth-scandate reading of an A:B integrated-intensity ratio of 2.4. The site *classes* are measured; the symbols are inference. A different perovskite is a three-symbol edit in `SCANDATE_SITES` and nothing else — geometry and physics are unaffected.
+
+**Layout.** The field is 6.1 cells wide and 6.2 tall, the wrong shape for a side-scroller. So it is cut along a lattice plane into two 3-cell bands and the lower band is laid to the right of the upper one, offset by a whole number of cells in both directions. Both halves are the same crystal, so the join is seamless: rows line up, the checkerboard continues, and there is no repeat. All 203 well-defined columns are used exactly once, each carrying its own real deviation from the ideal site. The 44 faintest peaks were dropped — they sit on no consistent sublattice.
+
+Level size 24.2 × 6.4 lattice units (2182 × 580 px), against the carbon sheet's 26 × 6.
+
+**Why the structure is the level design.** Every row is a continuous chain at the same 90 px pitch the carbon sheet runs at, but the footholds alternate by species:
+
+| Row type | Sequence | Air gap between platforms |
+|----------|----------|--------------------------|
+| A-rows | `Pr Pr · O · Pr Pr · O` | 29 px median (the dumbbell's two columns fuse into one 57 px pad) |
+| B-rows | `O · Sc · O · Sc` | 49 px median |
+
+Both are inside the 44 px the carbon sheet was tuned around, so the map is crossable — but roughly half of every row's footholds are oxygen, and `vibrationFactor` already makes oxygen survive 2.3 units of dose against the A-site's 6.8 while drifting three times as far. The fast route along a row therefore keeps landing on the fragile thing. **The only way across a perovskite is the oxygen, and the oxygen is what the beam takes first** — which is also what happens in a real microscope.
+
+The difficulty trade is deliberate and was not re-tuned: 203 columns in the same footprint is 28% denser than the carbon sheet, so a probe field of `RESOLVE_RADIUS` covers 11.3 columns instead of 8.8 and coverage comes *faster* per electron. What it costs instead is footing, and footing costs `REALIGN_COST`. The pressure moves from the dose meter to the platforming, on the same budget.
 
 ---
 
@@ -425,7 +472,9 @@ near the spawn.
 
 ## Known Limitations
 
-- **Single synthetic level.** No real reconstruction data yet; geometry, hazard placement, and difficulty are hand-tuned guesses, not derived from actual material structure.
+- ~~**Single synthetic level.**~~ Partly addressed: the perovskite scandate specimen is traced off a real 200-iteration reconstruction, and its geometry, site hierarchy and hazard placement are the material's rather than mine. The carbon sheet is still hand-tuned.
+- **The perovskite has not been balance-tested.** Its constants are the carbon sheet's, on the argument above that denser coverage pays for more treacherous footing. That argument is reasoning, not measurement — no bot run and no human run exists for it yet, and `WIN_FRAC` at 0.85 of 203 columns may be the wrong bar.
+- **The element labels on the perovskite are an inference.** See **Specimens**. The site classes are measured; Pr/Sc/O is the scandate reading of the intensity ratio and wants confirming against whatever the specimen actually was.
 - **Fixed camera framing.** Smoothing and velocity look-ahead are in, but there is no zoom; the framing works for one screen-sized level and is untested at larger world sizes.
 - **Renderer cost is still untested on low-end hardware, and cannot be tested here.** What *is* measured: a full `draw()` costs **0.5ms of JavaScript**, and the 152 atoms, their halos, the speckle clouds, the probe rig and the bloom composite are all free to the millisecond. Everything expensive is a full-screen fill — post, the parallax background, and the two full-world `drawImage` calls for the reconstruction and the fog over it. That is fill rate, which a software rasteriser punishes (100ms/frame at 2880x1800 headless) and any real GPU handles without noticing. An adaptive quality system that sheds those passes was written and then reverted: on the only instrument available it produced no measurable saving, so shipping it would have been guesswork wearing a measurement's clothes. If a real weak machine ever turns up, the ablation ranking above says exactly what to cut first.
 - **No mobile/touch controls.** Keyboard only.
@@ -436,7 +485,7 @@ near the spawn.
 - **A bad run still reads as *Probe lost*, because it is.** Stage re-insertion moved the pressure onto the budget — routed play now ends on *solved* or *beam exhausted* — but a random-input run falls seven times, spends 84 of its 94 electrons on re-alignment, and then hits the detector with nothing left to pay with. That ending is accurate and the card explains it, but the underlying precision demand of the platforming is untouched: unconverged lattice is not solid and cannot be converged on the way past (0.5s of dwell needed, under 0.3s in range at fall speed). Widening the columns further is the measured lever if playtesting says it is still too steep.
 - **85% is close to too *easy* a win bar for a good player.** The bar was moved down from all 152 columns because nothing could reach it. Over 15 page loads on a base instrument the loose-timing blanking bot now solves **13 of 15**, and the tightly routed one 5 of 15 — a 7-load sample taken right after the dose change read 7 of 7 and overstated it, which is what the wider sample is for. Two rows ridden end to end still cover 86% for 33 of the 100 electrons, so the ceiling is structural: a player who knows the route has nothing left to spend the budget on. Raising `WIN_FRAC` is a one-constant change, but the honest fix is a lattice whose coverage is not saturated by two horizontal sweeps.
 - **The upgrade curve is untuned.** Step sizes, the 40%/70% pick thresholds and 30 total picks are estimates, not playtest results. A fully upgraded instrument may trivialise the single level — and the three handling lines sharpen that risk, since a 229px reach clears gaps the lattice was laid out to make you think about.
-- **Nothing to spend picks on once maxed.** With every line at level 3 the draft is over and further sessions give no progression — the medium-term answer is more levels, not more upgrade tiers.
+- **Nothing to spend picks on once maxed.** With every line at level 3 the draft is over and further sessions give no progression. A second specimen helps — a maxed rig has somewhere else to go — but two is not a progression system.
 - **Blanking is still taught by text, just at a better moment.** The prompt now fires the first time the beam has spent three seconds with nothing new in range and 15 electrons already gone, and only once across all sessions. The beam hum cutting out on SHIFT teaches the same thing by ear. Neither is the "level 1-1" geometry the principle below actually asks for.
 
 ---
@@ -452,8 +501,10 @@ near the spawn.
 - ~~Sound/juice pass~~ — done, see **Sound**.
 
 ### Medium-term
-- **Swap in a real reconstruction.** Once recon data is available (owner is sourcing it separately), replace `generateSyntheticLattice()` output and `renderTargetImage()` with the real dataset — the `{x, y, element, intensity}` contract should make this a drop-in.
-- **Multiple levels**, one per paper/structure, selectable like Explore mode in `optimization-quest.html`. Difficulty comes from real defect density, not synthetic tuning.
+- ~~**Swap in a real reconstruction.**~~ Done. The perovskite scandate is traced off `obj_phase_roi_sum_Niter200.tiff` and the `SPECIMENS` contract took it without a change to game logic.
+- ~~**Multiple levels**, selectable like Explore mode.~~ Done for two; the picker is on the between-sessions card.
+- **Balance the perovskite.** The one thing the new specimen ships without. Run the headless bots against it the way `DOSE_BUDGET` was settled for the carbon sheet, and check whether 85% of 203 columns is the right bar when coverage comes faster but falls come more often.
+- **More real specimens**, one per paper/structure. Every reconstruction with a resolvable lattice is a level, and the extraction is now a known pipeline: peak-find, fit the cell, classify sites by peak height, cut the field into bands along a lattice plane, lay them end to end.
 - **Probe modes** — a wide/defocused probe resolves safely but coarsely; a tight coherent probe is riskier but reveals rare defects. Unlocking modes recontextualizes earlier levels on replay (Metroidvania-style backtrack incentive) instead of a flat difficulty curve.
 
 ### Long-term

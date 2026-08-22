@@ -341,6 +341,31 @@
     font: 400 12px/1.6 var(--sans); color: #a8e6c8;
   }
 
+  /* ------------------------------------------------- specimen picker */
+  #specLabel {
+    margin-top: 22px; font: 500 8.5px/1 var(--mono); letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--dim);
+  }
+  #specPick { display: flex; gap: 8px; margin-top: 9px; flex-wrap: wrap; }
+  .scard {
+    flex: 1 1 200px; text-align: left; cursor: pointer;
+    padding: 11px 13px; border-radius: 10px;
+    background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.08);
+    color: inherit; font: inherit; transition: border-color .15s, background .15s;
+  }
+  .scard:hover { border-color: rgba(90,212,255,0.35); background: rgba(90,212,255,0.05); }
+  .scard.on {
+    border-color: rgba(90,212,255,0.5); background: rgba(90,212,255,0.09);
+    box-shadow: 0 0 0 1px rgba(90,212,255,0.16) inset;
+  }
+  .scard .nm { display: block; font: 600 12.5px/1.3 var(--sans); color: #dff2ff; }
+  .scard.on .nm { color: var(--cyan); }
+  .scard .tg {
+    display: block; margin-top: 4px; font: 500 8px/1.4 var(--mono);
+    letter-spacing: 0.13em; text-transform: uppercase; color: var(--dim);
+  }
+  .scard .bl { display: block; margin-top: 7px; font: 400 11px/1.55 var(--sans); color: #93a6bb; }
+
   /* ------------------------------------------------- in-run rig strip */
   #rig, #rigSummary { display: flex; flex-wrap: wrap; gap: 6px; }
   #rig { margin-top: 11px; padding-top: 11px; border-top: 1px solid rgba(255,255,255,0.06); }
@@ -388,7 +413,7 @@
     </div>
     <div>
       <h1>Lattice Runner</h1>
-      <p>Scanning probe · dose-limited reconstruction</p>
+      <p id="brandSub">Scanning probe · dose-limited reconstruction</p>
     </div>
   </div>
 
@@ -459,6 +484,8 @@
       <div id="pickLeft"></div>
       <div id="draft"></div>
       <div id="labDone"></div>
+      <div id="specLabel">Specimen</div>
+      <div id="specPick"></div>
       <div id="rigLabel"></div>
       <div id="rigSummary"></div>
       <div class="actions">
@@ -491,6 +518,7 @@
   const labTitle = el("labTitle"), labText = el("labText"), pickLeft = el("pickLeft");
   const draftEl = el("draft"), labDone = el("labDone"), rigSummary = el("rigSummary");
   const rigLabel = el("rigLabel");
+  const specPick = el("specPick"), brandSub = el("brandSub");
   const beginBtn = el("beginBtn");
 
   // ---------------------------------------------------------------------
@@ -523,35 +551,19 @@
   // Data contract: an array of atom sites. This is the shape a real
   // ptychography reconstruction export should match so it can be dropped
   // in without touching game logic:
-  //   { x, y, element, intensity }
+  //   { x, y, element, intensity, r?, wobble?, note? }
   // x/y are in arbitrary "lattice units" here; they get scaled to world
-  // pixels below. element is a string label; intensity is 0..1 and is
-  // used as a rough proxy for platform size / visual weight.
+  // pixels below. element is a string label; intensity is 0..1 and is the
+  // measured column brightness — it drives visual weight, and platform size
+  // unless the site supplies its own `r`.
   // ---------------------------------------------------------------------
-  // Real dopants/defects, each with a one-line fact shown the first time
-  // it's resolved — optional curiosity content for players who explore
-  // off the direct path.
-  const DOPANT_DEFS = {
-    15: { symbol: "Au", r: 22,
-      fact: "Au — gold sits far heavier than carbon; dense atoms scatter electrons more strongly and glow brighter in a real STEM image." },
-    80: { symbol: "N", r: 18,
-      fact: "N — a single substituted nitrogen atom can change how an entire 2D material conducts electricity." },
-    130: { symbol: "O", r: 18,
-      fact: "O — oxygen dopants are light and hard to see with X-rays, but electron ptychography can resolve them directly." },
-  };
-
-  const DOPANT_DEFS_BY_SYMBOL = {};
-  for (const k of Object.keys(DOPANT_DEFS)) DOPANT_DEFS_BY_SYMBOL[DOPANT_DEFS[k].symbol] = DOPANT_DEFS[k];
-  const FIELD_NOTES_TOTAL = Object.keys(DOPANT_DEFS_BY_SYMBOL).length;
-
-  // "Wobble" atoms drift once resolved — an environmental scan-drift hazard,
-  // distinct from the dose damage you inflict yourself by lingering.
-  const WOBBLE_IDX = new Set([45, 95, 140]);
 
   // Atomic mass (amu) drives vibration: real thermal/Debye-Waller motion
   // scales roughly as 1/sqrt(mass), so lighter atoms jiggle faster and
-  // wider, and — once damaged — flicker out of solidity faster too.
-  const ATOMIC_MASS = { C: 12.011, N: 14.007, O: 15.999, Au: 196.97 };
+  // wider, and — once damaged — flicker out of solidity faster too. It is
+  // also what sets each column's dose tolerance, so this one table is
+  // responsible for most of how a specimen feels to run across.
+  const ATOMIC_MASS = { C: 12.011, N: 14.007, O: 15.999, Sc: 44.956, Au: 196.97, Pr: 140.91 };
   const REF_MASS = ATOMIC_MASS.C;
   function vibrationFactor(element) {
     return Math.sqrt(REF_MASS / (ATOMIC_MASS[element] || REF_MASS));
@@ -569,7 +581,9 @@
     C:  { core: "#eaf9ff", mid: "#5ec2ec", edge: "#0e3a54", rim: "#8ff0ff", glow: "90,212,255",  z: 1.00 },
     N:  { core: "#f5ecff", mid: "#a488f2", edge: "#2a1a5e", rim: "#cbb2ff", glow: "168,136,242", z: 1.15 },
     O:  { core: "#fff1de", mid: "#f2a05c", edge: "#5f2a10", rim: "#ffd0a0", glow: "242,160,92",  z: 1.30 },
+    Sc: { core: "#eefaff", mid: "#6fc9d8", edge: "#10404c", rim: "#a9edf6", glow: "111,201,216", z: 1.12 },
     Au: { core: "#fffbe6", mid: "#ffd05a", edge: "#5f3a04", rim: "#fff2b0", glow: "255,208,90",  z: 2.60 },
+    Pr: { core: "#fbf3ff", mid: "#b79ae8", edge: "#2b1c52", rim: "#dcc8ff", glow: "183,154,232", z: 2.40 },
   };
   const DAMAGED_ART = { core: "#ffdfd4", mid: "#df5f45", edge: "#450f08", rim: "#ff9d80", glow: "255,110,70", z: 1.0 };
 
@@ -585,7 +599,20 @@
     [1.00, 246, 255, 228],
   ];
 
-  function generateSyntheticLattice() {
+  const WORLD_SCALE = 90; // px per lattice unit
+
+  // =====================================================================
+  // SPECIMENS
+  // Each one is a lattice to run across, plus everything that is true about
+  // that lattice: which elements are in it, which sites are worth a field
+  // note, and which ones drift. `build()` returns the atom array; `spawn`
+  // names the index the probe drops onto, and that column starts
+  // pre-resolved — free-falling onto an unresolved atom would just fall
+  // through it before the 0.5s dwell timer finished, so the very first
+  // landing must be safe.
+  // =====================================================================
+
+  function graphene() {
     const atoms = [];
     const cols = 26;
     const rows = 6;
@@ -609,29 +636,194 @@
     // Vacancies (missing atoms -> gaps you must jump). 63+64 sit side by
     // side in the same row for one wider chasm; the rest are single gaps.
     const vacancyIdx = new Set([37, 63, 64, 90]);
+    // "Wobble" atoms drift once resolved — an environmental scan-drift
+    // hazard, distinct from the dose damage you inflict yourself.
+    const wobbleIdx = new Set([45, 95, 140]);
+    // Real dopants/defects, each with a one-line fact shown the first time
+    // it's resolved — optional curiosity content for players who explore
+    // off the direct path.
+    const notes = {
+      15: { symbol: "Au", r: 22,
+        fact: "Au — gold sits far heavier than carbon; dense atoms scatter electrons more strongly and glow brighter in a real STEM image." },
+      80: { symbol: "N", r: 18,
+        fact: "N — a single substituted nitrogen atom can change how an entire 2D material conducts electricity." },
+      130: { symbol: "O", r: 18,
+        fact: "O — oxygen dopants are light and hard to see with X-rays, but electron ptychography can resolve them directly." },
+    };
 
     return atoms
       .map((a, i) => {
-        const dopantDef = DOPANT_DEFS[i];
+        const note = notes[i];
         return {
           ...a,
-          element: dopantDef ? dopantDef.symbol : a.element,
+          element: note ? note.symbol : a.element,
           vacancy: vacancyIdx.has(i),
-          dopant: !!dopantDef,
-          dopantDef: dopantDef || null,
-          wobble: WOBBLE_IDX.has(i),
+          dopant: !!note,
+          dopantDef: note || null,
+          r: note ? note.r : 13 + a.intensity * 6,
+          wobble: wobbleIdx.has(i),
         };
       })
       .filter(a => !a.vacancy);
   }
 
-  const rawLattice = generateSyntheticLattice();
+  // ---------------------------------------------------------------------
+  // Specimen 2 is not invented. It is measured.
+  //
+  // Source: obj_phase_roi_sum_Niter200.tiff — a 277x277 px electron
+  // ptychography phase reconstruction, 200 iterations. 253 column peaks
+  // were located to sub-pixel precision, and the lattice fitted through
+  // them came out as a near-perfect square cell, a = 43.20 px, b = 42.98 px
+  // (interior angle 91.8 deg; the 1.8 deg of shear is scan distortion, not
+  // crystallography). Every site in the cell landed with a standard
+  // deviation under 0.012 of a cell edge, which is why this reads as a
+  // clean crystal rather than a point cloud.
+  //
+  // The cell contents are the textbook ABO3 perovskite projection down a
+  // pseudo-cubic <100> axis:
+  //
+  //   corner (0,0)      one heavy A-site, split into a resolved dumbbell
+  //                     5.2 px apart along 127 deg — the antipolar A
+  //                     displacement of an orthorhombic (Pbnm) tilt system
+  //   centre (1/2,1/2)  one B-site column, unsplit, same peak height. It sits
+  //                     on an inversion centre, which is why it is the one
+  //                     site in the cell that does not move
+  //   edges  (0,1/2)    two oxygen columns per cell, at 0.34x the cations'
+  //          (1/2,0)    peak height. Neither sits on its edge midpoint: each
+  //                     is displaced 4.54 px off it, and the direction of
+  //                     that displacement is set, in 100% of the 83 columns
+  //                     measured, by the parity of the cell indices. That is
+  //                     an antiphase octahedral tilt, and it is also what
+  //                     puts the half-order reflections in the FFT — a
+  //                     superlattice at 30 px, 45 deg off the cell axes.
+  //
+  // Column sigma came out at 2.0-2.6 px, so the information limit sits well
+  // inside a single cell: this reconstruction resolves the splitting, which
+  // is the whole reason a phase image is worth retrieving.
+  //
+  // If the pseudo-cubic edge is ~4.0 A (it is, for the scandate family),
+  // the pixel is 0.093 A, the field of view is 2.6 nm, the A-site dumbbell
+  // is 0.48 A across and the oxygen tilt displacement is 0.42 A.
+  //
+  // ELEMENT LABELS ARE THE ONE ASSUMPTION HERE. The site *classes* are
+  // measured; calling them Pr / Sc / O is the rare-earth-scandate reading
+  // of an A:B integrated-intensity ratio of 2.4. If the specimen is a
+  // different perovskite, change the three symbols in SITES below and
+  // nothing else — the geometry and the physics stay correct.
+  //
+  // Level layout: the reconstruction is 6.1 cells wide and 6.2 tall, which
+  // is the wrong shape for a side-scroller. So it is cut along a lattice
+  // plane into two 3-cell bands and the lower band is laid to the right of
+  // the upper one, offset by a whole number of cells in both directions.
+  // Because both halves are the same crystal, the join is seamless — the
+  // rows line up and the checkerboard continues. Every measured column is
+  // used exactly once, carrying its own real deviation from the ideal site.
+  // The 44 faintest peaks were dropped: they sit on no consistent
+  // sublattice, so they are the noise floor, not oxygen.
+  // ---------------------------------------------------------------------
 
-  const WORLD_SCALE = 90; // px per lattice unit
-  // Atom 0 sits directly under the spawn point and starts pre-resolved —
-  // free-falling onto an unresolved atom would just fall through it before
-  // the 0.5s dwell timer finished, so the very first landing must be safe.
-  const SPAWN_ATOM_INDEX = 0;
+  // Packed as "x,y,site,intensity" per column, space separated. x and y are
+  // in hundredths of a lattice unit (1 unit = half a pseudo-cubic cell, so
+  // nearest-neighbour columns sit 1 unit / 90 px apart, the same pitch the
+  // graphene specimen runs at). intensity is the measured peak phase,
+  // rescaled to 0..1, in hundredths.
+  const SCANDATE_COLUMNS = `
+    12,0,2,19 112,22,1,94 212,45,2,20 311,22,1,93 412,3,2,20 513,23,1,93 612,45,2,19 713,23,1,95
+    814,3,2,20 913,25,1,92 1013,45,2,20 1112,25,1,94 1213,44,2,17 1312,24,1,91 1512,26,1,86
+    1612,46,2,17 1713,24,1,89 1913,24,1,91 2012,45,2,15 2113,24,1,89 2312,25,1,90 2410,44,2,14
+    4,133,0,99 17,112,0,100 91,121,2,20 201,129,0,99 223,116,0,98 332,122,2,17 405,134,0,97
+    419,112,0,97 490,123,2,17 601,129,0,96 624,116,0,100 734,124,2,17 805,137,0,94 819,112,0,96
+    892,124,2,19 1003,131,0,100 1023,116,0,98 1133,125,2,16 1204,136,0,94 1223,118,0,96
+    1333,125,2,15 1406,135,0,89 1420,113,0,91 1491,124,2,16 1599,130,0,87 1624,117,0,93
+    1732,125,2,13 1806,134,0,92 1819,113,0,93 1893,124,2,14 2001,130,0,89 2024,117,0,88
+    2134,124,2,12 2205,134,0,91 2219,112,0,92 2289,124,2,14 2399,131,0,91 2422,116,0,86 13,243,2,19
+    112,223,1,94 211,203,2,17 312,223,1,93 412,245,2,17 512,224,1,94 613,203,2,18 714,223,1,92
+    813,245,2,18 913,223,1,93 1012,203,2,21 1113,225,1,92 1211,245,2,18 1213,201,2,14 1313,224,1,89
+    1411,246,2,16 1512,224,1,89 1611,204,2,14 1712,224,1,91 1812,246,2,14 1912,224,1,87
+    2013,204,2,14 2112,224,1,84 2211,245,2,15 2311,223,1,88 2411,203,2,11 0,329,0,98 22,317,0,94
+    133,323,2,15 204,334,0,96 218,313,0,98 291,324,2,16 402,330,0,87 424,316,0,95 533,323,2,15
+    607,334,0,92 620,312,0,97 691,323,2,17 802,329,0,98 824,317,0,97 935,324,2,15 1006,334,0,96
+    1019,312,0,92 1090,324,2,16 1200,331,0,96 1219,313,0,96 1292,324,2,16 1400,330,0,93
+    1423,317,0,93 1533,323,2,12 1605,335,0,89 1618,313,0,92 1691,324,2,14 1802,330,0,88
+    1825,316,0,91 1934,323,2,10 2007,334,0,85 2020,312,0,87 2091,323,2,13 2201,329,0,91
+    2223,316,0,92 2332,322,2,11 2405,334,0,89 2419,312,0,89 13,401,2,16 111,423,1,91 212,445,2,17
+    312,424,1,92 412,404,2,17 512,424,1,92 613,445,2,15 713,424,1,92 813,403,2,16 912,423,1,90
+    1012,446,2,16 1111,425,1,91 1211,404,2,17 1213,443,2,15 1314,424,1,89 1412,404,2,15
+    1513,424,1,89 1612,446,2,15 1713,424,1,92 1812,404,2,13 1913,424,1,89 2013,445,2,13
+    2112,423,1,90 2211,403,2,12 2312,424,1,89 2412,444,2,11 5,535,0,92 19,513,0,99 91,524,2,16
+    201,531,0,93 223,518,0,99 331,523,2,14 405,535,0,92 419,513,0,97 491,524,2,16 601,530,0,92
+    623,517,0,99 734,524,2,13 807,534,0,91 821,512,0,88 891,524,2,15 1002,529,0,91 1022,517,0,95
+    1132,524,2,15 1203,536,0,92 1224,518,0,90 1332,523,2,13 1405,535,0,88 1419,513,0,92
+    1490,524,2,12 1600,530,0,89 1623,516,0,90 1732,522,2,14 1806,535,0,93 1819,513,0,91
+    1892,523,2,13 2001,530,0,90 2023,517,0,93 2133,522,2,10 2204,534,0,90 2218,512,0,87
+    2291,524,2,11 2400,529,0,85 2424,516,0,87 212,604,2,16 612,604,2,15 1012,604,2,14 1212,601,2,10
+    1312,623,1,91 1511,624,1,89 1611,601,2,12 1711,623,1,89 1812,642,2,12 1911,623,1,87
+    2013,601,2,11 2113,623,1,84 2211,644,2,13 2310,622,1,87 2411,602,2,11
+  `;
+
+  // Site classes, in the order they are indexed by the packed data above.
+  //   r  — platform radius. The A-site dumbbell's two members are only 16 px
+  //        apart, so they fuse into one wide pad; the B-site is a single
+  //        broad column; oxygen is a small one. That hierarchy is the level
+  //        design, and it is the structure's, not mine.
+  const SCANDATE_SITES = [
+    { element: "Pr", r: 15 },  // A-site cation, dumbbell member
+    { element: "Sc", r: 19 },  // B-site cation, cell centre
+    { element: "O",  r: 11 },  // oxygen, cell edge, tilted off the midpoint
+  ];
+
+  function scandate() {
+    // Three field notes, each pinned to a column that actually demonstrates
+    // the thing it describes: a dumbbell member, a cell-centre cation, and
+    // one of the split oxygen columns, all near the middle of the run.
+    const notes = {
+      107: { symbol: "Pr", r: 17,
+        fact: "Pr — the A-site columns come in pairs 0.48 Å apart. Splitting a pair that close is the resolution claim electron ptychography is built on." },
+      138: { symbol: "Sc", r: 21,
+        fact: "Sc — the B-site sits at the centre of every cell and never splits: it lies on an inversion centre, so the octahedral tilt moves everything around it but not it." },
+      42:  { symbol: "O", r: 13,
+        fact: "O — every oxygen column here sits 0.42 Å off the midpoint it should occupy, tilting one way then the other cell by cell. Seeing which way is seeing the octahedral tilt." },
+    };
+
+    return SCANDATE_COLUMNS.trim().split(/\s+/).map((tok, i) => {
+      const [x, y, s, inten] = tok.split(",").map(Number);
+      const site = SCANDATE_SITES[s];
+      const note = notes[i];
+      return {
+        x: x / 100,
+        y: y / 100,
+        element: site.element,
+        intensity: inten / 100,
+        r: note ? note.r : site.r,
+        dopant: !!note,
+        dopantDef: note || null,
+        // Every oxygen column drifts. Not a hazard sprinkled on top — the
+        // lightest atom in the cell is the one thermal motion and beam
+        // heating actually move, and vibrationFactor() already makes it
+        // move three times as far as the cations.
+        wobble: site.element === "O",
+      };
+    });
+  }
+
+  const SPECIMENS = [
+    {
+      id: "graphene",
+      name: "Doped 2D lattice",
+      tag: "Synthetic · carbon · 152 columns",
+      blurb: "A single sheet of light carbon with three substitutions hidden in it. Even ground, even columns — what it costs you is dose, not footing.",
+      spawn: 0,
+      build: graphene,
+    },
+    {
+      id: "scandate",
+      name: "Perovskite scandate",
+      tag: "Measured · Pr / Sc / O · 203 columns",
+      blurb: "Traced off a real 200-iteration phase reconstruction. Heavy cation rows are solid ground; the oxygen columns bridging them are small, they drift, and they take a third of the dose the cations do.",
+      spawn: 1,
+      build: scandate,
+    },
+  ];
 
   // ---------------------------------------------------------------------
   // Dose. The probe is a focused cone of electrons, and it deposits dose
@@ -713,14 +905,14 @@
   // six rows of unconverged speckle to the detector, or stand on it long enough
   // to converge the row below and the column you are standing on knocks out.
   const SURVEY_RADIUS = RESOLVE_RADIUS * 1.25;
-  const SEEDED = (() => {
+  function surveyScan(lattice, spawnIdx) {
     const px = a => a.x * WORLD_SCALE + 80, py = a => a.y * WORLD_SCALE + 120;
-    const s0 = rawLattice[SPAWN_ATOM_INDEX], set = new Set();
-    rawLattice.forEach((a, i) => {
+    const s0 = lattice[spawnIdx], set = new Set();
+    lattice.forEach((a, i) => {
       if (Math.hypot(px(a) - px(s0), py(a) - py(s0)) <= SURVEY_RADIUS) set.add(i);
     });
     return set;
-  })();
+  }
 
   // ---------------------------------------------------------------------
   // Between-run upgrades. Every run ends in a draft: three instruments are
@@ -787,7 +979,8 @@
   // localStorage is unavailable in private mode and in some sandboxed
   // iframes. The game has to run there too — just without carrying progress.
   const SAVE_KEY = "latticeRunner.v1";
-  const save = { sessions: 0, picks: 0, best: 0, levels: {}, found: {}, muted: false, taughtBlank: 0 };
+  const save = { sessions: 0, picks: 0, best: 0, levels: {}, found: {}, muted: false,
+                 taughtBlank: 0, specimen: SPECIMENS[0].id };
   (function loadSave() {
     try {
       const raw = window.localStorage.getItem(SAVE_KEY);
@@ -799,11 +992,14 @@
         if (p.levels && typeof p.levels === "object") Object.assign(save.levels, p.levels);
         // the dopant facts are the one thing worth carrying between runs that
         // isn't an upgrade — a field notebook, not a score
+        // keys are "<specimen id>:<symbol>", so the same element found in two
+        // different specimens is two different notes
         if (p.found && typeof p.found === "object") {
-          for (const k of Object.keys(p.found)) if (DOPANT_DEFS_BY_SYMBOL[k]) save.found[k] = 1;
+          for (const k of Object.keys(p.found)) if (/^[a-z]+:[A-Z][a-z]?$/.test(k)) save.found[k] = 1;
         }
         save.muted = !!p.muted;
         save.taughtBlank = p.taughtBlank ? 1 : 0;
+        if (SPECIMENS.some(sp => sp.id === p.specimen)) save.specimen = p.specimen;
       }
     } catch (e) { /* no persistence here; play on */ }
     for (const u of UPGRADES) {
@@ -980,8 +1176,15 @@
   // the three instruments currently on offer; rerolled per pick and per session
   let draftOffer = [];
 
-  const world = rawLattice.map((a, i) => {
-    const r = a.dopantDef ? a.dopantDef.r : 13 + a.intensity * 6;
+  // Everything below is rebuilt whenever a specimen is loaded. It was all
+  // const when there was only one lattice to run across.
+  let SPEC, rawLattice, SEEDED, world, NOTES_BY_SYMBOL, NOTES_TOTAL;
+  let worldWidth, worldHeight, GROUND_Y, SPECIMEN_LEFT, SPECIMEN_RIGHT;
+  let totalResolvable, WIN_COUNT;
+
+  function buildWorld() {
+    return rawLattice.map((a, i) => {
+    const r = a.r != null ? a.r : 13 + a.intensity * 6;
     const preResolved = SEEDED.has(i);
     const vib = vibrationFactor(a.element);
     // A fixed speckle cloud per atom: the dots start scattered and collapse
@@ -1016,7 +1219,7 @@
       // any atom the probe crowds for too long will eventually knock out.
       damaged: false,
       dose: 0,
-      doseLimit: doseLimitEff / vib, // base C 2.0 · N 2.2 · O 2.3 · Au 8.1
+      doseLimit: doseLimitEff / vib, // base C 2.0 · O 2.3 · Sc 3.9 · Pr 6.8 · Au 8.1
       flickerPhase: 0,
       gone: false,   // knocked out and past its collapse — never solid again
       solidNow: true,
@@ -1032,20 +1235,56 @@
       cracks: null,   // built lazily the moment the atom knocks out
       popIn: preResolved ? 1 : 0, // 0..1 easing used for the resolve "snap"
     };
-  });
+    });
+  }
 
-  const worldWidth = Math.max(...world.map(a => a.x)) + 400;
-  const worldHeight = Math.max(...world.map(a => a.y)) + 500;
-  const GROUND_Y = worldHeight - 60;
-  // the scan field ends on the outermost columns: the probe can stand over the
-  // last one but not walk off into empty frame past it
-  const SPECIMEN_LEFT = Math.min(...world.map(a => a.x)) - 10;
-  const SPECIMEN_RIGHT = Math.max(...world.map(a => a.x)) - 10;
+  // Swapping specimens rebuilds the lattice, the geometry derived from it,
+  // the hidden phase image and the fog sheet over it. Nothing else in the
+  // game holds a reference to any of that across a call, so this is the
+  // whole of loading a map.
+  function loadSpecimen(id) {
+    SPEC = SPECIMENS.find(sp => sp.id === id) || SPECIMENS[0];
+    save.specimen = SPEC.id;
+    rawLattice = SPEC.build();
+    SEEDED = surveyScan(rawLattice, SPEC.spawn);
+    world = buildWorld();
 
-  const totalResolvable = world.length;
-  // what "solved" means, in columns rather than in a percentage
-  const WIN_COUNT = Math.max(1, Math.ceil(totalResolvable * WIN_FRAC));
-  let resolvedCount = SEEDED.size; // the columns the survey scan already has
+    NOTES_BY_SYMBOL = {};
+    for (const a of rawLattice) if (a.dopantDef) NOTES_BY_SYMBOL[a.dopantDef.symbol] = a.dopantDef;
+    NOTES_TOTAL = Object.keys(NOTES_BY_SYMBOL).length;
+
+    worldWidth = Math.max(...world.map(a => a.x)) + 400;
+    worldHeight = Math.max(...world.map(a => a.y)) + 500;
+    GROUND_Y = worldHeight - 60;
+    // the scan field ends on the outermost columns: the probe can stand over
+    // the last one but not walk off into empty frame past it
+    SPECIMEN_LEFT = Math.min(...world.map(a => a.x)) - 10;
+    SPECIMEN_RIGHT = Math.max(...world.map(a => a.x)) - 10;
+
+    totalResolvable = world.length;
+    // what "solved" means, in columns rather than in a percentage
+    WIN_COUNT = Math.max(1, Math.ceil(totalResolvable * WIN_FRAC));
+    // centred on the spawn column, not clipping its left edge
+    SPAWN.x = world[SPEC.spawn].x - 10;
+    SPAWN.y = world[SPEC.spawn].y - 200;
+
+    renderTargetImage();
+    buildFog();
+    brandSub.textContent = `${SPEC.name} · dose-limited reconstruction`;
+
+    // Re-seat the probe on the new lattice. The picker lives on the
+    // between-sessions card, so a swap happens while a finished run is still
+    // on screen behind it — and that run's probe position, standing column
+    // and resolved count all refer to a lattice that no longer exists.
+    player.x = SPAWN.x; player.y = SPAWN.y;
+    player.vx = 0; player.vy = 0;
+    player.standingOn = null;
+    lastSafeAtom = null;
+    resolvedCount = SEEDED.size;
+    camera.init = false;
+  }
+
+  let resolvedCount = 0; // the columns the survey scan already has
   let doseSpent = 0;     // against DOSE_BUDGET
   let damagedCount = 0;
   let probeHeat = 0;     // 0..1, how close the worst-hit nearby atom is to knocking out
@@ -1061,8 +1300,8 @@
   // ---------------------------------------------------------------------
   // Player (the scanning probe)
   // ---------------------------------------------------------------------
-  // centred on the spawn column, not clipping its left edge
-  const SPAWN = { x: world[SPAWN_ATOM_INDEX].x - 10, y: world[SPAWN_ATOM_INDEX].y - 200 };
+  // set by loadSpecimen(), which knows which column the probe drops onto
+  const SPAWN = { x: 0, y: 0 };
   const player = {
     x: SPAWN.x, y: SPAWN.y, w: 20, h: 26,
     vx: 0, vy: 0, onGround: false, facing: 1,
@@ -1235,7 +1474,7 @@
     statDose.textContent = doseSpent.toFixed(0);
     statKo.textContent = String(damagedCount);
     statRe.textContent = String(realignCount);
-    statNotes.textContent = `${Object.keys(save.found).length}/${FIELD_NOTES_TOTAL}`;
+    statNotes.textContent = `${notesFound()}/${NOTES_TOTAL}`;
     sfx.beam(false, 0);
     sfx.over(kind);
     paintThumbnail();
@@ -1312,6 +1551,29 @@
     renderLab();
   }
 
+  // The instrument you build carries across specimens — that is the point of
+  // having two. A rig tuned on light carbon meets an oxide that punishes the
+  // same habits differently, and the upgrade tree has to answer both.
+  function renderSpecimens() {
+    specPick.innerHTML = "";
+    for (const sp of SPECIMENS) {
+      const b = document.createElement("button");
+      b.className = "scard" + (sp.id === SPEC.id ? " on" : "");
+      b.innerHTML =
+        `<span class="nm">${sp.name}</span>` +
+        `<span class="tg">${sp.tag}</span>` +
+        `<span class="bl">${sp.blurb}</span>`;
+      b.addEventListener("click", () => {
+        if (sp.id === SPEC.id) return;
+        loadSpecimen(sp.id);
+        writeSave();
+        renderSpecimens();
+        sfx.dopant();
+      });
+      specPick.appendChild(b);
+    }
+  }
+
   function renderLab() {
     const anyLeft = UPGRADES.some(u => levelOf(u) < MAX_LEVEL);
     if (!anyLeft) save.picks = 0;
@@ -1355,6 +1617,8 @@
         ? `Best session so far: ${save.best}% of the lattice recovered.`
         : `Fully upgraded after ${save.sessions} session${save.sessions === 1 ? "" : "s"}. Best so far: ${save.best}%.`;
     }
+
+    renderSpecimens();
 
     rigSummary.innerHTML = "";
     rigLabel.textContent = UPGRADES.some(u => levelOf(u) > 0) ? "Instrument so far" : "";
@@ -1410,13 +1674,16 @@
   // Dopant facts are the one thing worth carrying between sessions that
   // isn't an upgrade, so the notebook persists: a symbol you have already
   // logged says so rather than pretending to be news.
+  function notesFound() {
+    return Object.keys(save.found).filter(k => k.startsWith(SPEC.id + ":")).length;
+  }
   function showFact(atom) {
     const art = ELEMENT_ART[atom.element] || ELEMENT_ART.C;
-    const known = !!save.found[atom.element];
-    if (!known) { save.found[atom.element] = 1; writeSave(); }
-    const n = Object.keys(save.found).length;
+    const key = `${SPEC.id}:${atom.element}`;
+    const known = !!save.found[key];
+    if (!known) { save.found[key] = 1; writeSave(); }
     showNote(
-      known ? `${atom.element} re-confirmed` : `Field note ${n} of ${FIELD_NOTES_TOTAL}`,
+      known ? `${atom.element} re-confirmed` : `Field note ${notesFound()} of ${NOTES_TOTAL}`,
       atom.dopantDef.fact.replace(/^[A-Za-z]{1,2}\s+—\s+/, ""),
       atom.element, art.core, art.mid, art.glow);
   }
@@ -1935,7 +2202,7 @@
   // neighbours, run through a false-colour lookup table, then softened by
   // the upsample so it reads as a finite-resolution measurement.
   // ---------------------------------------------------------------------
-  const targetCanvas = makeCanvas(worldWidth, worldHeight);
+  let targetCanvas = null;
 
   function buildPhaseLUT() {
     const lut = new Uint8Array(256 * 3);
@@ -1954,7 +2221,8 @@
     return lut;
   }
 
-  (function renderTargetImage() {
+  function renderTargetImage() {
+    targetCanvas = makeCanvas(worldWidth, worldHeight);
     const tctx = targetCanvas.getContext("2d");
     const S = 0.6; // the phase field is accumulated at reduced resolution,
                    // then upsampled — which is also what gives it the soft,
@@ -1988,7 +2256,7 @@
     for (const a of world) {
       const art = ELEMENT_ART[a.element] || ELEMENT_ART.C;
       const rad = (a.dopant ? a.r * 2.9 : a.r * 2.2) * S;
-      const peak = Math.min(1, (0.6 + a.intensity * 0.28) * Math.min(1.35, art.z));
+      const peak = Math.min(1, (0.34 + a.intensity * 0.56) * Math.min(1.35, art.z));
       const g = f.createRadialGradient(a.x * S, a.y * S, 0, a.x * S, a.y * S, rad);
       g.addColorStop(0, `rgba(255,255,255,${peak})`);
       g.addColorStop(0.26, `rgba(255,255,255,${peak * 0.58})`);
@@ -2038,14 +2306,19 @@
     // scan-raster striping: real STEM frames carry line-to-line noise
     tctx.fillStyle = "rgba(0,0,0,0.055)";
     for (let y = 0; y < worldHeight; y += 3) tctx.fillRect(0, y, worldWidth, 1);
-  })();
+  }
 
   // --- fog -------------------------------------------------------------
   // Unresolved territory is not empty, it is *unconverged*: dark speckle
   // and coarse blotches, the look of a phase retrieval that has not been
   // fed enough scan positions yet.
-  const fogCanvas = makeCanvas(worldWidth, worldHeight);
-  const fogCtx = fogCanvas.getContext("2d");
+  let fogCanvas = null, fogCtx = null;
+  function buildFog() {
+    fogCanvas = makeCanvas(worldWidth, worldHeight);
+    fogCtx = fogCanvas.getContext("2d");
+    resetFog();
+    SEEDED.forEach(i => eraseFogAt(world[i]));
+  }
 
   const fogTile = (function () {
     const T = 256;
@@ -2077,7 +2350,6 @@
     fogCtx.fillStyle = fogCtx.createPattern(fogTile, "repeat");
     fogCtx.fillRect(0, 0, worldWidth, worldHeight);
   }
-  resetFog();
 
   function eraseFogAt(a) {
     const rad = (a.dopant ? a.r * 5 : a.r * 3.4) * Math.max(0.15, a.resolveProgress);
@@ -2090,7 +2362,6 @@
     fogCtx.arc(a.x, a.y, rad, 0, TAU);
     fogCtx.fill();
   }
-  SEEDED.forEach(i => eraseFogAt(world[i]));
 
   function paintThumbnail() {
     const tw = 960; // 2x the on-card width, so the recovered image stays sharp
@@ -2850,6 +3121,10 @@
     requestAnimationFrame(loop);
   }
 
+  // Load the specimen last: it needs makeCanvas() and the fog helpers, and
+  // it is the thing every frame reads from.
+  loadSpecimen(save.specimen);
+  resetGame();
   requestAnimationFrame(loop);
 })();
 </script>

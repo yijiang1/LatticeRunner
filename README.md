@@ -2,7 +2,7 @@
 
 A 2D platformer about electron ptychography, where the thing you use to see is the thing that does the damage.
 
-You play a scanning probe crossing an atomic lattice. Atom columns are your platforms — but they start as unresolved speckle clouds and only condense into solid ground once you linger nearby long enough, the way a real reconstruction is built up scan position by scan position. Behind a layer of fog sits the true reconstruction image, and every atom you resolve punches a hole in it. The reward is watching the honeycomb picture emerge.
+You play a scanning probe crossing an atomic lattice. Atom columns are your platforms — but they start as unresolved speckle clouds and only condense into solid ground once you linger nearby long enough, the way a real reconstruction is built up scan position by scan position. Behind a layer of fog sits the true reconstruction image, and every atom you resolve punches a hole in it. The reward is watching the picture emerge.
 
 The catch is the central bargain of electron microscopy: **to see an atom you have to hit it with electrons, and the electrons knock it out.** Proximity is what resolves an atom and proximity is what destroys it — the same act, two consequences. You carry one specimen's worth of dose, and how much of the picture you get to see before the beam runs out is the score.
 
@@ -50,15 +50,39 @@ Atomic mass isn't flavour text here. A single `vibrationFactor = √(m_C / m)` d
 
 Which means the level design falls out of the material rather than out of a difficulty knob.
 
-## Swapping in real data
+## Specimens
 
-The lattice is synthetic today, but it's generated behind a deliberate seam. `generateSyntheticLattice()` emits an array of:
+There are two lattices to run across, chosen from the card between sessions. The instrument you build carries across both — that's the point of having two, since a rig tuned on light carbon meets an oxide that punishes the same habits differently.
+
+**Doped 2D lattice** — synthetic. A carbon sheet with three substitutions hidden in it and four vacancies to jump. Even ground, even columns; what it costs you is dose, not footing.
+
+**Perovskite scandate** — measured, not invented. Traced off `obj_phase_roi_sum_Niter200.tiff`, a 277×277 px electron ptychography phase reconstruction at 200 iterations. 253 column peaks were located to sub-pixel precision and a lattice fitted through them, and what came back was a near-perfect square cell — a = 43.20 px, b = 42.98 px, interior angle 91.8° — with every site landing inside 0.012 of a cell edge. The 1.8° of shear is scan distortion, not crystallography.
+
+The cell contents are the textbook ABO₃ perovskite projection down a pseudo-cubic ⟨100⟩ axis:
+
+| Site | Position | What it does |
+|------|----------|--------------|
+| A-site cation | corner | Split into a resolved dumbbell, 5.2 px apart along 127° — the antipolar A displacement of an orthorhombic (Pbnm) tilt system |
+| B-site cation | body centre | Unsplit. It sits on an inversion centre, so it's the one site in the cell that doesn't move |
+| Oxygen ×2 | cell edges | 0.34× the cations' peak height, and *not* on the edge midpoints: each is displaced 4.54 px off it, and in 100% of the 83 columns measured the direction is set by the parity of the cell indices. That's an antiphase octahedral tilt — and it's what puts the half-order reflections in the FFT, a superlattice at 30 px, 45° off the cell axes |
+
+Column σ came out at 2.0–2.6 px, so the information limit sits well inside a single cell: this reconstruction resolves the splitting, which is the entire reason a phase image is worth retrieving. If the pseudo-cubic edge is ~4.0 Å, the pixel is 0.093 Å, the field of view is 2.6 nm, the A-site dumbbell is 0.48 Å across and the oxygen displacement is 0.42 Å.
+
+Calling the three site classes Pr / Sc / O is the one assumption in there — it's the rare-earth-scandate reading of an A:B integrated-intensity ratio of 2.4. The site classes themselves are measured. A different perovskite is a three-symbol edit in `SCANDATE_SITES` and nothing else.
+
+**The layout is the reconstruction.** The field is 6.1 cells wide and 6.2 tall, which is the wrong shape for a side-scroller, so it's cut along a lattice plane into two 3-cell bands and the lower band is laid to the right of the upper one, offset by a whole number of cells in both directions. Both halves are the same crystal, so the join is seamless — rows line up, the checkerboard continues. Every measured column is used exactly once and carries its own real deviation from the ideal site. The 44 faintest peaks were dropped: they sit on no consistent sublattice, so they're the noise floor, not oxygen.
+
+**And the structure is the level design.** Every row is a continuous chain at the same 90 px pitch the carbon sheet runs at, but the footholds alternate: heavy cation, oxygen, heavy cation. The A-site dumbbell's two columns are 16 px apart and fuse into one wide safe pad; the B-site is a single broad column; oxygen is a small one. Then `vibrationFactor` does the rest — oxygen survives 2.3 units of dose against the A-site's 6.8, and drifts three times as far. So the fast route along a row keeps landing on the fragile thing, and the only way across a perovskite is the oxygen. Which is also true in a real microscope, where oxygen is the first thing you lose.
+
+## Swapping in more real data
+
+Specimens live in the `SPECIMENS` array behind a deliberate seam. Each one's `build()` emits an array of:
 
 ```js
-{ x, y, element, intensity }
+{ x, y, element, intensity, r?, wobble?, note? }
 ```
 
-Match that shape with a real ptychography reconstruction export and it drops in without touching game logic. `renderTargetImage()` is the other swap point — it draws the procedural false-colour reveal image that a real reconstruction would replace.
+Match that shape with any reconstruction export and it drops in without touching game logic. `renderTargetImage()` draws the false-colour reveal image from those columns, so a specimen brings its own hidden picture along with it.
 
 ## Look
 
