@@ -293,6 +293,11 @@
   #card { max-height: 88vh; overflow-y: auto; scrollbar-width: thin; transition: width 0.2s ease; }
   #card.lab { width: min(780px, 94vw); }
   #labDone { display: none; }
+  #card.lab .actions {
+    position: sticky; bottom: -24px; z-index: 2;
+    margin-top: 18px; padding: 14px 0 24px;
+    background: linear-gradient(180deg, rgba(8,13,23,0) 0%, rgba(8,13,23,0.93) 32%, rgba(8,13,23,0.99) 100%);
+  }
   #card::-webkit-scrollbar { width: 8px; }
   #card::-webkit-scrollbar-thumb { background: rgba(120,200,255,0.16); border-radius: 4px; }
 
@@ -342,11 +347,11 @@
   }
 
   /* ------------------------------------------------- specimen picker */
-  #specLabel {
-    margin-top: 22px; font: 500 8.5px/1 var(--mono); letter-spacing: 0.2em;
+  #specLabel, #modeLabel {
+    margin-top: 18px; font: 500 8.5px/1 var(--mono); letter-spacing: 0.2em;
     text-transform: uppercase; color: var(--dim);
   }
-  #specPick { display: flex; gap: 8px; margin-top: 9px; flex-wrap: wrap; }
+  #specPick, #modePick { display: flex; gap: 8px; margin-top: 9px; flex-wrap: wrap; }
   .scard {
     flex: 1 1 200px; text-align: left; cursor: pointer;
     padding: 11px 13px; border-radius: 10px;
@@ -387,10 +392,97 @@
     background: var(--cyan); box-shadow: 0 0 6px rgba(90,212,255,0.7);
   }
 
+  /* the ghost card that opens the designer, and the edit affordance on a
+     specimen you built yourself */
+  .scard.ghost {
+    border-style: dashed; color: var(--dim);
+    display: flex; flex-direction: column; justify-content: center;
+  }
+  .scard.ghost .nm { color: var(--cyan); }
+  .scard .ed {
+    float: right; padding: 2px 7px; border-radius: 5px; margin-left: 8px;
+    background: rgba(120,200,255,0.1); border: 1px solid var(--line);
+    font: 600 8px/1.5 var(--mono); letter-spacing: 0.12em; color: #a9d8ef;
+  }
+  .scard .ed:hover { background: rgba(120,200,255,0.22); color: #eaf9ff; }
+
+  /* ------------------------------------------------ specimen designer */
+  #editor {
+    position: fixed; inset: 0; z-index: 30; display: none;
+    flex-direction: column; gap: 11px; padding: 16px 20px 14px;
+    background: var(--void);
+  }
+  #editor.on { display: flex; }
+  #edTop { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+  #edTop .eyebrow {
+    font: 500 8.5px/1 var(--mono); letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--dim); margin-bottom: 6px;
+  }
+  #edTop h2 { margin: 0; font: 600 15px/1 var(--sans); color: var(--ice); }
+  #edName {
+    background: rgba(255,255,255,0.04); border: 1px solid var(--line);
+    color: var(--ice); font: 500 12px/1 var(--mono);
+    padding: 9px 11px; border-radius: 8px; width: 230px; outline: none;
+  }
+  #edName:focus { border-color: var(--line-2); }
+  #edTop .sp { flex: 1; }
+  .ebtn {
+    cursor: pointer; border-radius: 8px; padding: 9px 14px;
+    font: 600 11px/1 var(--sans); letter-spacing: 0.02em;
+    border: 1px solid var(--line-2); background: rgba(120,200,255,0.08);
+    color: var(--ice); transition: filter .15s, background .15s;
+  }
+  .ebtn:hover { filter: brightness(1.15); }
+  .ebtn.primary {
+    border-color: transparent; color: #04121c; font-weight: 700;
+    background: linear-gradient(150deg, #8ff0ff, #4bb8f0);
+  }
+  .ebtn.warn {
+    border-color: rgba(255,122,77,0.3); background: rgba(255,122,77,0.08); color: #ffb499;
+  }
+  #edPal { display: flex; gap: 6px; flex-wrap: wrap; align-items: center; }
+  .pchip {
+    display: flex; align-items: center; gap: 8px; cursor: pointer;
+    padding: 6px 11px 6px 7px; border-radius: 9px; text-align: left;
+    border: 1px solid rgba(255,255,255,0.08); background: rgba(255,255,255,0.025);
+    color: inherit; font: inherit;
+  }
+  .pchip:hover { border-color: rgba(90,212,255,0.3); }
+  .pchip.on { border-color: rgba(90,212,255,0.5); background: rgba(90,212,255,0.1); }
+  .pchip b {
+    width: 23px; height: 23px; border-radius: 50%; display: grid; place-items: center;
+    font: 700 9.5px/1 var(--mono); color: #06121b; flex: none;
+  }
+  .pchip .t { display: block; font: 600 11px/1.3 var(--sans); color: #dff2ff; }
+  .pchip .s {
+    display: block; font: 500 8px/1.4 var(--mono);
+    letter-spacing: 0.11em; text-transform: uppercase; color: var(--dim);
+  }
+  .pchip.tool b { background: rgba(255,255,255,0.07); color: var(--dim); font-size: 12px; }
+  .pchip.tool.on b { background: rgba(125,255,196,0.18); color: var(--mint); }
+  #edWrap {
+    flex: 1; min-height: 0; overflow: auto; display: flex;
+    border: 1px solid var(--line); border-radius: 12px;
+    background: #050b16; scrollbar-width: thin;
+  }
+  /* margin:auto rather than flex centring: it keeps the whole canvas
+     scrollable when the grid is wider than the frame */
+  #edCanvas { display: block; margin: auto; touch-action: none; cursor: crosshair; }
+  #edFoot {
+    display: flex; gap: 18px; align-items: center; flex-wrap: wrap;
+    font: 400 11px/1.5 var(--sans); color: var(--dim);
+  }
+  #edFoot b { color: var(--ice); font-weight: 600; font-variant-numeric: tabular-nums; }
+  #edWarn { color: var(--amber); }
+  #edWarn:empty { display: none; }
+  #edHelp { font: 400 10.5px/1.5 var(--sans); color: #5f7c92; }
+
   @media (max-width: 720px) {
     #panel { width: 210px; }
     #brand p { display: none; }
     #hints { display: none; }
+    #editor { padding: 12px 12px 10px; }
+    #edName { width: 140px; }
   }
 </style>
 </head>
@@ -425,10 +517,10 @@
     <div class="track"><div class="fill" id="meterFill"></div><div class="ticks"></div><div class="goal" id="meterGoal"></div></div>
 
     <div class="readout">
-      <span class="k">Dose remaining</span>
+      <span class="k" id="budgetLabel">Dose remaining</span>
       <span class="v small" id="doseVal">100</span>
     </div>
-    <div class="track"><div class="fill" id="doseFill"></div><div class="ticks"></div></div>
+    <div class="track" id="budgetTrack"><div class="fill" id="doseFill"></div><div class="ticks"></div></div>
 
     <div class="status">
       <span id="beamState"><i class="dot"></i>Beam on</span>
@@ -484,6 +576,8 @@
       <div id="pickLeft"></div>
       <div id="draft"></div>
       <div id="labDone"></div>
+      <div id="modeLabel">Mode</div>
+      <div id="modePick"></div>
       <div id="specLabel">Specimen</div>
       <div id="specPick"></div>
       <div id="rigLabel"></div>
@@ -492,6 +586,33 @@
         <button id="beginBtn">Begin session</button>
       </div>
     </div>
+  </div>
+</div>
+
+<div id="editor">
+  <div id="edTop">
+    <div>
+      <div class="eyebrow">Specimen designer</div>
+      <h2>Build a lattice</h2>
+    </div>
+    <input id="edName" maxlength="32" spellcheck="false" aria-label="Specimen name">
+    <span class="sp"></span>
+    <button class="ebtn" id="edClear">Clear</button>
+    <button class="ebtn warn" id="edDelete">Delete</button>
+    <button class="ebtn" id="edClose">Save &amp; close</button>
+    <button class="ebtn primary" id="edPlay">Play it</button>
+  </div>
+
+  <div id="edPal"></div>
+
+  <div id="edWrap"><canvas id="edCanvas"></canvas></div>
+
+  <div id="edFoot">
+    <span><b id="edCount">0</b> columns</span>
+    <span id="edRig"></span>
+    <span id="edWarn"></span>
+    <span class="sp" style="flex:1"></span>
+    <span id="edHelp">Drag to paint · right-drag or E to erase · 1-6 pick an element</span>
   </div>
 </div>
 
@@ -520,6 +641,13 @@
   const rigLabel = el("rigLabel");
   const specPick = el("specPick"), brandSub = el("brandSub");
   const beginBtn = el("beginBtn");
+  const modePick = el("modePick");
+  const budgetLabel = el("budgetLabel"), budgetTrack = el("budgetTrack");
+  const editorEl = el("editor"), edCanvas = el("edCanvas"), edWrap = el("edWrap");
+  const edPal = el("edPal"), edNameInput = el("edName");
+  const edCount = el("edCount"), edWarn = el("edWarn"), edRig = el("edRig");
+  const edPlayBtn = el("edPlay"), edCloseBtn = el("edClose");
+  const edClearBtn = el("edClear"), edDeleteBtn = el("edDelete");
 
   // ---------------------------------------------------------------------
   // Small colour helpers. Art definitions below are authored as hex so the
@@ -544,6 +672,9 @@
     canvas.style.width = VW + "px";
     canvas.style.height = VH + "px";
     buildScreenBuffers();
+    // the designer's canvas is sized from the frame it sits in and from DPR,
+    // so it has to be re-laid out after both are up to date
+    if (editorOpen) { edLayout(); drawEditor(); }
   }
   window.addEventListener("resize", resize);
 
@@ -915,6 +1046,174 @@
   }
 
   // ---------------------------------------------------------------------
+  // Modes. The specimen decides what you are looking at; the mode decides
+  // what you are short of while you look at it. All three run the same
+  // simulation and the same physics — knock-out is permanent in every one
+  // of them, because that is the specimen, not a difficulty setting. What
+  // changes is which resource is scarce, and that is enough to change what
+  // playing well means:
+  //
+  //   session  the electron budget is the clock, and blanking is how you
+  //            stretch it. This is the mode every balance number in
+  //            DESIGN.md is measured on, and the only one that feeds the
+  //            draft.
+  //   sprint   wall-clock time is the clock. A real stage drifts, so a
+  //            frame smears if you take too long over it — which is
+  //            precisely why fast acquisition exists. Dose is free here, so
+  //            blanking buys nothing but lost seconds, and coverage per
+  //            second is the whole skill. It is the inverse of a session.
+  //   open     nothing is scarce but the specimen. No clock, no budget, and
+  //            the bar moves from 85% to every last column: with nothing to
+  //            spend there is no reason to stop at "unambiguous".
+  //
+  // Only `session` earns upgrade picks. The other two are where you learn a
+  // specimen and try a route, and a mode with no scarcity in it would
+  // out-earn the one the economy is tuned against within a couple of runs.
+  // ---------------------------------------------------------------------
+  const SPRINT_SECONDS = 60;
+  const MODES = [
+    {
+      id: "session", name: "Dose-limited session",
+      tag: `Campaign · ${DOSE_BUDGET} electrons · earns upgrades`,
+      blurb: "One specimen's worth of dose and no clock. Every electron you spend is specimen you do not get back, and blanking the beam is what makes the budget stretch.",
+      budget: true, seconds: 0, winFrac: WIN_FRAC, earns: true,
+      hints: [{ k: ["A", "D"], t: "move" }, { k: ["Space"], t: "jump" },
+              { k: ["Shift"], t: "blank the beam", hl: 1 }, { k: ["Esc"], t: "modes" },
+              { k: ["R"], t: "abandon run" }],
+    },
+    {
+      id: "sprint", name: `${SPRINT_SECONDS}-second acquisition`,
+      tag: `Timed · ${SPRINT_SECONDS}s · dose unlimited`,
+      blurb: "Stage drift smears the frame after about a minute, so a minute is all you get. Dose is free — blanking only costs you seconds. Cover as much lattice as the window allows.",
+      budget: false, seconds: SPRINT_SECONDS, winFrac: WIN_FRAC, earns: false,
+      hints: [{ k: ["A", "D"], t: "move" }, { k: ["Space"], t: "jump" },
+              { k: ["Esc"], t: "modes" }, { k: ["R"], t: "restart the clock" }],
+    },
+    {
+      id: "open", name: "Open survey",
+      tag: "Untimed · dose unlimited · every column",
+      blurb: "No clock and no budget: take as long as you like and phase the whole lattice. Knock-out is still permanent, so it can still be ruined — just not hurried.",
+      budget: false, seconds: 0, winFrac: 1, earns: false,
+      hints: [{ k: ["A", "D"], t: "move" }, { k: ["Space"], t: "jump" },
+              { k: ["Shift"], t: "blank the beam", hl: 1 },
+              { k: ["Enter"], t: "end the survey" }, { k: ["Esc"], t: "modes" }],
+    },
+  ];
+  let MODE = MODES[0];
+  let budgetLimited = true;   // is the electron budget a hard cap this run
+  let timeLimit = 0;          // sec, 0 = untimed
+  let timeLeft = 0;
+
+  // ---------------------------------------------------------------------
+  // Sandbox specimens. The data contract a specimen has to satisfy is four
+  // fields wide, so a lattice a player built is not a special case in the
+  // engine — it is another build(). The designer edits a grid of cells at
+  // the same 90px pitch the shipped specimens run at, and emits exactly the
+  // atom array scandate() emits. Everything downstream — the hidden phase
+  // image, the fog, the survey scan, knock-on tolerance, the field notes —
+  // falls out of that for free, which is the whole point of having kept the
+  // seam clean.
+  //
+  // Element identity does all the level design here, the same way it does
+  // in the perovskite: r sets how wide the platform is and mass sets how
+  // much dose the column survives before it leaves its site. So an oxygen
+  // row is a tightrope, a gold row is a bench, and a player laying them out
+  // is doing the same reasoning a microscopist does about which columns
+  // will still be there at the end of a scan.
+  // ---------------------------------------------------------------------
+  const SANDBOX_ID = "sandbox";
+  let editorOpen = false;   // the designer takes the keyboard and pauses the sim
+  const GRID_COLS = 34, GRID_ROWS = 9, MAX_DESIGNS = 8;
+  const DESIGN_PALETTE = [
+    { el: "C",  r: 16, intensity: 0.62, name: "Carbon" },
+    { el: "N",  r: 16, intensity: 0.68, name: "Nitrogen" },
+    { el: "O",  r: 12, intensity: 0.56, name: "Oxygen" },
+    { el: "Sc", r: 19, intensity: 0.80, name: "Scandium" },
+    { el: "Pr", r: 20, intensity: 0.92, name: "Praseodymium" },
+    { el: "Au", r: 21, intensity: 0.97, name: "Gold" },
+  ];
+  // One note per element, fired the first time that element is resolved in a
+  // design. Same notebook, same keys as the shipped specimens.
+  const DESIGN_FACTS = {
+    C: "C — carbon is the lightest thing you will stand on and the first the beam displaces: knock-on tolerance goes as the square root of mass.",
+    N: "N — a single substituted nitrogen atom can change how an entire 2D material conducts electricity.",
+    O: "O — oxygen is light and hard to see with X-rays, but electron ptychography resolves it directly. It is also the first column a real scan loses.",
+    Sc: "Sc — a mid-weight cation takes roughly twice the dose a carbon column will, which is why the centre of a perovskite cell outlives its edges.",
+    Pr: "Pr — rare-earth columns are the brightest thing in a phase image and the last thing to move; tolerance climbs as the square root of mass.",
+    Au: "Au — gold sits far heavier than carbon; dense atoms scatter electrons more strongly and glow brighter in a real STEM image.",
+  };
+
+  function newDesignId() { return Math.random().toString(36).slice(2, 10); }
+
+  // Designs come back out of localStorage, which means they can come back
+  // hand-edited, truncated, or written by an older build. Anything that does
+  // not survive this is dropped rather than trusted.
+  function sanitiseDesign(d) {
+    if (!d || typeof d !== "object" || !Array.isArray(d.cells)) return null;
+    const seen = new Set(), cells = [];
+    for (const c of d.cells) {
+      if (!Array.isArray(c)) continue;
+      const col = c[0] | 0, row = c[1] | 0, e = c[2] | 0;
+      if (col < 0 || col >= GRID_COLS || row < 0 || row >= GRID_ROWS) continue;
+      if (e < 0 || e >= DESIGN_PALETTE.length) continue;
+      const k = row * GRID_COLS + col;
+      if (seen.has(k)) continue;
+      seen.add(k);
+      cells.push([col, row, e, c[3] ? 1 : 0]);
+    }
+    if (!cells.length) return null;
+    return {
+      id: typeof d.id === "string" && /^[a-z0-9]{1,12}$/.test(d.id) ? d.id : newDesignId(),
+      name: typeof d.name === "string" && d.name.trim() ? d.name.trim().slice(0, 32) : "Untitled specimen",
+      cells,
+    };
+  }
+
+  function activeDesign() {
+    return save.designs.find(d => d.id === save.designId) || null;
+  }
+
+  // Alternate rows sit half a cell over, exactly the way graphene() lays its
+  // rows out, and for a reason that is mechanical rather than decorative: on
+  // a rigid grid every column has another column directly overhead, and the
+  // probe's collision box fights a ceiling it cannot land on. Offset rows put
+  // the site above you 45px to one side, which is the geometry the whole game
+  // was tuned against — and it is also what a real close-packed lattice does.
+  function designX(col, row) { return col + (row % 2 ? 0.5 : 0); }
+
+  function designAtoms(d) {
+    // leftmost column first, so spawn index 0 is where the probe drops in
+    const cells = d.cells.slice().sort((a, b) =>
+      (designX(a[0], a[1]) - designX(b[0], b[1])) || (a[1] - b[1]));
+    const seenEl = new Set();
+    return cells.map(c => {
+      const pal = DESIGN_PALETTE[c[2]] || DESIGN_PALETTE[0];
+      const first = !seenEl.has(pal.el);
+      if (first) seenEl.add(pal.el);
+      return {
+        x: designX(c[0], c[1]), y: c[1],
+        element: pal.el, intensity: pal.intensity, r: pal.r,
+        wobble: !!c[3],
+        dopant: false,
+        dopantDef: first ? { symbol: pal.el, r: pal.r, fact: DESIGN_FACTS[pal.el] } : null,
+      };
+    });
+  }
+
+  function sandboxSpecimen() {
+    const d = activeDesign();
+    if (!d) return null;
+    const n = d.cells.length;
+    return {
+      id: SANDBOX_ID, name: d.name, design: d,
+      tag: `Your design · ${n} column${n === 1 ? "" : "s"}`,
+      blurb: "A lattice you built. Same dose model, same physics — mass still decides what survives standing on.",
+      spawn: 0,
+      build: () => designAtoms(d),
+    };
+  }
+
+  // ---------------------------------------------------------------------
   // Between-run upgrades. Every run ends in a draft: three instruments are
   // offered, the player keeps one, and it carries into every session after.
   // How much of the lattice a run recovered decides how many picks it earns,
@@ -980,7 +1279,8 @@
   // iframes. The game has to run there too — just without carrying progress.
   const SAVE_KEY = "latticeRunner.v1";
   const save = { sessions: 0, picks: 0, best: 0, levels: {}, found: {}, muted: false,
-                 taughtBlank: 0, specimen: SPECIMENS[0].id };
+                 taughtBlank: 0, specimen: SPECIMENS[0].id,
+                 mode: MODES[0].id, bests: {}, designs: [], designId: null };
   (function loadSave() {
     try {
       const raw = window.localStorage.getItem(SAVE_KEY);
@@ -999,9 +1299,20 @@
         }
         save.muted = !!p.muted;
         save.taughtBlank = p.taughtBlank ? 1 : 0;
-        if (SPECIMENS.some(sp => sp.id === p.specimen)) save.specimen = p.specimen;
+        if (p.specimen === SANDBOX_ID || SPECIMENS.some(sp => sp.id === p.specimen)) save.specimen = p.specimen;
+        if (MODES.some(m => m.id === p.mode)) save.mode = p.mode;
+        if (p.bests && typeof p.bests === "object") {
+          for (const m of MODES) save.bests[m.id] = Math.max(0, Math.min(100, p.bests[m.id] | 0));
+        }
+        if (Array.isArray(p.designs)) {
+          save.designs = p.designs.map(sanitiseDesign).filter(Boolean).slice(0, MAX_DESIGNS);
+        }
+        if (save.designs.some(d => d.id === p.designId)) save.designId = p.designId;
       }
     } catch (e) { /* no persistence here; play on */ }
+    // a saved design can go away without the specimen pointer going with it
+    if (!save.designId && save.designs.length) save.designId = save.designs[0].id;
+    if (save.specimen === SANDBOX_ID && !activeDesign()) save.specimen = SPECIMENS[0].id;
     for (const u of UPGRADES) {
       save.levels[u.id] = Math.max(0, Math.min(MAX_LEVEL, save.levels[u.id] | 0));
     }
@@ -1173,6 +1484,30 @@
   }
   applyUpgrades();
 
+  // Everything a mode changes about a run, in one place: what the second
+  // HUD track is counting down, what "solved" means in columns, and what
+  // the hint strip says. Called from loadSpecimen() and resetGame(), so a
+  // mode picked on the card lands on the next session and nothing ever
+  // half-switches under a run already in progress.
+  function applyMode() {
+    MODE = MODES.find(m => m.id === save.mode) || MODES[0];
+    budgetLimited = MODE.budget;
+    timeLimit = MODE.seconds;
+    timeLeft = timeLimit;
+    WIN_COUNT = Math.max(1, Math.ceil(totalResolvable * MODE.winFrac));
+    meterGoal.style.left = Math.round(MODE.winFrac * 100) + "%";
+    // at 100% the goal tick is the end of the track, where it reads as a
+    // rendering artefact rather than as a target
+    meterGoal.style.display = MODE.winFrac >= 1 ? "none" : "";
+    budgetLabel.textContent = timeLimit ? "Time remaining"
+      : budgetLimited ? "Dose remaining" : "Electrons spent";
+    budgetTrack.style.display = (timeLimit || budgetLimited) ? "" : "none";
+    brandSub.textContent = `${SPEC.name} · ${MODE.name.toLowerCase()}`;
+    hintsEl.innerHTML = MODE.hints.map(h =>
+      `<span class="grp${h.hl ? " hl" : ""}">` +
+      h.k.map(k => `<kbd>${k}</kbd>`).join("") + ` ${h.t}</span>`).join("");
+  }
+
   // the three instruments currently on offer; rerolled per pick and per session
   let draftOffer = [];
 
@@ -1243,7 +1578,10 @@
   // game holds a reference to any of that across a call, so this is the
   // whole of loading a map.
   function loadSpecimen(id) {
-    SPEC = SPECIMENS.find(sp => sp.id === id) || SPECIMENS[0];
+    // a design the player built is looked up the same way a shipped one is;
+    // if the save points at a design that has since been deleted, fall back
+    SPEC = (id === SANDBOX_ID ? sandboxSpecimen() : null) ||
+           SPECIMENS.find(sp => sp.id === id) || SPECIMENS[0];
     save.specimen = SPEC.id;
     rawLattice = SPEC.build();
     SEEDED = surveyScan(rawLattice, SPEC.spawn);
@@ -1262,15 +1600,16 @@
     SPECIMEN_RIGHT = Math.max(...world.map(a => a.x)) - 10;
 
     totalResolvable = world.length;
-    // what "solved" means, in columns rather than in a percentage
-    WIN_COUNT = Math.max(1, Math.ceil(totalResolvable * WIN_FRAC));
+    // what "solved" means, in columns rather than as a percentage, belongs to
+    // the mode now: applyMode(), at the foot of this function, sets WIN_COUNT
+
     // centred on the spawn column, not clipping its left edge
     SPAWN.x = world[SPEC.spawn].x - 10;
     SPAWN.y = world[SPEC.spawn].y - 200;
 
     renderTargetImage();
     buildFog();
-    brandSub.textContent = `${SPEC.name} · dose-limited reconstruction`;
+    applyMode();
 
     // Re-seat the probe on the new lattice. The picker lives on the
     // between-sessions card, so a swap happens while a finished run is still
@@ -1325,12 +1664,19 @@
   const MOVE_KEYS = new Set([" ", "arrowup", "w", "arrowleft", "arrowright", "a", "d"]);
   let hintsFading = 0, hintsArmed = false;
   window.addEventListener("keydown", (e) => {
+    // the designer's name field is a text input and gets to keep its keys
+    if (e.target && e.target.tagName === "INPUT") return;
     const k = e.key.toLowerCase();
     sfx.unlock(); // an AudioContext needs a gesture; this is the first one
+    if (editorOpen) { editorKey(k, e); return; }
     if (!e.repeat && JUMP_KEYS.has(k)) player.jumpBufferTimer = JUMP_BUFFER_TIME;
     if (MOVE_KEYS.has(k)) hintsArmed = true;
     keys[k] = true;
     if (k === "r") resetGame();
+    if (k === "escape" && !e.repeat) openSetup();
+    // an untimed, unrationed survey has no natural end short of the last
+    // column, so it needs a way to stop and read the report
+    if (k === "enter" && !e.repeat && !runOver && !budgetLimited && !timeLimit) endRun("ended");
     if (k === "m" && !e.repeat) {
       const on = sfx.toggle();
       showNote(on ? "Sound on" : "Sound off",
@@ -1350,6 +1696,7 @@
 
   function resetGame() {
     applyUpgrades();
+    applyMode();
     player.x = SPAWN.x; player.y = SPAWN.y;
     player.vx = 0; player.vy = 0; player.onGround = false;
     player.coyoteTimer = 0; player.jumpBufferTimer = 0; player.standingOn = null;
@@ -1377,9 +1724,27 @@
     SEEDED.forEach(i => eraseFogAt(world[i]));
     overlay.classList.remove("on");
     card.classList.remove("lab");
+    // a new mode has a new hint strip; bring it back rather than leaving it
+    // faded out from the last session
+    hintsEl.classList.remove("faded");
+    hintsFading = 0; hintsArmed = false;
     toastEl.classList.remove("on");
     renderRig();
   }
+  // Esc is the way back to the card from inside a run. It abandons the
+  // session exactly the way R does and earns nothing: a mode picker that let
+  // you bank a good run and reroll a bad one would be a scoreboard exploit
+  // wearing a menu.
+  function openSetup() {
+    if (!runOver) {
+      runOver = true;
+      beamOn = false;
+      sfx.beam(false, 0);
+    }
+    overlay.classList.add("on");
+    openLab();
+  }
+
   restartBtn.addEventListener("click", () => {
     if (save.picks > 0 && UPGRADES.some(u => levelOf(u) < MAX_LEVEL)) openLab();
     else resetGame();
@@ -1408,9 +1773,11 @@
     // Two ways the retract genuinely cannot happen: nothing left standing to
     // re-insert onto, or not enough beam left to re-find focus. Both end the
     // session down here, and the card says which.
-    if (!home || doseBudgetEff - doseSpent < REALIGN_COST) { endRun("lost"); return; }
+    if (!home || (budgetLimited && doseBudgetEff - doseSpent < REALIGN_COST)) { endRun("lost"); return; }
 
-    doseSpent = Math.min(doseBudgetEff, doseSpent + REALIGN_COST);
+    doseSpent = budgetLimited
+      ? Math.min(doseBudgetEff, doseSpent + REALIGN_COST)
+      : doseSpent + REALIGN_COST;
     realignCount++;
     player.x = home.x - player.w / 2;
     player.y = (home.y + home.wobbleOffset) - home.r * 0.45 - player.h - 1;
@@ -1427,7 +1794,10 @@
     sfx.realign();
     const left = Math.round(doseBudgetEff - doseSpent);
     showNote("Stage re-inserted",
-      `Retracting and re-finding focus cost ${REALIGN_COST} electrons. ${left} left.`,
+      budgetLimited
+        ? `Retracting and re-finding focus cost ${REALIGN_COST} electrons. ${left} left.`
+        : `Retracting and re-finding focus cost ${REALIGN_COST} electrons and ` +
+          `${REALIGN_GRACE.toFixed(1)}s of stage settling.`,
       "\u21ba", "#bff0ff", "#5ad4ff", "150,225,255");
   }
 
@@ -1450,19 +1820,44 @@
     const fellLine = realignCount === 0 ? "" :
       ` You lost the probe ${realignCount} time${realignCount > 1 ? "s" : ""} — ` +
       `${spentOnFalling} of those electrons went on re-aligning it, not on looking at anything.`;
+    // what the electrons cost is quoted against the budget only where there
+    // is one to quote it against
+    const cost = budgetLimited
+      ? `${doseSpent.toFixed(0)} of ${doseBudgetEff.toFixed(0)} electrons`
+      : `${doseSpent.toFixed(0)} electrons`;
     if (kind === "complete") {
-      overlayTitle.textContent = "Reconstruction solved";
+      overlayTitle.textContent = MODE.winFrac >= 1 ? "Every column phased" : "Reconstruction solved";
       overlayTitle.style.color = "#7dffc4";
+      const closer = MODE.winFrac >= 1
+        ? "There is nothing left in the field of view to resolve. What it cost the specimen to get there is the only score that means anything in a survey."
+        : timeLimit
+          ? `Solved with ${timeLeft.toFixed(1)}s still on the clock — the drift window closed on a finished reconstruction.`
+          : `Past ${Math.round(MODE.winFrac * 100)}% the structure is unambiguous — a real reconstruction is called solved there, ` +
+            `not at every last column. Every electron you didn't spend is specimen that survived.`;
+      overlayText.textContent = `${pct}% of the lattice phased on ${cost}, ${dmg}. ` + closer + fellLine;
+    } else if (kind === "timeout") {
+      overlayTitle.textContent = "Drift window closed";
+      overlayTitle.style.color = "#ffc078";
       overlayText.textContent =
-        `${pct}% of the lattice phased on ${doseSpent.toFixed(0)} of ${doseBudgetEff.toFixed(0)} electrons, ${dmg}. ` +
-        `Past ${Math.round(WIN_FRAC * 100)}% the structure is unambiguous — a real reconstruction is called solved there, ` +
-        `not at every last column. Every electron you didn't spend is specimen that survived.` + fellLine;
+        `${pct}% of the lattice phased in ${timeLimit} seconds, on ${cost}, ${dmg}. ` +
+        `Dose was free here and time was not, which is the trade a real fast-scan acquisition makes: ` +
+        `you spend the specimen to beat the drift.` + fellLine;
+    } else if (kind === "ended") {
+      overlayTitle.textContent = "Survey ended";
+      overlayTitle.style.color = "#7fe3ff";
+      overlayText.textContent =
+        `${pct}% of the lattice phased on ${cost}, ${dmg}. ` +
+        `Nothing was rationed, so what this run is worth reading is the damage column: ` +
+        `every knock-out here was one you chose to stand still for.` + fellLine;
     } else if (kind === "lost") {
       overlayTitle.textContent = "Probe lost";
       overlayTitle.style.color = "#ff8f6b";
       overlayText.textContent =
-        `The probe struck the detector at ${pct}% resolved, ${dmg}, with too little beam left to retract the stage ` +
-        `and re-find focus. Falling is survivable — ${REALIGN_COST} electrons a time — right up until it isn't.` + fellLine;
+        (budgetLimited
+          ? `The probe struck the detector at ${pct}% resolved, ${dmg}, with too little beam left to retract the stage ` +
+            `and re-find focus. Falling is survivable — ${REALIGN_COST} electrons a time — right up until it isn't.`
+          : `The probe struck the detector at ${pct}% resolved, ${dmg}, and there was no column left standing to ` +
+            `re-insert onto. Dose costs nothing in this mode, but a knocked-out lattice is still gone for good.`) + fellLine;
     } else {
       overlayTitle.textContent = "Beam exhausted";
       overlayTitle.style.color = "#ffc078";
@@ -1480,16 +1875,33 @@
     paintThumbnail();
 
     save.sessions++;
-    save.best = Math.max(save.best, pct);
+    // The draft pays out on dose-limited sessions over shipped specimens and
+    // nowhere else. A mode with nothing scarce in it, or a lattice the player
+    // laid out to be easy, would out-earn the run the economy is tuned
+    // against inside a couple of sessions — and then the upgrade tree stops
+    // meaning anything. Bests are tracked per mode for the same reason: a
+    // sprint percentage and a session percentage are not the same number.
+    const shipped = SPEC.id !== SANDBOX_ID;
+    const eligible = MODE.earns && shipped;
+    if (shipped) {
+      save.bests[MODE.id] = Math.max(save.bests[MODE.id] | 0, pct);
+      if (MODE.id === "session") save.best = Math.max(save.best, pct);
+    }
     const anyLeft = UPGRADES.some(u => levelOf(u) < MAX_LEVEL);
-    const earned = anyLeft ? picksFor(pct) : 0;
+    const earned = (eligible && anyLeft) ? picksFor(pct) : 0;
     // once every line is maxed there is nothing to bank picks against, so
     // don't let the save quietly accumulate them
     save.picks = anyLeft ? save.picks + earned : 0;
     writeSave();
 
-    reportEyebrow.textContent = `Session ${save.sessions} · scan report`;
-    if (anyLeft) {
+    reportEyebrow.textContent = `Session ${save.sessions} · ${MODE.name}`;
+    if (!eligible) {
+      earnVal.textContent = String(pct);
+      earnUnit.textContent = shipped ? `% — best here ${save.bests[MODE.id] | 0}%` : "% of your lattice";
+      earnBrk.textContent = shipped
+        ? "Practice mode — the draft only pays out on a dose-limited session"
+        : "Specimens you designed don't earn upgrades — the instrument is earned on real data";
+    } else if (anyLeft) {
       earnVal.textContent = String(earned);
       earnUnit.textContent = earned === 1 ? "upgrade earned" : "upgrades earned";
       earnBrk.textContent =
@@ -1551,27 +1963,84 @@
     renderLab();
   }
 
+  // design names are player text and go through innerHTML with the rest of
+  // the card, so they get escaped on the way
+  function esc(t) {
+    return String(t).replace(/[&<>"]/g, c =>
+      ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+  }
+
+  function scardEl(on, nm, tg, bl, extra) {
+    const b = document.createElement("button");
+    b.className = "scard" + (on ? " on" : "") + (extra ? " " + extra : "");
+    b.innerHTML = `<span class="nm">${nm}</span>` +
+                  `<span class="tg">${tg}</span>` +
+                  `<span class="bl">${bl}</span>`;
+    return b;
+  }
+
+  // The mode is picked in the same place and the same shape as the specimen,
+  // because they are the same kind of decision: what you are looking at, and
+  // what you are short of while you look at it.
+  function renderModes() {
+    modePick.innerHTML = "";
+    for (const m of MODES) {
+      const best = save.bests[m.id] | 0;
+      const b = scardEl(m.id === save.mode, m.name,
+        m.tag + (best ? ` · best ${best}%` : ""), m.blurb);
+      b.addEventListener("click", () => {
+        if (m.id === save.mode) return;
+        save.mode = m.id;
+        writeSave();
+        applyMode();
+        renderLab();
+        sfx.dopant();
+      });
+      modePick.appendChild(b);
+    }
+  }
+
   // The instrument you build carries across specimens — that is the point of
-  // having two. A rig tuned on light carbon meets an oxide that punishes the
-  // same habits differently, and the upgrade tree has to answer both.
+  // having more than one. A rig tuned on light carbon meets an oxide that
+  // punishes the same habits differently, and the upgrade tree has to answer
+  // both. A lattice the player drew is listed here as one more specimen,
+  // because to everything downstream of build() that is exactly what it is.
   function renderSpecimens() {
     specPick.innerHTML = "";
     for (const sp of SPECIMENS) {
-      const b = document.createElement("button");
-      b.className = "scard" + (sp.id === SPEC.id ? " on" : "");
-      b.innerHTML =
-        `<span class="nm">${sp.name}</span>` +
-        `<span class="tg">${sp.tag}</span>` +
-        `<span class="bl">${sp.blurb}</span>`;
+      const b = scardEl(sp.id === SPEC.id, sp.name, sp.tag, sp.blurb);
       b.addEventListener("click", () => {
         if (sp.id === SPEC.id) return;
         loadSpecimen(sp.id);
         writeSave();
-        renderSpecimens();
+        renderLab();
         sfx.dopant();
       });
       specPick.appendChild(b);
     }
+    for (const d of save.designs) {
+      const on = SPEC.id === SANDBOX_ID && save.designId === d.id;
+      const n = d.cells.length;
+      const b = scardEl(on, `<span class="ed">Edit</span>${esc(d.name)}`,
+        `Your design · ${n} column${n === 1 ? "" : "s"}`,
+        "A lattice you built. Same dose model, same physics — mass still decides what survives being stood on.");
+      b.addEventListener("click", (ev) => {
+        if (ev.target.classList.contains("ed")) { openEditor(d); return; }
+        if (on) return;
+        save.designId = d.id;
+        loadSpecimen(SANDBOX_ID);
+        writeSave();
+        renderLab();
+        sfx.dopant();
+      });
+      specPick.appendChild(b);
+    }
+    const add = scardEl(false, "＋ Design a specimen",
+      `Sandbox · ${save.designs.length}/${MAX_DESIGNS} saved`,
+      "Lay out your own lattice column by column. Element mass sets how wide a platform is and how much dose it survives — the same rules the measured specimens run on.",
+      "ghost");
+    add.addEventListener("click", () => openEditor(null));
+    specPick.appendChild(add);
   }
 
   function renderLab() {
@@ -1618,6 +2087,7 @@
         : `Fully upgraded after ${save.sessions} session${save.sessions === 1 ? "" : "s"}. Best so far: ${save.best}%.`;
     }
 
+    renderModes();
     renderSpecimens();
 
     rigSummary.innerHTML = "";
@@ -1648,7 +2118,6 @@
     }
   }
   renderRig();
-  meterGoal.style.left = Math.round(WIN_FRAC * 100) + "%";
 
   function aabbOverlap(ax, ay, aw, ah, bx, by, bw, bh) {
     return ax < bx + bw && ax + aw > bx && ay < by + bh && ay + ah > by;
@@ -1675,7 +2144,10 @@
   // isn't an upgrade, so the notebook persists: a symbol you have already
   // logged says so rather than pretending to be news.
   function notesFound() {
-    return Object.keys(save.found).filter(k => k.startsWith(SPEC.id + ":")).length;
+    // counted against the symbols in *this* lattice: every design shares one
+    // specimen id, so a notebook filled in on one of them would otherwise
+    // report 6 of 2 on the next
+    return Object.keys(NOTES_BY_SYMBOL).filter(sym => save.found[`${SPEC.id}:${sym}`]).length;
   }
   function showFact(atom) {
     const art = ELEMENT_ART[atom.element] || ELEMENT_ART.C;
@@ -1756,11 +2228,24 @@
     // the beam stays off while the stage settles after a re-insertion, so
     // you are never charged for the frames you didn't choose to be there
     realignGrace = Math.max(0, realignGrace - dt);
+    // A timed mode's clock is wall time, not beam time: the specimen drifts
+    // under the beam whether or not you are looking at it, so blanking buys
+    // nothing here. It keeps running through a stage re-insertion too — that
+    // is what makes falling expensive when electrons are free.
+    if (timeLimit && !runOver) {
+      timeLeft = Math.max(0, timeLeft - dt);
+      if (timeLeft <= 0) endRun("timeout");
+    }
     if (keys["shift"]) blankedEver = true;
     beamOn = !runOver && !keys["shift"] && realignGrace <= 0;
     if (beamOn) {
-      doseSpent = Math.min(doseBudgetEff, doseSpent + BEAM_DRAIN * dt);
-      if (doseSpent >= doseBudgetEff) { beamOn = false; endRun("exhausted"); }
+      // electrons are still counted when they are not rationed — the report
+      // is about what the scan cost the specimen either way
+      doseSpent += BEAM_DRAIN * dt;
+      if (budgetLimited) {
+        doseSpent = Math.min(doseBudgetEff, doseSpent);
+        if (doseSpent >= doseBudgetEff) { beamOn = false; endRun("exhausted"); }
+      }
     }
     // --- horizontal input ---
     // Top speed is the scan generator's slew rate; once the probe is out of
@@ -2060,9 +2545,20 @@
     meterPct.innerHTML = pct + "<i>%</i>";
 
     const left = doseBudgetEff - doseSpent;
-    doseVal.textContent = left.toFixed(0);
-    doseFill.style.width = (left / doseBudgetEff * 100) + "%";
-    const lowNow = left / doseBudgetEff < 0.22;
+    let lowNow = false;
+    if (timeLimit) {
+      // sub-10s reads in tenths: the last seconds of a sprint are where the
+      // decision to go for one more column actually gets made
+      doseVal.textContent = timeLeft >= 10 ? timeLeft.toFixed(0) : timeLeft.toFixed(1);
+      doseFill.style.width = (timeLeft / timeLimit * 100) + "%";
+      lowNow = timeLeft / timeLimit < 0.22;
+    } else if (budgetLimited) {
+      doseVal.textContent = left.toFixed(0);
+      doseFill.style.width = (left / doseBudgetEff * 100) + "%";
+      lowNow = left / doseBudgetEff < 0.22;
+    } else {
+      doseVal.textContent = doseSpent.toFixed(0);
+    }
     panel.classList.toggle("low", lowNow);
     if (lowNow && !lowWarned && !runOver) { lowWarned = true; sfx.low(); setTimeout(() => sfx.low(), 140); }
     beamState.innerHTML = '<i class="dot"></i>' + (runOver ? "Beam off"
@@ -2166,6 +2662,50 @@
 
     s = { canvas: c, off: size / 2 };
     spriteCache.set(key, s);
+    return s;
+  }
+
+  // --- convergence sprites ----------------------------------------------
+  // A column that has not converged yet is not a placeholder, it is the same
+  // sphere at a worse information limit. Each level bakes the sharp sprite
+  // through a downsample-and-back — a real band limit, spatial frequency
+  // actually thrown away — plus a gaussian to kill the resampling grid. So
+  // the reveal is the reconstruction gaining resolution, not a dissolve.
+  //
+  // Baked once per (element, radius, level); the blur never runs per frame.
+  const FOCUS_LEVELS = 8;
+  const focusCache = new Map();
+
+  function focusSprite(art, r, level) {
+    const key = `${art.core}|${art.rim}|${Math.round(r)}|${level}`;
+    let s = focusCache.get(key);
+    if (s) return s;
+
+    const sharp = atomSprite(art, r);
+    const size = sharp.canvas.width;
+    const t = level / (FOCUS_LEVELS - 1);          // 0 defocused .. 1 sharp
+
+    const c = makeCanvas(size, size);
+    const g = c.getContext("2d");
+    g.imageSmoothingEnabled = true;
+
+    if (t >= 0.999) {
+      g.drawImage(sharp.canvas, 0, 0);
+    } else {
+      // cut the sampling to a fraction of the sprite, then bring it back up
+      const f = 0.12 + t * t * 0.88;
+      const sw = Math.max(2, Math.round(size * f));
+      const tmp = makeCanvas(sw, sw);
+      const tg = tmp.getContext("2d");
+      tg.imageSmoothingEnabled = true;
+      tg.drawImage(sharp.canvas, 0, 0, sw, sw);
+      if (SUPPORTS_FILTER) g.filter = `blur(${(0.6 + (1 - t) * r * 0.30).toFixed(2)}px)`;
+      g.drawImage(tmp, 0, 0, size, size);
+      g.filter = "none";
+    }
+
+    s = { canvas: c, off: size / 2 };
+    focusCache.set(key, s);
     return s;
   }
 
@@ -2613,10 +3153,15 @@
     }
   }
 
-  // Unresolved sites: a speckle cloud that collapses onto the column as the
-  // reconstruction converges, ringed by a progress arc. Drift-hazard sites
-  // stretch their cloud vertically and carry a dashed track, so the hazard
-  // is telegraphed by motion language rather than by an arbitrary colour.
+  // Unresolved sites: the column itself, defocused and dim, pulling into
+  // focus and up in brightness as the reconstruction converges. No meter —
+  // the *image quality is* the meter, which is how you read a real
+  // reconstruction: blurred and faint means not enough data yet, sharp and
+  // bright means the column is solved. Residual speckle is the noise floor,
+  // so it thins out as the signal comes up rather than merely collapsing
+  // inward, and the site jitters about its true position until the phase
+  // settles. Drift-hazard sites keep their vertical bias and dashed track,
+  // so the hazard is still telegraphed in motion language.
   function drawUnresolved() {
     for (const a of world) {
       if (a.resolved) continue;
@@ -2636,43 +3181,57 @@
         ctx.setLineDash([]);
       }
 
-      // a soft core so the site reads as standable geometry from a distance —
-      // it is a ghost, but the player still has to route around it
-      const core = ctx.createRadialGradient(a.x, a.y, 0, a.x, a.y, a.r * 1.25);
-      core.addColorStop(0, `rgba(${art.glow},${0.14 + p * 0.4})`);
-      core.addColorStop(0.55, `rgba(${art.glow},${0.05 + p * 0.18})`);
-      core.addColorStop(1, `rgba(${art.glow},0)`);
-      ctx.fillStyle = core;
-      ctx.beginPath(); ctx.arc(a.x, a.y, a.r * 1.25, 0, TAU); ctx.fill();
+      // an unconverged column has not settled onto its true position yet:
+      // it wanders, and the wander dies out as the phase locks
+      const unrest = spread * spread;
+      const jx = Math.sin(simTime * 5.3 + a.id * 1.7) * a.r * 0.20 * unrest;
+      const jy = Math.cos(simTime * 4.1 + a.id * 2.9) * a.r * 0.20 * unrest * (a.wobble ? 2.1 : 1);
+      const cx = a.x + jx, cy = a.y + jy;
 
-      ctx.fillStyle = `rgba(${art.glow},${0.34 + p * 0.45})`;
+      // the sphere at its current information limit, crossfaded between the
+      // two nearest baked levels so the sharpening is continuous
+      const lvl = Math.pow(p, 0.75) * (FOCUS_LEVELS - 1);
+      const lo = Math.min(FOCUS_LEVELS - 1, Math.floor(lvl));
+      const hi = Math.min(FOCUS_LEVELS - 1, lo + 1);
+      const mix = lvl - lo;
+      const bright = 0.20 + 0.80 * Math.pow(p, 0.8);
+
+      const sLo = focusSprite(art, a.r, lo);
+      ctx.globalAlpha = bright * (1 - mix);
+      ctx.drawImage(sLo.canvas, cx - sLo.off, cy - sLo.off);
+      if (mix > 0.001 && hi !== lo) {
+        const sHi = focusSprite(art, a.r, hi);
+        ctx.globalAlpha = bright * mix;
+        ctx.drawImage(sHi.canvas, cx - sHi.off, cy - sHi.off);
+      }
+      ctx.globalAlpha = 1;
+
+      // noise floor: speckle scattered off the column, falling away as the
+      // signal-to-noise comes up
+      ctx.fillStyle = `rgba(${art.glow},${0.10 + spread * 0.42})`;
       for (const s of a.speckle) {
         const d = a.r * (0.5 + s.dist * spread);
         const ang = s.ang + simTime * 0.3 * s.dir;
-        const sx = a.x + Math.cos(ang) * d;
-        const sy = a.y + Math.sin(ang) * d * (a.wobble ? 1.7 : 1);
+        const sx = cx + Math.cos(ang) * d;
+        const sy = cy + Math.sin(ang) * d * (a.wobble ? 1.7 : 1);
         ctx.fillRect(sx - s.size / 2, sy - s.size / 2, s.size, s.size);
       }
 
-      ctx.strokeStyle = `rgba(${art.glow},${0.3 + p * 0.35})`;
+      // the aperture the column is being resolved through, closing onto it
+      ctx.strokeStyle = `rgba(${art.glow},${0.06 + spread * 0.20})`;
       ctx.lineWidth = 1;
-      if (p < 0.02) ctx.setLineDash([3, 5]);
+      ctx.setLineDash([3, 5]);
       ctx.beginPath();
-      ctx.arc(a.x, a.y, a.r * (1.3 - p * 0.3), 0, TAU);
+      ctx.arc(a.x, a.y, a.r * (1.5 - p * 0.5), 0, TAU);
       ctx.stroke();
       ctx.setLineDash([]);
 
-      if (p > 0.02) {
-        ctx.strokeStyle = rgba(art.rim, 0.85);
-        ctx.lineWidth = 2.4;
-        ctx.lineCap = "round";
-        ctx.beginPath();
-        ctx.arc(a.x, a.y, a.r * 1.3, -Math.PI / 2, -Math.PI / 2 + TAU * p);
-        ctx.stroke();
-        ctx.lineCap = "butt";
-      }
-      const h = haloSprite(art.glow, a.r * 0.7, 0.16 + p * 0.5);
-      gctx.drawImage(h.canvas, a.x - h.off, a.y - h.off);
+      // the bloom is lerped onto exactly what drawResolved() will hand back
+      // — radius and strength both land on the resolved values at p = 1, so
+      // locking in is a snap in scale, not a jump in brightness
+      const hz = Math.min(1.6, art.z);
+      const h = haloSprite(art.glow, a.r * (0.7 + 0.3 * p), 0.10 + (0.42 * hz - 0.10) * Math.pow(p, 0.9));
+      gctx.drawImage(h.canvas, cx - h.off, cy - h.off);
     }
   }
 
@@ -3096,7 +3655,10 @@
 
     // the specimen is cooking / the budget is nearly gone — warn at the
     // edge of vision rather than with another number on the panel
-    const doseFrac = 1 - doseSpent / doseBudgetEff;
+    // whichever resource this mode rations; in a mode that rations neither
+    // there is nothing to warn about
+    const doseFrac = timeLimit ? timeLeft / timeLimit
+      : budgetLimited ? 1 - doseSpent / doseBudgetEff : 1;
     const heatAlpha = probeHeat > DOSE_WARN_FRAC
       ? (probeHeat - DOSE_WARN_FRAC) / (1 - DOSE_WARN_FRAC) * 0.3 : 0;
     const lowAlpha = doseFrac < 0.22 && !runOver
@@ -3113,11 +3675,442 @@
     }
   }
 
+  // =====================================================================
+  // THE SPECIMEN DESIGNER
+  //
+  // A grid editor over the lattice the engine already runs on: one cell is
+  // one 90px lattice site, and painting one emits exactly the atom a
+  // build() would. Nothing in here reaches into the simulation — it edits a
+  // design, loadSpecimen() does the rest, and the game cannot tell a
+  // player's lattice from a measured one.
+  //
+  // The one thing it does read out of the simulation is the physics, and
+  // that is what makes it an editor rather than a level dump: it walks the
+  // lattice you have drawn using your instrument's actual jump arc and says
+  // which columns the probe can never get to. Same constants update() runs
+  // on, so it is not advice about the game — it is the game, solved for
+  // reachability, which also means the answer changes as you upgrade.
+  // =====================================================================
+  let edId = null, edEl = 0, edTool = "paint", edDrift = false;
+  let edCell = 44, edPaint = 0, edHover = -1;
+  const edSlot = new Int8Array(GRID_COLS * GRID_ROWS); // 0 empty, else palette index + 1
+  const edWob = new Uint8Array(GRID_COLS * GRID_ROWS);
+  const edCtx = edCanvas.getContext("2d");
+
+  // The standable top of a column, and the arc the probe actually flies —
+  // both straight out of the constants the run uses. vAir is deliberately
+  // the conservative figure: the measured ground speed is 117 px/s and a
+  // jump from a standing start carries about 0.9 of it, so anything this
+  // calls crossable is crossable with speed already on.
+  function edHalf(pal) { return pal.r * 2.7 / 2; }
+  function edArc() {
+    const v0 = JUMP_VELOCITY * jumpBoostEff;
+    const apex = v0 * v0 / (2 * GRAVITY);
+    const tFall = Math.sqrt(2 * apex / (GRAVITY * FALL_GRAVITY_MULT));
+    return { apex, tRise: v0 / GRAVITY, tFall,
+             vAir: 117 * 0.9 * moveSpeedEff * airControlEff };
+  }
+  function edLinked(a, b, arc) {
+    const gap = Math.abs(b.wx - a.wx) * WORLD_SCALE - edHalf(a.pal) - edHalf(b.pal);
+    const rise = (a.row - b.row) * WORLD_SCALE;   // how much higher b sits
+    if (rise > arc.apex - 10) return false;       // cannot clear its top at all
+    if (gap <= 0) return true;                    // the pads touch: walk it
+    // time in the air before the probe is back down at b's height — falling
+    // further buys more of it, which is why a drop can be crossed wider
+    const t = arc.tRise + Math.sqrt(2 * (arc.apex - rise) / (GRAVITY * FALL_GRAVITY_MULT));
+    return gap <= arc.vAir * t;
+  }
+
+  function edAnalyse() {
+    const pts = [];
+    for (let row = 0; row < GRID_ROWS; row++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        const k = row * GRID_COLS + c;
+        if (edSlot[k]) pts.push({ k, c, row, wx: designX(c, row),
+                                  pal: DESIGN_PALETTE[edSlot[k] - 1], wob: edWob[k] });
+      }
+    }
+    const arc = edArc();
+    const reach = new Set();
+    const lost = [];
+    let spawn = null;
+    if (pts.length) {
+      // the probe drops onto the leftmost column, the rule designAtoms() sorts by
+      spawn = pts[0];
+      for (const q of pts) if (q.wx < spawn.wx || (q.wx === spawn.wx && q.row < spawn.row)) spawn = q;
+      const queue = [spawn];
+      reach.add(spawn.k);
+      while (queue.length) {
+        const a = queue.pop();
+        for (const b of pts) {
+          if (reach.has(b.k)) continue;
+          if (edLinked(a, b, arc)) { reach.add(b.k); queue.push(b); }
+        }
+      }
+      // A column the probe cannot stand on is not necessarily lost — the scan
+      // field reaches 150px, so a neighbour of a reachable column still gets
+      // phased from next door. What is lost is a column that is neither.
+      const rr = resolveRadiusEff * resolveRadiusEff;
+      for (const b of pts) {
+        if (reach.has(b.k)) continue;
+        let scanned = false;
+        for (const a of pts) {
+          if (!reach.has(a.k)) continue;
+          const dx = (b.wx - a.wx) * WORLD_SCALE, dy = (b.row - a.row) * WORLD_SCALE;
+          if (dx * dx + dy * dy <= rr) { scanned = true; break; }
+        }
+        if (!scanned) lost.push(b);
+      }
+    }
+    return { pts, reach, lost, spawn, arc };
+  }
+
+  // The canvas fills the frame and the lattice is centred inside it, so the
+  // empty part of the field of view is drawn as vacuum with the detector
+  // plane under it rather than left as a hole in the panel. Same picture the
+  // run gives you: a specimen suspended over a detector.
+  let edOX = 0, edOY = 0;
+  const ED_FLOOR = 30;   // px of detector plane along the bottom
+  function edLayout() {
+    const availW = Math.max(320, edWrap.clientWidth - 2);
+    const availH = Math.max(240, edWrap.clientHeight - 2);
+    // + half a cell of margin: the odd rows overhang the grid on the right
+    edCell = Math.max(24, Math.min(58, Math.floor(availW / (GRID_COLS + 0.5))));
+    const gw = edCell * (GRID_COLS + 0.5), gh = edCell * GRID_ROWS;
+    const w = Math.max(gw, availW), h = Math.max(gh + ED_FLOOR, availH);
+    edOX = Math.round((w - gw) / 2);
+    edOY = Math.max(0, Math.round((h - ED_FLOOR - gh) / 2));
+    edCanvas.style.width = w + "px";
+    edCanvas.style.height = h + "px";
+    edCanvas.width = Math.round(w * DPR);
+    edCanvas.height = Math.round(h * DPR);
+    edCtx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  }
+
+  function drawEditor() {
+    const a = edAnalyse();
+    const g = edCtx;
+    const W = edCanvas.width / DPR, H = edCanvas.height / DPR;
+    const gh = edCell * GRID_ROWS, gw = edCell * (GRID_COLS + 0.5);
+    const cellX = (c, row) => (c + (row % 2 ? 0.5 : 0)) * edCell;
+    const scale = edCell / WORLD_SCALE;   // the grid is the lattice, to scale
+
+    const bg = g.createLinearGradient(0, 0, 0, H);
+    bg.addColorStop(0, "#060d1a");
+    bg.addColorStop(0.72, "#03060e");
+    bg.addColorStop(1, "#02040a");
+    g.fillStyle = bg;
+    g.fillRect(0, 0, W, H);
+
+    // the detector plane runs the full width of the frame, under everything
+    g.fillStyle = "rgba(90,212,255,0.05)";
+    g.fillRect(0, H - ED_FLOOR, W, ED_FLOOR);
+    g.strokeStyle = "rgba(90,212,255,0.22)";
+    g.beginPath(); g.moveTo(0, H - ED_FLOOR + 0.5); g.lineTo(W, H - ED_FLOOR + 0.5); g.stroke();
+    g.fillStyle = "rgba(123,156,181,0.85)";
+    g.font = '500 9px ui-monospace, "SF Mono", Menlo, monospace';
+    g.fillText("DETECTOR PLANE — fall to here and the stage has to be retracted and re-inserted",
+      12, H - ED_FLOOR + 19);
+
+    g.save();
+    g.translate(edOX, edOY);
+
+    g.strokeStyle = "rgba(120,200,255,0.07)";
+    g.lineWidth = 1;
+    g.beginPath();
+    for (let r = 0; r < GRID_ROWS; r++) {
+      const y = r * edCell, off = (r % 2) * edCell / 2;
+      for (let c = 0; c <= GRID_COLS; c++) {
+        g.moveTo(c * edCell + off + 0.5, y);
+        g.lineTo(c * edCell + off + 0.5, y + edCell);
+      }
+      g.moveTo(off, y + 0.5); g.lineTo(off + GRID_COLS * edCell, y + 0.5);
+    }
+    g.moveTo(0, gh + 0.5); g.lineTo(gw, gh + 0.5);
+    g.stroke();
+
+    if (edHover >= 0) {
+      const hc = edHover % GRID_COLS, hr = (edHover / GRID_COLS) | 0;
+      const hx = cellX(hc, hr) + edCell / 2, hy = hr * edCell + edCell / 2;
+      // the scan field, at the size it will really be: what one column
+      // resolves for free is most of what routing a lattice is about
+      g.strokeStyle = "rgba(90,212,255,0.18)";
+      g.setLineDash([4, 5]);
+      g.beginPath(); g.arc(hx, hy, resolveRadiusEff * scale, 0, TAU); g.stroke();
+      g.setLineDash([]);
+      g.fillStyle = "rgba(90,212,255,0.09)";
+      g.fillRect(cellX(hc, hr), hr * edCell, edCell, edCell);
+    }
+
+    for (const q of a.pts) {
+      const art = ELEMENT_ART[q.pal.el] || ELEMENT_ART.C;
+      const x = cellX(q.c, q.row) + edCell / 2, y = q.row * edCell + edCell / 2;
+      const sp = atomSprite(art, q.pal.r);
+      const dw = sp.canvas.width * scale;
+      g.globalAlpha = a.reach.has(q.k) ? 1 : 0.5;
+      g.drawImage(sp.canvas, x - sp.off * scale, y - sp.off * scale, dw, dw);
+      g.globalAlpha = 1;
+      if (q.wob) {
+        // scan drift: the same vertical vocabulary the run uses
+        g.strokeStyle = "rgba(200,230,255,0.5)";
+        g.setLineDash([3, 3]);
+        g.beginPath();
+        g.moveTo(x, y - edCell * 0.36); g.lineTo(x, y + edCell * 0.36);
+        g.stroke();
+        g.setLineDash([]);
+      }
+    }
+
+    for (const q of a.lost) {
+      const x = cellX(q.c, q.row) + edCell / 2, y = q.row * edCell + edCell / 2;
+      g.strokeStyle = "rgba(255,192,120,0.85)";
+      g.lineWidth = 1.5;
+      g.setLineDash([3, 4]);
+      g.beginPath(); g.arc(x, y, edCell * 0.42, 0, TAU); g.stroke();
+      g.setLineDash([]);
+    }
+
+    if (a.spawn) {
+      const x = cellX(a.spawn.c, a.spawn.row) + edCell / 2, y = a.spawn.row * edCell + edCell / 2;
+      const top = y - a.spawn.pal.r * 0.45 * scale;
+      g.strokeStyle = "rgba(143,240,255,0.9)";
+      g.fillStyle = "rgba(143,240,255,0.9)";
+      g.lineWidth = 1.4;
+      g.beginPath();
+      g.moveTo(x - 6, top - 20); g.lineTo(x, top - 8); g.lineTo(x + 6, top - 20);
+      g.stroke();
+      g.beginPath(); g.arc(x, top - 24, 2.4, 0, TAU); g.fill();
+      g.font = '600 8px ui-monospace, "SF Mono", Menlo, monospace';
+      g.fillText("PROBE", x - 12, top - 30);
+    }
+    g.restore();
+
+    // --- footer readout ---------------------------------------------------
+    edCount.textContent = String(a.pts.length);
+    const reachPx = Math.round(a.arc.vAir * (a.arc.tRise + a.arc.tFall));
+    // quoted as the gap it clears rather than as the distance it travels:
+    // neighbouring columns leave a 47px gap between their pads, a vacancy
+    // leaves 137px, and which of those your instrument can cross is the
+    // whole of whether a layout is playable
+    edRig.innerHTML =
+      `your rig: jumps <b>${Math.round(a.arc.apex)}px</b> high · clears a <b>${reachPx}px</b> gap · ` +
+      `scan field <b>${Math.round(resolveRadiusEff)}px</b> · columns sit <b>${WORLD_SCALE}px</b> apart`;
+    let warn = "";
+    if (!a.pts.length) {
+      warn = "Empty grid — paint some columns.";
+    } else if (a.pts.length < 8) {
+      warn = "Under 8 columns is not really a specimen yet.";
+    } else if (a.lost.length) {
+      warn = `${a.lost.length} column${a.lost.length === 1 ? "" : "s"} ringed in amber can be neither reached ` +
+             `nor scanned from the spawn on this instrument. Bridge the gap through the row above or below, ` +
+             `or open it up with a longer jump (PZT) and more reach (SCAN, SHFT).`;
+    }
+    edWarn.textContent = warn;
+  }
+
+  function renderPalette() {
+    edPal.innerHTML = "";
+    DESIGN_PALETTE.forEach((pal, i) => {
+      const art = ELEMENT_ART[pal.el] || ELEMENT_ART.C;
+      const b = document.createElement("button");
+      b.className = "pchip" + (edTool === "paint" && edEl === i ? " on" : "");
+      // tolerance quoted against carbon, because that is what it is: the
+      // knock-on limit goes as the square root of mass and nothing else
+      const tol = (1 / vibrationFactor(pal.el)).toFixed(1);
+      b.innerHTML =
+        `<b style="background:linear-gradient(150deg,${art.core},${art.mid})">${pal.el}</b>` +
+        `<span><span class="t">${pal.name}</span>` +
+        `<span class="s">${Math.round(pal.r * 2.7)}px pad · ${tol}× C dose</span></span>`;
+      b.addEventListener("click", () => { edTool = "paint"; edEl = i; renderPalette(); });
+      edPal.appendChild(b);
+    });
+    const eraser = document.createElement("button");
+    eraser.className = "pchip tool" + (edTool === "erase" ? " on" : "");
+    eraser.innerHTML = '<b>⌫</b><span><span class="t">Vacancy</span>' +
+      '<span class="s">erase · or right-drag</span></span>';
+    eraser.addEventListener("click", () => { edTool = "erase"; renderPalette(); });
+    edPal.appendChild(eraser);
+
+    const drift = document.createElement("button");
+    drift.className = "pchip tool" + (edDrift ? " on" : "");
+    drift.innerHTML = '<b>↕</b><span><span class="t">Scan drift</span>' +
+      `<span class="s">${edDrift ? "painting drifters" : "off"}</span></span>`;
+    drift.addEventListener("click", () => { edDrift = !edDrift; renderPalette(); });
+    edPal.appendChild(drift);
+  }
+
+  // A blank grid is a worse first move than a lattice to carve: two carbon
+  // rows at the pitch the shipped specimens run at is already a playable
+  // specimen, and it shows what the units are before you have placed a thing.
+  function edSeed() {
+    for (let c = 0; c < GRID_COLS; c++) {
+      edSlot[3 * GRID_COLS + c] = 1;
+      edSlot[4 * GRID_COLS + c] = 1;
+    }
+  }
+
+  function openEditor(d) {
+    if (!d && save.designs.length >= MAX_DESIGNS) {
+      showNote("Designer full",
+        `${MAX_DESIGNS} saved designs is the limit — delete one to make room.`,
+        "!", "#ffd9c0", "#ff9d70", "255,150,110");
+      return;
+    }
+    edSlot.fill(0); edWob.fill(0);
+    if (d) {
+      edId = d.id;
+      edNameInput.value = d.name;
+      for (const c of d.cells) {
+        const k = c[1] * GRID_COLS + c[0];
+        edSlot[k] = c[2] + 1;
+        edWob[k] = c[3] ? 1 : 0;
+      }
+    } else {
+      edId = newDesignId();
+      edNameInput.value = `Specimen ${save.designs.length + 1}`;
+      edSeed();
+    }
+    edEl = 0; edTool = "paint"; edDrift = false; edHover = -1; edPaint = 0;
+    editorOpen = true;
+    editorEl.classList.add("on");
+    edDeleteBtn.style.display = save.designs.some(x => x.id === edId) ? "" : "none";
+    renderPalette();
+    edLayout();
+    drawEditor();
+  }
+
+  function commitDesign() {
+    const cells = [];
+    for (let row = 0; row < GRID_ROWS; row++) {
+      for (let c = 0; c < GRID_COLS; c++) {
+        const k = row * GRID_COLS + c;
+        if (edSlot[k]) cells.push([c, row, edSlot[k] - 1, edWob[k] ? 1 : 0]);
+      }
+    }
+    if (!cells.length) return null;
+    const name = (edNameInput.value || "").trim().slice(0, 32) || "Untitled specimen";
+    let d = save.designs.find(x => x.id === edId);
+    if (!d) {
+      if (save.designs.length >= MAX_DESIGNS) return null;
+      d = { id: edId, name, cells };
+      save.designs.push(d);
+    } else {
+      d.name = name;
+      d.cells = cells;
+    }
+    save.designId = d.id;
+    writeSave();
+    // if the card behind the designer is sitting on this lattice, rebuild it
+    // so the edit is what the next session runs on
+    if (SPEC.id === SANDBOX_ID) loadSpecimen(SANDBOX_ID);
+    return d;
+  }
+
+  function closeEditor(committed) {
+    if (!committed && !commitDesign()) {
+      showNote("Nothing saved",
+        "An empty grid is not a specimen, so the design was left as it was.",
+        "∅", "#ffd9c0", "#ff9d70", "255,150,110");
+    }
+    editorOpen = false;
+    edPaint = 0;
+    editorEl.classList.remove("on");
+    renderLab();
+  }
+
+  function editorKey(k, e) {
+    if (k === "escape") { closeEditor(); return; }
+    if (k >= "1" && k <= "9") {
+      const i = +k - 1;
+      if (i < DESIGN_PALETTE.length) { edTool = "paint"; edEl = i; renderPalette(); }
+      return;
+    }
+    if (k === "e") { edTool = edTool === "erase" ? "paint" : "erase"; renderPalette(); }
+    else if (k === "d") { edDrift = !edDrift; renderPalette(); }
+    else if (k === "enter") { e.preventDefault(); edPlayBtn.click(); }
+  }
+
+  function edCellAt(ev) {
+    const rect = edCanvas.getBoundingClientRect();
+    const r = Math.floor((ev.clientY - rect.top - edOY) / edCell);
+    if (r < 0 || r >= GRID_ROWS) return -1;
+    const c = Math.floor((ev.clientX - rect.left - edOX - (r % 2) * edCell / 2) / edCell);
+    if (c < 0 || c >= GRID_COLS) return -1;
+    return r * GRID_COLS + c;
+  }
+  function edApply(k, erase) {
+    if (k < 0) return false;
+    if (erase) {
+      if (!edSlot[k]) return false;
+      edSlot[k] = 0; edWob[k] = 0;
+    } else {
+      const want = edEl + 1, w = edDrift ? 1 : 0;
+      if (edSlot[k] === want && edWob[k] === w) return false;
+      edSlot[k] = want; edWob[k] = w;
+    }
+    return true;
+  }
+
+  edCanvas.addEventListener("pointerdown", (ev) => {
+    ev.preventDefault();
+    const erase = edTool === "erase" || ev.button === 2 || ev.shiftKey;
+    edPaint = erase ? 2 : 1;
+    edHover = edCellAt(ev);
+    try { edCanvas.setPointerCapture(ev.pointerId); } catch (err) {}
+    edApply(edHover, erase);
+    drawEditor();
+  });
+  edCanvas.addEventListener("pointermove", (ev) => {
+    const k = edCellAt(ev);
+    const moved = k !== edHover;
+    edHover = k;
+    if (edPaint) { if (edApply(k, edPaint === 2) || moved) drawEditor(); }
+    else if (moved) drawEditor();
+  });
+  edCanvas.addEventListener("pointerleave", () => {
+    if (edPaint) return;
+    edHover = -1;
+    if (editorOpen) drawEditor();
+  });
+  window.addEventListener("pointerup", () => {
+    if (!edPaint) return;
+    edPaint = 0;
+    drawEditor();
+  });
+  edCanvas.addEventListener("contextmenu", (ev) => ev.preventDefault());
+
+  edPlayBtn.addEventListener("click", () => {
+    const d = commitDesign();
+    if (!d) { edWarn.textContent = "Paint a few columns first — an empty grid is not a specimen."; return; }
+    save.specimen = SANDBOX_ID;
+    save.designId = d.id;
+    writeSave();
+    loadSpecimen(SANDBOX_ID);
+    closeEditor(true);
+    resetGame();
+  });
+  edCloseBtn.addEventListener("click", () => closeEditor());
+  edClearBtn.addEventListener("click", () => { edSlot.fill(0); edWob.fill(0); drawEditor(); });
+  edDeleteBtn.addEventListener("click", () => {
+    const i = save.designs.findIndex(x => x.id === edId);
+    if (i >= 0) save.designs.splice(i, 1);
+    if (!activeDesign()) save.designId = save.designs.length ? save.designs[0].id : null;
+    writeSave();
+    // the run behind the designer cannot be left pointing at a lattice that
+    // no longer exists
+    if (SPEC.id === SANDBOX_ID) loadSpecimen(activeDesign() ? SANDBOX_ID : SPECIMENS[0].id);
+    closeEditor(true);
+  });
+  edNameInput.addEventListener("keydown", (ev) => {
+    if (ev.key === "Enter") edNameInput.blur();
+  });
+
   function loop(now) {
     const dt = Math.min(0.033, (now - lastTime) / 1000);
     lastTime = now;
-    update(dt);
-    draw();
+    // the designer covers the frame, so there is nothing to simulate or
+    // draw behind it
+    if (!editorOpen) { update(dt); draw(); }
     requestAnimationFrame(loop);
   }
 
