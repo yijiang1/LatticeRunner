@@ -64,18 +64,24 @@ Visually an unresolved site is *the column itself at a worse information limit*:
 This replaced a circular progress arc, and the arc was the wrong instrument twice over. It read as a cooldown timer rather than as convergence, and it collided with the dose ring — two arcs around the same column, one meaning *dwell longer* and one meaning *get away*. Moving resolve progress into focus and brightness leaves the arc vocabulary to mean exactly one thing: heat. The dashed ring that remains is an aperture closing onto the column (`r·1.5 → r·1.0`, fading out), and it stays because a very dim ghost still has to read as standable geometry from across the screen.
 
 ### Dose (self-inflicted risk)
-The probe deposits dose into **every** atom within its radius, not just the one it's standing on, at a rate falling off with distance the way a real beam profile does. Deposition and annealing both run all the time, and what the arc shows is the net:
+The probe deposits dose into **every** atom within its radius, not just the one it's standing on, at a rate falling off with distance the way a real beam profile does. Inside the field, deposition and annealing both run and what the arc shows is the net; outside it, nothing runs at all:
 
 ```
 d² = dx² + (dy · DOSE_DEFOCUS)²
-rate = DOSE_PEAK / (1 + d² / DOSE_FALLOFF²) - DOSE_ANNEAL
+in field:      rate = DOSE_PEAK / (1 + d² / DOSE_FALLOFF²) - DOSE_ANNEAL
+in field, blanked: rate = -DOSE_ANNEAL
+out of field:  rate = 0          (frozen — the reading holds)
 ```
 
 Standing on an atom is simply the closest you can physically get, so it cooks fastest (1.97s measured for carbon); a neighbour one lattice spacing away still takes dose, at roughly 1/3 the rate.
 
 Two details in that formula are load-bearing, and both were added to fix the same bug.
 
-**Annealing is unconditional.** It used to apply only *outside* the probe field, which made the gauge a ratchet: anywhere inside the 150px radius the arc could climb but never fall, and it flipped sign at a hard edge — an atom at 149px gained dose, one at 151px lost it. Backing off did nothing you could see until you crossed that line. Now moving away registers on the ring immediately, and far enough away the arc winds back down with the beam still on.
+**Everything happens inside the field, and only inside it.** Annealing used to be unconditional — it ran on every atom in the specimen, everywhere, forever. That fixed the original ratchet (inside 150px the arc could climb but never fall, and it flipped sign at a hard edge: an atom at 149px gained dose, one at 151px lost it), but it introduced a worse problem in the other direction: a column you had cooked to 90% quietly healed itself back to zero while you were three rows away, so the ring was never a record of what you had actually done to the specimen — only of what you were doing to it right now.
+
+Now the field is the switch for both terms. Inside the radius the gauge is live and reads the net, so backing off still registers on the ring immediately and far enough out the arc winds down with the beam on. The moment a column leaves the field its dose **freezes exactly where you left it** — no forward, no backward, however long you are gone — and it is still sitting there when you jump back. This is also what a real accumulated dose does: the specimen does not un-irradiate itself because the scan moved on. The ring becomes a record of damage you can leave behind and come back to read, which is the whole point of it being drawn on columns you are not standing on.
+
+The one consequence to keep in mind while tuning: dose is now genuinely cumulative across a run. There is no global relief valve, so a route that grazes the same column four times pays for all four passes, and BLNK (which buys anneal rate) only helps a column while it is in range — which is where the damage is being done anyway. The warning ring is likewise scoped to in-field columns, or a single frozen 0.9 three rows back would pin it on for the rest of the run.
 
 **Vertical distance counts double.** The probe is focused *in* the specimen plane; leaving that plane defocuses it, and a defocused probe spreads the same current over a much larger disc, so the dose density on any one column collapses. `DOSE_DEFOCUS` (2.0) is the factor vertical offset counts for. Without it the entire 0.62s jump arc stays inside the beam's waist — apex is only 114px up, against a 70px falloff — so the gauge you are jumping to escape keeps filling while you are airborne. Measured on a carbon at the warning threshold, a jump straight up used to add **+0.126** of the limit and could knock the column out from under the probe mid-flight; it now adds **+0.004**, and the arc visibly stalls and dips at the apex.
 
@@ -200,7 +206,7 @@ re-alignment — the end card says so in as many words, because "you lost the
 probe four times, 48 of those electrons went on re-aligning it rather than on
 looking at anything" is the whole feedback loop in one line.
 
-The unconditional-anneal change moved these: the routed rows gained 2–4 points
+The unconditional-anneal change moved these (measured before dose was made cumulative — see the field-gating note above, which has not been re-measured): the routed rows gained 2–4 points
 and the routed-with-blanking bot went from solving 2 runs in 7 to solving all 7.
 That is the cost of making the gauge honest, and it lands entirely on players
 who are already routing well. The unblanked rows barely moved, so the gap the
@@ -359,7 +365,7 @@ Ten lines, three levels each — 30 picks to max the instrument, so roughly 12�
 |------|-----------|--------|---------------|
 | 80 kV | Low-voltage column | `DOSE_LIMIT` ×1.3 → ×2.1 | Below carbon's knock-on threshold the beam stops displacing atoms |
 | MSR | Mixed-state reconstruction | `RESOLVE_TIME` ×0.82 → ×0.55 | Modelling partial coherence converges from fewer scan positions |
-| DED | Direct electron detector | `DOSE_BUDGET` +30 → +105 | Counting single electrons beats integrating a current |
+| DED | Direct electron detector | `DOSE_BUDGET` +22 → +78 | Counting single electrons beats integrating a current |
 | BLNK | Fast electrostatic blanker | `DOSE_ANNEAL` ×2 → ×4.2 | Microsecond blanking gives the specimen real rest |
 | FOV | Wide-field scan coils | `RESOLVE_RADIUS` +26 → +88 | More columns per position — and more of them irradiated |
 | CRYO | Cryogenic stage | wobble amplitude ×0.7 → ×0.3 | Cooling suppresses the thermal motion the drift hazard models |
@@ -369,6 +375,83 @@ Ten lines, three levels each — 30 picks to max the instrument, so roughly 12�
 | SHFT | Beam-shift deflectors | airborne speed ×1.2 → ×1.7 | Shift coils translate the probe laterally without touching focus |
 
 FOV is the only one with a genuine downside, and the card says so: a wider field irradiates everything it takes in. That is the trade a real operator makes.
+
+#### What each line is worth against dose
+The table above says what each upgrade scales. This says what it buys you
+against the thing that ends runs. Numbers are carbon (`doseLimit` 2.0), derived
+from the dose formula at the standing geometry — a defocus-weighted 40px, which
+reproduces the measured 1.97s standing knock-out as 1.94s.
+
+Freezing dose outside the field re-ranked these. There is now exactly one line
+that gives dose *back*, and it only reaches what is in range.
+
+**80 kV raises the ceiling, and the ceiling is now permanent.** Carbon survives
+2.6 / 3.3 / 4.2 instead of 2.0, so standing knock-out goes 1.94s → 2.5 / 3.2 /
+4.1s. This is the only mitigation banked unconditionally for the whole run.
+Under the old unconditional anneal a bigger buffer was partly redundant with a
+buffer that drained itself; now that the fill never resets, headroom is
+headroom.
+
+**BLNK is the only recovery, and it became positional.** It does two separate
+jobs, and the second is the one the freeze changed:
+
+| | anneal | standing net | → knock-out | neighbour at 90px | net-zero radius |
+|---|---|---|---|---|---|
+| base | 0.25 | +1.03/s | 1.94s | +0.39/s → 5.1s | 169px (84px vertical) |
+| BLNK 1 | 0.50 | +0.78/s | 2.56s | +0.14/s → 14.2s | 108px (54px) |
+| BLNK 2 | 0.75 | +0.53/s | 3.76s | **−0.11/s → never** | 79px (39px) |
+| BLNK 3 | 1.05 | +0.23/s | 8.64s | −0.41/s → never | 55px (28px) |
+
+Beam-on, the anneal term is subtracted whether or not the beam is on, so BLNK
+flattens the net fill at every position in the field: by BLNK 2 the nearest
+neighbour at one lattice pitch goes net-negative and adjacent columns cool while
+you work. That half is unchanged. Beam-off, it used to heal the whole specimen
+passively in the background; now it only reaches columns inside the field, so
+draining a hot one is a deliberate act — park it in range and hold SHIFT. Full
+carbon limit: 8.0s at base, 1.9s at BLNK 3.
+
+The **net-zero radius** is where the beam-on arc flips from filling to draining.
+At base it is 169px — outside the 150px field — so on a base instrument every
+in-field position fills, and the only beam-on relief is vertical (84px, which
+the 109px jump apex already clears). BLNK is what opens a horizontal standing
+band inside the field.
+
+**FOV buys distance, and distance is the cheapest mitigation there is.** Resolve
+rate is distance-independent inside the field, so a wider field lets you
+converge a column from where deposition sits below the anneal floor. At the FOV
+1 edge the net is −0.018/s; at FOV 3, −0.115/s. Resolve at arm's length and the
+column cools while it solves. The listed downside is still real — more columns
+are live in the field at once — but the freeze also means the columns you
+already passed are no longer quietly healing behind you, which makes reaching
+the next one from further away worth more than it was.
+
+**MSR and SCAN cut exposure time.** Deposition is rate × time. MSR takes dwell
+from 0.5s to 0.275s — a straight ~45% cut in dose per column resolved — and SCAN
+moves the probe past everything else 16–45% faster.
+
+**PZT and SHFT are the escape verbs, and they now preserve rather than repair.**
+`DOSE_DEFOCUS` (2.0) makes vertical distance count double, so the vertical
+net-zero is 84px at base and a 109px apex already stalls the arc; PZT's 203px
+apex spends most of the jump well past it. What changed is what clearing the
+field means: leaving used to start a decay, and now it *locks the reading in*.
+
+**SPRS is indirect but got better.** It does not touch dose. But re-visits are
+cumulative now — a route that grazes the same column four times pays for all
+four passes — so holding partial resolve progress rather than paying a second
+visit for it is worth more than it was.
+
+**DED and CRYO are not damage mitigation.** DED buys budget only. CRYO scales
+`driftScaleEff`, which is positional wobble; it never touches `vib`, and `vib`
+is what sets per-element tolerance.
+
+One stacking note. 80 kV 3 + BLNK 3 puts standing knock-out at 18s with every
+neighbour net-cooling — damage effectively switched off for the rest of the run.
+That combination was reachable before the freeze too, but it used to sit on top
+of a model that healed everything anyway; now it is the only thing left holding
+back a quantity that otherwise only goes up, so it reads as a much bigger
+switch. 30 picks is 12–20 sessions away, so it is a late-instrument state rather
+than a live balance problem, but it is the pair to watch first if the endgame
+starts feeling weightless.
 
 **The last three buy handling, not picture.** Every other line makes a route
 cheaper; these three change which routes exist at all. They also fall straight

@@ -6,7 +6,7 @@ You play a scanning probe crossing an atomic lattice. Atom columns are your plat
 
 The catch is the central bargain of electron microscopy: **to see an atom you have to hit it with electrons, and the electrons knock it out.** Proximity is what resolves an atom and proximity is what destroys it — the same act, two consequences. You carry one specimen's worth of dose, and how much of the picture you get to see before the beam runs out is the score.
 
-The orange arc around a column is a net gauge: dose going in, minus the damage annealing back out. Getting away winds it down, and getting away vertically works best, because the probe is focused in the specimen plane and jumping defocuses it. So the arc filling under your feet is something you can actually outrun — jump, and it stalls.
+The orange arc around a column is a net gauge while the column is under the probe: dose going in, minus the damage annealing back out. Getting away winds it down, and getting away vertically works best, because the probe is focused in the specimen plane and jumping defocuses it. So the arc filling under your feet is something you can actually outrun — jump, and it stalls. Get clear of the scan field entirely and the arc freezes where it stands: the specimen does not un-irradiate itself because you walked away, and that reading is still waiting for you when you come back.
 
 Knock-out is permanent. A column you overexpose collapses out of its site and does not come back, so the platform you were standing on can become the hole you fall through — and below the lattice there is only the detector.
 

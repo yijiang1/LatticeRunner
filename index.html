@@ -2432,16 +2432,19 @@
     for (const a of world) {
       const ddx = a.x - cx, ddy = (a.y + a.wobbleOffset) - cy;
       const d2 = ddx * ddx + ddy * ddy;
-      // Deposition and annealing both run all the time, and the arc shows the
-      // net. The old model only annealed *outside* the probe field, which made
-      // the gauge a ratchet: anywhere inside 150px it could climb but never
-      // fall, so backing off did nothing until you crossed a hard edge. Now
-      // moving away is visible on the ring immediately, and far enough away
-      // the arc winds back down while the beam is still on.
-      if (!a.damaged) {
+      // A column's dose only moves while it is under the probe field. Inside
+      // it, deposition and annealing both run and the arc shows the net: sit
+      // on a column and it climbs, back off to the edge of the field and it
+      // winds down, blank the beam and it cools. Step outside the field and
+      // the reading freezes exactly where you left it — no forward, no
+      // backward, however long you are gone. That is what a real accumulated
+      // dose is, and it makes the ring a record you can come back and read
+      // instead of a gauge that quietly resets the moment you look away.
+      const inField = d2 < resolveRadiusEff * resolveRadiusEff;
+      if (!a.damaged && inField) {
         const dd2 = ddx * ddx + (ddy * DOSE_DEFOCUS) * (ddy * DOSE_DEFOCUS);
         let rate = -doseAnnealEff;
-        if (beamOn && d2 < resolveRadiusEff * resolveRadiusEff) {
+        if (beamOn) {
           rate += DOSE_PEAK / (1 + dd2 / (DOSE_FALLOFF * DOSE_FALLOFF));
         }
         a.dose = Math.max(0, a.dose + rate * dt);
@@ -2449,7 +2452,11 @@
 
       if (!a.damaged) {
         const frac = a.dose / a.doseLimit;
-        if (frac > hottestFrac) { hottestFrac = frac; hottest = a; }
+        // only what the probe is actually on right now can be "taking dose":
+        // a column frozen at 90% three rows back is not an emergency, and
+        // leaving it in this comparison would pin the warning ring on for the
+        // rest of the run.
+        if (inField && frac > hottestFrac) { hottestFrac = frac; hottest = a; }
         if (frac >= 1) {
           a.damaged = true; damagedCount++;
           buildCracks(a);
