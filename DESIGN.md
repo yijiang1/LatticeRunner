@@ -486,7 +486,142 @@ which is the only way they can make a base run worse.
 The win state used to be out of reach on a base instrument, and the upgrade path was the intended answer to that. Two of the three fixes since have come from elsewhere — `WIN_FRAC` at 85% and stage re-insertion — so the draft is no longer load-bearing for reachability. It is now what makes a *comfortable* clear, and what a player spends bad runs earning. Whether that is enough for it to do is unmeasured.
 
 ### Persistence
-`localStorage` under `latticeRunner.v1`, holding session count, banked picks, best percentage, upgrade levels, the dopant facts already logged (`found`), the mute setting, whether the blanking prompt has been shown (`taughtBlank`), the selected mode and per-mode bests, and the player's saved specimen designs (`designs`, `designId`). Reads and writes are wrapped — private mode and sandboxed iframes throw on access, and the game has to run there too, just without carrying progress. Levels are clamped on load, so a corrupted or hand-edited save can't put the instrument out of range; designs go through `sanitiseDesign()`, which drops any cell outside the grid or off the palette and any design left with nothing in it, because a save that has been hand-edited or written by an older build must not be able to build a lattice the renderer chokes on.
+`localStorage` under `latticeRunner.v1`, holding session count, banked picks, best percentage, upgrade levels, the dopant facts already logged (`found`), the mute setting, whether the blanking prompt has been shown (`taughtBlank`), the selected mode and per-mode bests, the player's saved specimen designs (`designs`, `designId`), and the logbook (`log`). Reads and writes are wrapped — private mode and sandboxed iframes throw on access, and the game has to run there too, just without carrying progress. Levels are clamped on load, so a corrupted or hand-edited save can't put the instrument out of range; designs go through `sanitiseDesign()` and logbook entries through `sanitiseLog()`, both of which drop anything malformed rather than trust it, because a save that has been hand-edited or written by an older build must not be able to build a lattice the renderer chokes on or a board the ranking can't sort.
+
+One trap worth recording, because it cost a debugging pass: everything `loadSave()` reaches has to be *initialised* by the time it runs, not merely hoisted. `sanitiseLog()` is a function declaration and hoists fine, but two `const` regexes it closes over were originally declared beside it, three hundred lines further down the file — in the temporal dead zone at load. The resulting `ReferenceError` landed in the `try/catch` that exists for private-mode storage, which swallowed it and silently dropped the entire logbook on every single load. The catch is right and should stay; the fix is that the logbook's constants live with `BOARDS`, above `loadSave()`, and the comment there says why.
+
+---
+
+## The Logbook
+
+A record of your own runs, ranked. It is a leaderboard, and the design work is
+entirely in deciding what it ranks.
+
+### Percent resolved is the wrong number
+
+The obvious score is the one the README already names — how much of the picture
+you got. It is right for a single run's report card and wrong for a board, for
+four reasons that were all already written down under **Known Limitations**,
+about something else:
+
+- **It saturates.** `WIN_FRAC` is 0.85 and a routed player clears it with budget
+  to spare. A board of 85 / 85 / 85 is not a board — the win bar is a ceiling on
+  the metric, so the best players are indistinguishable from the adequate ones.
+- **It is buyable.** A maxed instrument carries +78 budget, ×2.1 tolerance and
+  ×1.45 slew. Ranking a stock player against a rigged one measures sessions
+  played, not skill.
+- **It is not one quantity.** A sprint percentage and a session percentage are
+  different things; `save.bests` already refuses to average them.
+- **It is farmable.** A flat gold row under an open survey is a legal thing to
+  build and sit in.
+
+### Each board ranks what its mode makes scarce
+
+Principle 10 says a mode changes what is scarce, never what is true. Take it one
+step further and the board falls out: rank the rationed resource, and the win bar
+stops being the score and becomes the *entry*. Solving the lattice qualifies you;
+what it cost is the rank. There is always a cheaper route, so it never tops out —
+which also hands the player the limitations section complains about, the one with
+"nothing left to spend the budget on", something to do with the surplus.
+
+| Mode | Qualify | Ranked on | Tiebreak |
+|---|---|---|---|
+| Dose-limited session | solved (≥ 85%) | fewest electrons ↑ | fewest knocked out, then quicker, then earlier |
+| 60-second acquisition | ran the full window | most lattice phased ↓ | as above |
+| Open survey | every last column | fewest electrons ↑ | as above |
+
+Dose is already accumulated in every mode — `doseSpent += BEAM_DRAIN * dt` runs
+unconditionally, and the comment beside it says why: *"electrons are still counted
+when they are not rationed — the report is about what the scan cost the specimen
+either way."* The survey board needed nothing that was not already there.
+
+**The sprint board is two-tiered**, because a single number would punish the
+player who is good enough to finish early: a solved sprint ranks above any
+coverage that did not solve, and solved runs separate on the seconds left over
+(`rank` returns `1000 + left` for those). Without that tier, finishing early caps
+you at the win bar and a slower player who never got there out-ranks you.
+
+**The survey board deliberately does not rank damage**, even though the end card
+calls that "the only score that means anything" in a survey. The balance table
+says sweeping at full speed destroys nothing, so a damage board would tie at zero
+for everyone competent and rank patience for everyone else. Electrons-to-every-
+column is the same figure of merit at a harder bar, and it carries its own brutal
+condition: a column knocked out before it is phased can never be phased, so 100%
+is gone the moment you overexpose something you had not already resolved.
+
+### Two rulesets, and no handicap
+
+Every board exists twice, split on one boolean: **Stock column** (every line at
+level 0) and **Any rig**. Stock is the only setting in which two runs are the same
+experiment, so it is the board that means something; any rig is where a finished
+instrument shows what it can do. It also makes **Reset upgrades** load-bearing
+rather than housekeeping — clearing the column is how a fifteen-session player
+enters the competition, so the wipe now switches the board view to stock.
+
+The tempting third option is a handicap derived from upgrade levels. It is refused
+on purpose: the step sizes, the pick thresholds and the 30-pick length are all
+estimates, and a handicap built on untuned constants would be guesswork wearing a
+measurement's clothes — the same objection that got the adaptive quality pass
+reverted. It can be added later *from measurement*; it cannot be added now from
+reasoning.
+
+Ranking on electrons has one pleasant side effect: it neutralises the biggest
+upgrade in the game. DED adds up to 78 electrons of budget and buys nothing on the
+board, because you cannot post a better number by having more electrons you did
+not need. MSR, FOV, SPRS and the three handling lines still cut beam-on time and
+still help, which is why the split is not optional.
+
+### A row carries the picture, not a number
+
+Principle 1 says the goal is seeing the image, not filling a meter — and a
+leaderboard is a meter with names on it unless every row carries its own
+reconstruction. Each entry stores a bitmask over the specimen's atom array, one
+bit per phased column: 152 columns is **19 bytes**, 26 in base64. The phase image
+and the fog are already in memory for whichever lattice the board is scoped to, so
+the row redraws its own thumbnail locally rather than storing one.
+
+The mask pays twice. It makes the board a wall of recovered reconstructions you
+can read at a glance — the leader rode two rows, the fourth-place run wandered —
+and it is free verification: `popcount(mask) / total` has to equal the submitted
+percentage, so an entry that lies about its score has to fabricate a consistent
+picture too. That check is what a server-side plausibility gate would lean on
+first if the board ever becomes shared.
+
+### Keys, and dying honestly
+
+An entry is keyed `mode|specimen|rig|balanceVersion` and carries `specimenHash`,
+an FNV-1a over the sites themselves.
+
+`BALANCE_VERSION` is a constant beside the tuning constants, bumped by hand
+whenever one of them moves. Three of the constants a score depends on —
+`DOSE_BUDGET`, `REALIGN_COST`, `WIN_FRAC` — are named in the roadmap as one-line
+changes a single playtest would settle, and the moment any of them lands, every
+posted number stops being comparable. Entries under an older version are *kept and
+not shown* rather than deleted, because they were true; they just stop being
+rankable against what comes after. This is the piece most easily left out and most
+expensive to add afterwards, and it costs one integer.
+
+`specimenHash` does the same job for the lattice: edit a specimen and its old
+entries drop out on the next write instead of drawing the wrong picture from
+indices that no longer mean anything.
+
+Specimens the player designed keep no board at all, on exactly the argument that
+withholds picks from them.
+
+### Placement, and what it cost
+
+Two surfaces, no new screen. On the scan report, one line under the earned block —
+the only moment the number is emotionally live — naming the gap rather than just
+the rank, because the gap is what sends you back in. On the between-sessions card,
+a block under Mode and Specimen, scoped to whichever two are selected: the board is
+keyed by exactly those, so switching either re-ranks it in place and choosing what
+to play and seeing what it is worth become one gesture. An empty board says what
+would qualify, never "no data".
+
+Cost: one config object per mode, a `runSeconds` accumulator, the mask pack/unpack
+pair, `specimenHash`, and the render. Nothing in `update()` changed. It is
+deliberately built so that a shared board is a layer over this rather than a
+rewrite of it — an entry already carries everything a server row would.
 
 ---
 
@@ -755,6 +890,10 @@ names the vocabulary.
 - **The designer has no way to share a design.** Eight lattices, local to one browser, with no export string and no import. The data is four integers per column and would serialise to a URL fragment in a few lines, which is the obvious next move if anyone builds something worth showing someone.
 - **The reachability model is conservative and one-way.** It uses the standing-start horizontal reach, so a run-up crosses more than it promises; it treats a drop as always crossable when the pads overlap, so it will call a region reachable that you cannot climb back out of; and it says nothing about whether a route is *pleasant*. It answers "can the probe get there", which is the question that stops a player building something unplayable, and not the question of whether the layout is any good.
 - **A player's lattice can be trivially easy and there is nothing to stop that.** Picks are withheld from sandbox specimens, which removes the incentive to farm, but the mode/specimen matrix means a flat gold row under an open survey is a legal thing to build and sit in. That seems fine — it is a sandbox — but it does mean the game's difficulty claims stop applying the moment you leave the shipped specimens.
+- **The logbook is local and unverified.** It is your own record of your own runs; there is no shared board and no server. Nothing stops a player opening the console and writing an entry — the save is a JSON blob and the whole game is readable source. `sanitiseLog()` guards against a *corrupt* save, not a *dishonest* one, and the mask/percentage agreement is a consistency check rather than a proof. The design that would make it shared (a route on PtychoHub, identity from the session cookie, a plausibility gate, and eventually deterministic replay of a recorded input trace) is written up but not built, and the replay tier has a real prerequisite: the loop runs on a variable `dt` clamped at 0.033, so a run is not currently reproducible.
+- **"Any rig" is a bin, not a ranking.** A level-1 instrument and a fully maxed one share a board and the maxed one wins. Two buckets is the cheapest honest split available before the upgrade curve is measured; the label should not be read as a fair fight.
+- **The survey board may be unreachable.** It requires 100% of the columns, and nobody has checked that every column in either shipped specimen is reachable — the designer's reachability walker exists and could answer it in an afternoon. If one column is stranded, that board is permanently empty.
+- **Nothing has posted a session board in anger.** The session board is exercised by seeded entries and by the ranking tests, not by a human solving the lattice, so what a real distribution of electron counts looks like — and therefore whether the board discriminates at all above the 33-electron floor — is unmeasured, like everything else on this list that says "measured against bots".
 - **The upgrade curve is untuned.** Step sizes, the 40%/70% pick thresholds and 30 total picks are estimates, not playtest results. A fully upgraded instrument may trivialise the single level — and the three handling lines sharpen that risk, since a 229px reach clears gaps the lattice was laid out to make you think about.
 - **Nothing to spend picks on once maxed.** With every line at level 3 the draft is over and further sessions give no progression. A second specimen helps — a maxed rig has somewhere else to go — but two is not a progression system.
 - **Blanking is still taught by text, just at a better moment.** The prompt now fires the first time the beam has spent three seconds with nothing new in range and 15 electrons already gone, and only once across all sessions. The beam hum cutting out on SHIFT teaches the same thing by ear. Neither is the "level 1-1" geometry the principle below actually asks for.
@@ -775,7 +914,8 @@ names the vocabulary.
 - ~~**Swap in a real reconstruction.**~~ Done. The perovskite scandate is traced off `obj_phase_roi_sum_Niter200.tiff` and the `SPECIMENS` contract took it without a change to game logic.
 - ~~**Multiple levels**, selectable like Explore mode.~~ Done for two; the picker is on the between-sessions card.
 - **Balance the sprint.** Drive the same routed and loose-timing bots through the 60-second window that settled `DOSE_BUDGET`, and pick the clock from where a competent route lands rather than from the fact that a minute is a round number.
-- **Design sharing.** A design is four small integers per column; a base64 fragment in the URL would make a lattice something you can hand to someone, which is the only thing the designer is currently missing.
+- **A shared logbook.** The local board is built as the lower layer of one: an entry already carries everything a server row would (mask, rig, balance version, specimen hash). Inside PtychoHub the game is served same-origin from `/api/games/lattice-runner` behind `requireSession`, so identity is free — `getSessionUser(request).sub`, no name entry and no impersonation — and the write echoes the existing JS-readable `csrf_token` like every other write in the app. What it needs: one table, one GET/POST route, a plausibility gate (mask/percentage agreement, a dose floor set well under the measured 33-electron route, a duration floor, a known specimen hash), and the fetch-or-fall-back in the panel. Record the input trace from the first day even though nothing reads it, because that is what makes verification possible later without throwing the board away.
+- **Design sharing.** A design is four small integers per column; a base64 fragment in the URL would make a lattice something you can hand to someone, which is the only thing the designer is currently missing. It pairs with the board: a shared design has a stable hash, and a hash is a board key, which is the one honest way a sandbox lattice could ever earn one.
 - **Balance the perovskite.** The one thing the new specimen ships without. Run the headless bots against it the way `DOSE_BUDGET` was settled for the carbon sheet, and check whether 85% of 203 columns is the right bar when coverage comes faster but falls come more often.
 - **More real specimens**, one per paper/structure. Every reconstruction with a resolvable lattice is a level, and the extraction is now a known pipeline: peak-find, fit the cell, classify sites by peak height, cut the field into bands along a lattice plane, lay them end to end.
 - **Probe modes** — a wide/defocused probe resolves safely but coarsely; a tight coherent probe is riskier but reveals rare defects. Unlocking modes recontextualizes earlier levels on replay (Metroidvania-style backtrack incentive) instead of a flat difficulty curve.

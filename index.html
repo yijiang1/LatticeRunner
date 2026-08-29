@@ -375,6 +375,86 @@
   }
   .scard .bl { display: block; margin-top: 7px; font: 400 11px/1.55 var(--sans); color: #93a6bb; }
 
+  /* ------------------------------------------------------------ logbook */
+  /* Scoped to the mode and specimen chosen directly above it, because that
+     is what a board is keyed by — switching either re-ranks in place. Each
+     row carries the picture that run recovered rather than a number
+     standing in for it, which is the same argument the end card's
+     thumbnail makes, applied to a table. */
+  #logLabel {
+    margin-top: 20px; font: 500 8.5px/1 var(--mono); letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--dim);
+  }
+  #logHead {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 9px;
+    font: 400 9.5px/1.5 var(--mono); letter-spacing: 0.04em; color: var(--dim);
+  }
+  #logTabs { display: flex; gap: 5px; margin-left: auto; }
+  .ltab {
+    padding: 4px 9px; border-radius: 6px; cursor: pointer;
+    background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
+    font: 600 8px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase;
+    color: var(--dim);
+  }
+  .ltab:hover { border-color: rgba(90,212,255,0.35); color: #bfe8ff; }
+  .ltab.on {
+    background: rgba(90,212,255,0.14); border-color: rgba(90,212,255,0.45); color: var(--cyan);
+  }
+  #logBoard {
+    margin-top: 9px; border-radius: 10px; overflow: hidden;
+    border: 1px solid rgba(255,255,255,0.07);
+  }
+  #logBoard:empty { display: none; border: none; margin: 0; }
+  .lrow {
+    display: grid; grid-template-columns: 20px 104px 1fr auto; align-items: center;
+    gap: 0 12px; padding: 8px 12px; background: rgba(255,255,255,0.02);
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+  }
+  .lrow:last-child { border-bottom: none; }
+  .lrow.you { background: rgba(90,212,255,0.07); box-shadow: inset 2px 0 0 var(--cyan); }
+  .lrow .rk {
+    font: 400 11px/1 var(--mono); color: var(--dim); font-variant-numeric: tabular-nums;
+  }
+  .lrow.you .rk { color: var(--cyan); }
+  .lrow canvas { display: block; width: 104px; height: auto; border-radius: 4px; background: #04070d; }
+  .lrow .dt {
+    font: 400 9.5px/1.7 var(--mono); color: var(--dim);
+    letter-spacing: 0.03em; font-variant-numeric: tabular-nums;
+  }
+  .lrow .dt b { color: #bfd8e8; font-weight: 500; }
+  .lrow .dt i { font-style: normal; color: var(--ember); }
+  .lrow .sc {
+    text-align: right; white-space: nowrap;
+    font: 300 19px/1 var(--sans); color: var(--amber);
+    font-variant-numeric: tabular-nums;
+  }
+  /* a board ranked on coverage is reading a gain, not a cost, so it does not
+     take the warm colour that everywhere else means spending */
+  #logBoard.gain .sc { color: var(--mint); }
+  .lrow .sc em {
+    font-style: normal; font-size: 8.5px; letter-spacing: 0.14em;
+    margin-left: 3px; font-family: var(--mono); color: var(--dim);
+  }
+  #logEmpty {
+    margin-top: 9px; padding: 12px 14px; border-radius: 10px;
+    background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1);
+    font: 400 11px/1.6 var(--sans); color: #93a6bb;
+  }
+  #logEmpty:empty { display: none; }
+
+  /* the one line on the scan report that says where the run landed */
+  #logSlug {
+    margin-top: 12px; padding: 11px 14px; border-radius: 11px;
+    background: rgba(255,192,120,0.06); border: 1px solid rgba(255,192,120,0.22);
+    font: 400 12px/1.6 var(--sans); color: #e4c9a6;
+  }
+  #logSlug:empty { display: none; }
+  #logSlug b { color: var(--amber); font-weight: 600; }
+  #logSlug.miss {
+    background: rgba(255,255,255,0.025); border-color: rgba(255,255,255,0.09); color: #93a6bb;
+  }
+  #logSlug.miss b { color: #bfd8e8; }
+
   /* ------------------------------------------------- in-run rig strip */
   #rig, #rigSummary { display: flex; flex-wrap: wrap; gap: 6px; }
   #rig { margin-top: 11px; padding-top: 11px; border-top: 1px solid rgba(255,255,255,0.06); }
@@ -654,6 +734,7 @@
         <div class="big"><span id="earnVal">1</span><em id="earnUnit">upgrades earned</em></div>
         <div id="earnBrk"></div>
       </div>
+      <div id="logSlug"></div>
       <div class="actions">
         <button id="setupBtn" class="ghost">Setup &amp; upgrades</button>
         <button id="restartBtn">Choose an upgrade</button>
@@ -671,6 +752,10 @@
       <div id="modePick"></div>
       <div id="specLabel">Specimen</div>
       <div id="specPick"></div>
+      <div id="logLabel">Logbook</div>
+      <div id="logHead"><span id="logScope"></span><span id="logTabs"></span></div>
+      <div id="logBoard"></div>
+      <div id="logEmpty"></div>
       <div id="rigLabel"></div>
       <div id="rigSummary"></div>
       <div class="actions">
@@ -751,6 +836,8 @@
   const draftEl = el("draft"), labDone = el("labDone"), rigSummary = el("rigSummary");
   const rigLabel = el("rigLabel");
   const specPick = el("specPick"), brandSub = el("brandSub");
+  const logLabel = el("logLabel"), logScope = el("logScope"), logTabs = el("logTabs");
+  const logBoard = el("logBoard"), logEmpty = el("logEmpty"), logSlug = el("logSlug");
   const beginBtn = el("beginBtn");
   const modePick = el("modePick");
   const budgetLabel = el("budgetLabel"), budgetTrack = el("budgetTrack");
@@ -1142,6 +1229,16 @@
   // skill level, which turned the win state into decoration.
   const WIN_FRAC = 0.85;
 
+  // The logbook ranks runs against each other, so it has to know which
+  // tuning they were posted against. Bump this whenever a constant a score
+  // depends on moves — DOSE_BUDGET, REALIGN_COST, WIN_FRAC, RESOLVE_TIME,
+  // the dose model, an upgrade step. Entries posted under an earlier number
+  // are kept rather than deleted, because they were true; they just stop
+  // being comparable, so they stop being shown. Three of those constants
+  // are on the roadmap to be settled by a single playtest, which is exactly
+  // why this exists before the first entry does.
+  const BALANCE_VERSION = 1;
+
   const RESOLVE_RADIUS = 150;      // must be this close to build resolve progress
   const RESOLVE_TIME = 0.5;        // seconds of continuous presence to fully resolve
   const RESOLVE_DECAY_MULT = 2.2;  // progress bleeds off faster than it builds when you leave
@@ -1219,6 +1316,82 @@
   let budgetLimited = true;   // is the electron budget a hard cap this run
   let timeLimit = 0;          // sec, 0 = untimed
   let timeLeft = 0;
+
+  // ---------------------------------------------------------------------
+  // The logbook. A board per mode, and each one ranks the thing that mode
+  // makes scarce — which is Principle 10 taken one step further.
+  //
+  // What it deliberately does not rank is percent resolved. WIN_FRAC is
+  // 0.85 and a routed player clears it with budget to spare, so a board of
+  // 85 / 85 / 85 is not a board; and a maxed instrument would out-post a
+  // stock one on sessions played rather than on skill. Ranking the scarce
+  // resource instead turns the win bar from the score into the entry: a
+  // solved lattice qualifies you, and what it cost is the rank. There is
+  // always a cheaper route, so it never tops out — which also gives the
+  // player the roadmap complains about, the one with "nothing left to
+  // spend the budget on", something to do with the surplus.
+  //
+  //   session  fewest electrons to solve it
+  //   sprint   most lattice phased inside the drift window
+  //   open     fewest electrons to phase every column
+  //
+  // The survey board does not rank damage, even though the end card calls
+  // that the only score meaning anything there: the balance table says
+  // sweeping at full speed destroys nothing, so a damage board would tie at
+  // zero for everyone competent and rank patience for everyone else.
+  // Electrons-to-every-column is the same figure of merit at a harder bar,
+  // and it carries its own brutal condition — a column knocked out before
+  // it is phased can never be phased, so 100% is gone the moment you
+  // overexpose something you had not already resolved.
+  // ---------------------------------------------------------------------
+  const LOG_KEEP = 10;  // entries kept per board
+  const LOG_SHOW = 5;   // entries shown on the card
+  // These two live up here with the rest of the logbook's constants rather
+  // than beside sanitiseLog(), which is what uses them: loadSave() runs long
+  // before that section, and a const it reaches early throws — into a catch
+  // written for private-mode storage, which would swallow it and quietly
+  // drop every entry on every load.
+  const LOG_KEY_RE = /^[a-z]+\|[a-z0-9]+\|(stock|open)\|\d+$/;
+  const LOG_MASK_RE = /^[A-Za-z0-9+/=]{0,512}$/;
+  const BOARDS = {
+    session: {
+      scope: "Fewest electrons to solve",
+      gain: false,
+      qualify: (e) => e.kind === "complete",
+      rank: (e) => e.dose,
+      asc: true,
+      main: (e) => e.dose.toFixed(0),
+      unit: () => "e⁻",
+      top: "Nothing on this board has solved it for less.",
+      entry: `A session posts when the reconstruction is solved — ${Math.round(WIN_FRAC * 100)}% is the entry, and the electron count is the rank.`,
+    },
+    sprint: {
+      scope: `Most lattice phased in ${SPRINT_SECONDS}s`,
+      gain: true,
+      qualify: (e) => e.kind === "timeout" || e.kind === "complete",
+      // Solving inside the window beats any amount of coverage that didn't,
+      // and among solved runs the seconds left over separate them — without
+      // that tier a player good enough to finish early would be capped at
+      // the win bar and out-ranked by someone slower who never got there.
+      rank: (e) => (e.kind === "complete" ? 1000 + e.left : e.pct),
+      asc: false,
+      main: (e) => (e.kind === "complete" ? e.left.toFixed(1) : String(e.pct)),
+      unit: (e) => (e.kind === "complete" ? "s spare" : "%"),
+      top: "Nothing on this board has covered more of the lattice.",
+      entry: "A sprint posts when the drift window closes on it. Abandoning the clock does not count.",
+    },
+    open: {
+      scope: "Fewest electrons to phase every column",
+      gain: false,
+      qualify: (e) => e.kind === "complete",
+      rank: (e) => e.dose,
+      asc: true,
+      main: (e) => e.dose.toFixed(0),
+      unit: () => "e⁻",
+      top: "Nothing on this board has phased the whole lattice for less.",
+      entry: "A survey posts only at every last column — knock one out before you have phased it and this board is out of reach for the rest of the run.",
+    },
+  };
 
   // ---------------------------------------------------------------------
   // Sandbox specimens. The data contract a specimen has to satisfy is four
@@ -1396,7 +1569,7 @@
   const SAVE_KEY = "latticeRunner.v1";
   const save = { sessions: 0, picks: 0, best: 0, levels: {}, found: {}, muted: false,
                  taughtBlank: 0, guideSeen: 0, specimen: SPECIMENS[0].id,
-                 mode: MODES[0].id, bests: {}, designs: [], designId: null };
+                 mode: MODES[0].id, bests: {}, designs: [], designId: null, log: {} };
   (function loadSave() {
     try {
       const raw = window.localStorage.getItem(SAVE_KEY);
@@ -1424,6 +1597,7 @@
         if (Array.isArray(p.designs)) {
           save.designs = p.designs.map(sanitiseDesign).filter(Boolean).slice(0, MAX_DESIGNS);
         }
+        if (p.log && typeof p.log === "object") save.log = sanitiseLog(p.log);
         if (save.designs.some(d => d.id === p.designId)) save.designId = p.designId;
       }
     } catch (e) { /* no persistence here; play on */ }
@@ -1630,7 +1804,7 @@
 
   // Everything below is rebuilt whenever a specimen is loaded. It was all
   // const when there was only one lattice to run across.
-  let SPEC, rawLattice, SEEDED, world, NOTES_BY_SYMBOL, NOTES_TOTAL;
+  let SPEC, rawLattice, SEEDED, world, NOTES_BY_SYMBOL, NOTES_TOTAL, SPEC_HASH;
   let worldWidth, worldHeight, GROUND_Y, SPECIMEN_LEFT, SPECIMEN_RIGHT;
   let totalResolvable, WIN_COUNT;
 
@@ -1703,6 +1877,7 @@
     rawLattice = SPEC.build();
     SEEDED = surveyScan(rawLattice, SPEC.spawn);
     world = buildWorld();
+    SPEC_HASH = specimenHash(rawLattice);
 
     NOTES_BY_SYMBOL = {};
     for (const a of rawLattice) if (a.dopantDef) NOTES_BY_SYMBOL[a.dopantDef.symbol] = a.dopantDef;
@@ -1752,6 +1927,7 @@
   let lowWarned = false; // the one-shot beep when the budget gets thin
   let wastedBeam = 0;    // sec of beam spent with nothing new in range
   let blankedEver = false;
+  let runSeconds = 0;    // wall time this run has taken, for the logbook
 
   // ---------------------------------------------------------------------
   // Player (the scanning probe)
@@ -1835,7 +2011,7 @@
     doseSpent = 0; damagedCount = 0; probeHeat = 0;
     beamOn = true; runOver = false;
     realignCount = 0; realignGrace = 0; lastSafeAtom = null;
-    lowWarned = false; wastedBeam = 0; blankedEver = false;
+    lowWarned = false; wastedBeam = 0; blankedEver = false; runSeconds = 0;
     camera.init = false;
     particles.length = 0; rings.length = 0; shake = 0;
     // skipping a draft banks the picks but must not lock in that offer —
@@ -1900,6 +2076,9 @@
     save.picks = 0;
     for (const u of UPGRADES) save.levels[u.id] = 0;
     draftOffer = [];
+    // clearing the column is how a player enters the stock board, so show
+    // them the one they can now post to rather than the one they just left
+    logRigView = "stock";
     writeSave();
     applyUpgrades();
     renderRig();
@@ -2048,6 +2227,12 @@
     // once every line is maxed there is nothing to bank picks against, so
     // don't let the save quietly accumulate them
     save.picks = anyLeft ? save.picks + earned : 0;
+    // The logbook takes a wider set of runs than the draft does — a sprint
+    // and a survey are ranked even though they pay nothing, because a board
+    // that ranks the scarce resource cannot be farmed the way picks can.
+    // Only an abandoned run is excluded, and that happens by never getting
+    // here: R and Esc leave without an ending.
+    const posted = logRun(kind, pct);
     writeSave();
 
     reportEyebrow.textContent = `Session ${save.sessions} · ${MODE.name}`;
@@ -2068,6 +2253,7 @@
       earnBrk.textContent = "Instrument fully upgraded — this is the rig you finish on";
     }
     restartBtn.textContent = (save.picks > 0 && anyLeft) ? "Choose an upgrade" : "Scan again";
+    renderLogSlug(posted);
 
     card.classList.remove("lab");
     overlay.classList.add("on");
@@ -2078,6 +2264,323 @@
   const PICK_TIER_1 = 40, PICK_TIER_2 = 70;
   function picksFor(pct) {
     return pct >= PICK_TIER_2 ? 3 : pct >= PICK_TIER_1 ? 2 : 1;
+  }
+
+  // ---------------------------------------------------------------------
+  // The logbook, part two: keeping the entries. See BOARDS above for what
+  // each board ranks and why. Everything here is local — this is your own
+  // record of your own runs, in the save file next to everything else — and
+  // it is deliberately built so a shared board is a layer over it rather
+  // than a rewrite of it: an entry carries everything a server row would.
+  // ---------------------------------------------------------------------
+
+  // A mask is indices into this specimen's atom array, so it stops meaning
+  // anything the moment that array changes. FNV-1a over the sites gives an
+  // entry something to be checked against: edit a specimen and its old
+  // entries drop out instead of drawing the wrong picture.
+  function specimenHash(lattice) {
+    let h = 2166136261 >>> 0;
+    for (const a of lattice) {
+      const s = `${Math.round(a.x)},${Math.round(a.y)},${a.element}`;
+      for (let i = 0; i < s.length; i++) {
+        h ^= s.charCodeAt(i);
+        h = Math.imul(h, 16777619) >>> 0;
+      }
+    }
+    return h.toString(36);
+  }
+
+  // One bit per column, set if the run phased it, packed LSB-first and
+  // base64'd: 152 columns is 19 bytes, 26 characters. Small enough that an
+  // entry can carry the picture the run recovered rather than a number
+  // standing in for it — which is Principle 1 applied to a table, since a
+  // leaderboard is otherwise exactly the meter the game refuses to be. It
+  // is also checkable: the bit count has to agree with the percentage.
+  function packMask(atoms) {
+    const bytes = new Uint8Array(Math.ceil(atoms.length / 8));
+    for (let i = 0; i < atoms.length; i++) {
+      if (atoms[i].resolved) bytes[i >> 3] |= 1 << (i & 7);
+    }
+    let s = "";
+    for (let i = 0; i < bytes.length; i++) s += String.fromCharCode(bytes[i]);
+    try { return btoa(s); } catch (e) { return ""; }
+  }
+
+  function unpackMask(mask, n) {
+    const out = [];
+    let s = "";
+    try { s = atob(mask); } catch (e) { return out; }
+    // charCodeAt past the end is NaN, and NaN >> k is 0, so a short or
+    // hand-edited mask draws fewer columns rather than throwing
+    for (let i = 0; i < n; i++) if ((s.charCodeAt(i >> 3) >> (i & 7)) & 1) out.push(i);
+    return out;
+  }
+
+  // Two rulesets, split on one boolean. A stock column is the only setting
+  // in which two runs are the same experiment, so it is the board that
+  // means something; "any rig" is where a finished instrument shows what it
+  // can do. The obvious third option — a handicap derived from upgrade
+  // levels — is refused on purpose: the step sizes and the pick thresholds
+  // are estimates rather than measurements, and a handicap built on them
+  // would be guesswork wearing a measurement's clothes. It can be added
+  // later from playtest data; it cannot be added now from reasoning.
+  function rigClass() {
+    return UPGRADES.some(u => levelOf(u) > 0) ? "open" : "stock";
+  }
+  function rigCode() {
+    const on = UPGRADES.filter(u => levelOf(u) > 0);
+    return on.length ? on.map(u => u.code.replace(/\s+/g, "") + levelOf(u)).join(" ") : "stock";
+  }
+  function rigShort(code) {
+    if (!code || code === "stock") return "";
+    const p = code.split(" ");
+    return p.length > 3 ? p.slice(0, 3).join(" ") + " +" + (p.length - 3) : code;
+  }
+
+  // The balance version is part of the key rather than a field on the entry,
+  // so runs posted against different tuning end up on different boards and
+  // the old ones are simply not read. Kept, not deleted — they were true.
+  function logKey(modeId, specId, rig) {
+    return `${modeId}|${specId}|${rig}|${BALANCE_VERSION}`;
+  }
+
+  function logCmp(B) {
+    const dir = B.asc ? 1 : -1;
+    // ties break toward the run that damaged less, then the quicker one,
+    // then the one that got there first — a record holder keeps the record
+    return (a, b) => dir * (B.rank(a) - B.rank(b)) || (a.ko - b.ko) ||
+                     (a.sec - b.sec) || (a.at - b.at);
+  }
+
+  function logEntries(modeId, specId, rig) {
+    const B = BOARDS[modeId];
+    if (!B) return [];
+    return (save.log[logKey(modeId, specId, rig)] || [])
+      .filter(e => e.h === SPEC_HASH)
+      .sort(logCmp(B));
+  }
+
+  // A save can be hand-edited or written by an older build, and an entry
+  // that survives that has to be one the board can rank and the renderer can
+  // draw. Same posture as sanitiseDesign(): drop it rather than trust it.
+  function sanitiseEntry(e) {
+    if (!e || typeof e !== "object") return null;
+    if (typeof e.kind !== "string" || !/^[a-z]{1,10}$/.test(e.kind)) return null;
+    if (typeof e.mask !== "string" || !LOG_MASK_RE.test(e.mask)) return null;
+    if (typeof e.h !== "string" || !/^[a-z0-9]{1,12}$/.test(e.h)) return null;
+    const num = (v, hi) => Math.max(0, Math.min(hi, Number(v) || 0));
+    return {
+      v: e.v | 0, h: e.h, kind: e.kind, mask: e.mask,
+      pct: num(e.pct, 100) | 0,
+      dose: num(e.dose, 1e6),
+      ko: num(e.ko, 1e5) | 0,
+      re: num(e.re, 1e5) | 0,
+      sec: num(e.sec, 1e6),
+      left: num(e.left, 1e5),
+      rig: typeof e.rig === "string" && /^[A-Za-z0-9 +]{0,64}$/.test(e.rig) ? e.rig : "stock",
+      at: num(e.at, 1e15),
+    };
+  }
+  function sanitiseLog(raw) {
+    const out = {};
+    for (const key of Object.keys(raw)) {
+      if (!LOG_KEY_RE.test(key) || !Array.isArray(raw[key])) continue;
+      const B = BOARDS[key.split("|")[0]];
+      if (!B) continue;
+      const list = [];
+      for (const e of raw[key].slice(0, LOG_KEEP * 4)) {
+        const c = sanitiseEntry(e);
+        if (c && B.qualify(c)) list.push(c);
+      }
+      if (list.length) out[key] = list.sort(logCmp(B)).slice(0, LOG_KEEP);
+    }
+    return out;
+  }
+
+  // Called from endRun() while the run's state is still standing. Returns
+  // what the scan report needs to say where the run landed, or null when
+  // this mode and specimen keep no board at all.
+  let logJustPosted = 0;   // marks the most recent entry on the card
+  function logRun(kind, pct) {
+    const B = BOARDS[MODE.id];
+    if (!B || SPEC.id === SANDBOX_ID) return null;
+    const entry = {
+      v: BALANCE_VERSION,
+      h: SPEC_HASH,
+      kind,
+      pct,
+      dose: +doseSpent.toFixed(1),
+      ko: damagedCount,
+      re: realignCount,
+      sec: +runSeconds.toFixed(1),
+      left: +Math.max(0, timeLeft).toFixed(1),
+      rig: rigCode(),
+      mask: packMask(world),
+      at: Date.now(),
+    };
+    if (!B.qualify(entry)) return { rank: 0, entry, ahead: null, kept: false, board: B };
+
+    const key = logKey(MODE.id, SPEC.id, rigClass());
+    const all = (save.log[key] || []).filter(e => e.h === SPEC_HASH);
+    all.push(entry);
+    all.sort(logCmp(B));
+    const rank = all.indexOf(entry) + 1;
+    const kept = rank <= LOG_KEEP;
+    save.log[key] = all.slice(0, LOG_KEEP);
+    logJustPosted = kept ? entry.at : 0;
+    return { rank, entry, ahead: all[rank - 2] || null, kept, board: B };
+  }
+
+  function ordinal(n) {
+    const t = n % 100;
+    if (t >= 11 && t <= 13) return n + "th";
+    return n + (["th", "st", "nd", "rd"][n % 10] || "th");
+  }
+
+  function agoText(t) {
+    const d = (Date.now() - t) / 86400000;
+    if (d < 1) return "today";
+    if (d < 2) return "yesterday";
+    if (d < 7) return `${Math.floor(d)} days ago`;
+    const w = Math.floor(d / 7);
+    if (d < 30) return `${w} week${w === 1 ? "" : "s"} ago`;
+    const m = Math.floor(d / 30);
+    return `${m} month${m === 1 ? "" : "s"} ago`;
+  }
+
+  // The one line on the scan report that says where the run landed. It
+  // quotes the entry above rather than only the rank, because the gap is
+  // the thing that sends you back in.
+  function renderLogSlug(posted) {
+    logSlug.className = "";
+    logSlug.innerHTML = "";
+    if (!posted) return;
+    const { rank, entry, ahead, kept, board: B } = posted;
+    const where = rigClass() === "stock" ? "on a stock column" : "on an upgraded instrument";
+    const val = `${B.main(entry)} ${B.unit(entry)}`;
+    if (!rank) {
+      logSlug.className = "miss";
+      logSlug.innerHTML = `<b>No logbook entry.</b> ${B.entry}`;
+      return;
+    }
+    if (!kept) {
+      logSlug.className = "miss";
+      logSlug.innerHTML =
+        `<b>${val}</b> — outside the ${LOG_KEEP} entries kept ${where}. ` +
+        `The last one standing is ${B.main(ahead)} ${B.unit(ahead)}.`;
+      return;
+    }
+    let line = `<b>${ordinal(rank)} in the logbook</b> ${where} — ${val}.`;
+    line += ahead ? ` The entry above it: ${B.main(ahead)} ${B.unit(ahead)}.` : ` ${B.top}`;
+    logSlug.innerHTML = line;
+  }
+
+  // The phase image and the specimen are already in memory for whichever
+  // lattice the board is scoped to, so a row draws its own picture out of
+  // 19 bytes of coverage instead of storing one. Two layers, the same two
+  // the end card composites: the reconstruction, and fog punched through
+  // wherever that run converged a column.
+  function paintLogThumb(cv, mask) {
+    const w = 104;
+    const h = Math.max(26, Math.min(70, Math.round(w * worldHeight / worldWidth)));
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    cv.width = Math.round(w * dpr);
+    cv.height = Math.round(h * dpr);
+    cv.style.height = h + "px";
+    const t = cv.getContext("2d");
+    t.scale(dpr, dpr);
+    t.fillStyle = "#04070d";
+    t.fillRect(0, 0, w, h);
+    if (!targetCanvas) return;
+    t.drawImage(targetCanvas, 0, 0, w, h);
+
+    const fg = makeCanvas(w, h);
+    const f = fg.getContext("2d");
+    f.fillStyle = "#060a12";
+    f.fillRect(0, 0, w, h);
+    f.globalCompositeOperation = "destination-out";
+    const sx = w / worldWidth, sy = h / worldHeight;
+    for (const i of unpackMask(mask, world.length)) {
+      const a = world[i];
+      if (!a) continue;
+      const x = a.x * sx, y = a.y * sy;
+      // a harder punch-through than eraseFogAt uses: at 104px a column is
+      // under two pixels across, and the soft edge that reads as convergence
+      // at full size just greys the whole frame at this one
+      const rad = Math.max(1.9, a.r * 3.4 * sx);
+      const rg = f.createRadialGradient(x, y, 0, x, y, rad);
+      rg.addColorStop(0, "rgba(0,0,0,1)");
+      rg.addColorStop(0.45, "rgba(0,0,0,0.88)");
+      rg.addColorStop(1, "rgba(0,0,0,0)");
+      f.fillStyle = rg;
+      f.beginPath();
+      f.arc(x, y, rad, 0, TAU);
+      f.fill();
+    }
+    t.drawImage(fg, 0, 0);
+  }
+
+  // The board sits under the mode and specimen pickers because those two
+  // are what it is keyed by: switching either one re-ranks it in place, so
+  // choosing what to play and seeing what it is worth are one gesture.
+  let logRigView = null;
+  function renderLogbook() {
+    const B = BOARDS[MODE.id];
+    logBoard.innerHTML = "";
+    logBoard.className = "";
+    logTabs.innerHTML = "";
+    logEmpty.textContent = "";
+    logScope.textContent = "";
+
+    // Same argument that withholds picks from a lattice you drew: a layout
+    // built to be easy would out-post the ones the balance is tuned against.
+    if (SPEC.id === SANDBOX_ID) {
+      logScope.textContent = "No board for a lattice you built";
+      logEmpty.textContent =
+        "Specimens you designed keep no logbook — one laid out to be crossable would out-post the " +
+        "measured lattices within a couple of runs, which is the same reason they earn no upgrades.";
+      return;
+    }
+    if (!B) return;
+    if (!logRigView) logRigView = rigClass();
+
+    logScope.textContent = `${B.scope} · ${SPEC.name}`;
+    for (const t of [["stock", "Stock column"], ["open", "Any rig"]]) {
+      const b = document.createElement("button");
+      b.className = "ltab" + (t[0] === logRigView ? " on" : "");
+      b.textContent = t[1];
+      b.addEventListener("click", () => {
+        if (t[0] === logRigView) return;
+        logRigView = t[0];
+        renderLogbook();
+        sfx.dopant();
+      });
+      logTabs.appendChild(b);
+    }
+
+    const rows = logEntries(MODE.id, SPEC.id, logRigView).slice(0, LOG_SHOW);
+    if (!rows.length) {
+      // an empty board says what would qualify, rather than "no data"
+      logEmpty.textContent = (logRigView === "stock"
+        ? "Nothing posted on a stock column yet. "
+        : "Nothing posted on an upgraded instrument yet. ") + B.entry;
+      return;
+    }
+    if (B.gain) logBoard.className = "gain";
+    rows.forEach((e, i) => {
+      const row = document.createElement("div");
+      row.className = "lrow" + (e.at === logJustPosted ? " you" : "");
+      const rig = rigShort(e.rig);
+      row.innerHTML =
+        `<span class="rk">${i + 1}</span>` +
+        `<canvas></canvas>` +
+        `<span class="dt"><b>${e.pct}%</b> phased · <i>${e.ko}</i> knocked out · ` +
+        `${e.re} re-insert${e.re === 1 ? "" : "s"}<br>` +
+        `${agoText(e.at)}${rig ? " · " + esc(rig) : ""}</span>` +
+        `<span class="sc">${B.main(e)}<em>${B.unit(e)}</em></span>`;
+      logBoard.appendChild(row);
+      paintLogThumb(row.querySelector("canvas"), e.mask);
+    });
   }
 
   // ---------------------------------------------------------------------
@@ -2250,6 +2753,7 @@
 
     renderModes();
     renderSpecimens();
+    renderLogbook();
 
     rigSummary.innerHTML = "";
     rigLabel.textContent = anyOwned ? "Instrument so far" : "";
@@ -2384,6 +2888,9 @@
 
   function update(dt) {
     simTime += dt;
+    // how long the run has taken, which is a ranking tiebreak in the logbook
+    // and the only thing the untimed modes have to say about pace
+    if (!runOver) runSeconds += dt;
 
     // --- beam state + global budget --------------------------------------
     // the beam stays off while the stage settles after a re-insertion, so

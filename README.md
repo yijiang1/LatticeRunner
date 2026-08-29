@@ -32,7 +32,7 @@ Three of them, picked on the between-sessions card — **Esc** opens it from ins
 
 The sprint is the interesting one, because it inverts the lesson. In a session the beam is the resource and standing still is what costs you; in a sprint the clock is the resource and blanking is what costs you — but leaving the beam on while you loiter still destroys the columns you are about to want to stand on. Two opposite pressures, one dose model.
 
-Only the dose-limited session feeds the draft, and only on a specimen that shipped with the game. The other two modes, and any lattice you drew yourself, keep their own best-percentage but pay no picks — a mode with nothing scarce in it would out-earn the one the balance is tuned against within a couple of runs.
+Only the dose-limited session feeds the draft, and only on a specimen that shipped with the game. The other two modes, and any lattice you drew yourself, keep their own best-percentage but pay no picks — a mode with nothing scarce in it would out-earn the one the balance is tuned against within a couple of runs. All three keep a **logbook**, though, because a board that ranks the scarce resource can't be farmed the way picks can.
 
 ## Runs and upgrades
 
@@ -43,6 +43,28 @@ Picks settle only on a dose-limited session over a specimen that shipped with th
 Fully rigged, those three take the probe from 117 to 163 px/s, from a 109px jump to a 203px one, and from clearing one 90px lattice gap to clearing two and a half. They're the only upgrades that change which routes exist rather than what a route costs.
 
 On a stock instrument a solved reconstruction is reachable but tight — it leaves room for about three falls and not much sloppy routing. The rig is what makes it comfortable.
+
+## The logbook
+
+Under the mode and specimen pickers, a board of your best runs — and what it ranks is the point of it.
+
+Percent resolved is the wrong number to rank on. The win bar is 85%, a routed player clears it with budget to spare, and a board of 85 / 85 / 85 is not a board. So the bar stops being the score and becomes the entry: solving the lattice qualifies you, and **what it cost is the rank.** Each mode ranks the one thing it makes scarce, which is the same rule that makes the modes different from each other in the first place.
+
+| Mode | Qualifies | Ranked on |
+|------|-----------|-----------|
+| **Dose-limited session** | solved — 85% phased | fewest electrons |
+| **60-second acquisition** | ran the full drift window | most lattice phased |
+| **Open survey** | every last column | fewest electrons |
+
+There is always a cheaper route, so the board never tops out — which finally gives a player who knows the route something to do with the budget they had nothing left to spend on. The survey board is the hard one: every column has to be phased, and a column knocked out before you resolve it can never be resolved, so one careless dwell puts 100% out of reach for the rest of the run.
+
+Two rulesets, split on one boolean: **Stock column** — every upgrade line at zero — and **Any rig**. Stock is the only setting where two runs are the same experiment, so it is the board that means something; any rig is where a finished instrument gets to show what it can do. That makes **Reset upgrades** the door into the competition rather than housekeeping. There is deliberately no handicap: the upgrade steps are estimates, and a handicap built on untuned constants would be guesswork wearing a measurement's clothes.
+
+Each entry carries the picture that run recovered rather than a number standing in for it — 152 bits of coverage, 19 bytes, redrawn against the specimen's own phase image. So the board is a wall of recovered reconstructions ranked by what they cost, which is the only shape a leaderboard can take in a game whose stated goal is seeing the image rather than filling a meter. It doubles as a consistency check: the bit count has to agree with the percentage the entry claims.
+
+Boards are keyed by a balance version. Three of the constants a score depends on are one-line changes a single playtest would settle, and when one moves every posted number stops being comparable — so entries under an older tuning are kept and stop being shown, rather than quietly ranked against runs they can't be compared to. Specimens you designed keep no board, on the same argument that keeps them from earning upgrades.
+
+It's local: your runs, in `localStorage` with the rest of your progress, with no server and no verification. A shared board on PtychoHub is designed but not built — see [`DESIGN.md`](DESIGN.md).
 
 ## Controls
 
