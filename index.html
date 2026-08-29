@@ -268,6 +268,10 @@
     border: 1px solid var(--line-2); box-shadow: none;
   }
   .actions button.ghost:hover { background: rgba(120,200,255,0.13); }
+  .actions button.ghost.danger {
+    color: #ffb499; background: rgba(255,122,77,0.1); border-color: rgba(255,122,77,0.42);
+  }
+  .actions button.ghost.danger:hover { background: rgba(255,122,77,0.17); }
 
   /* ---------------------------------------------------- upgrades earned */
   #earned {
@@ -651,6 +655,7 @@
         <div id="earnBrk"></div>
       </div>
       <div class="actions">
+        <button id="setupBtn" class="ghost">Setup &amp; upgrades</button>
         <button id="restartBtn">Choose an upgrade</button>
       </div>
     </div>
@@ -669,6 +674,7 @@
       <div id="rigLabel"></div>
       <div id="rigSummary"></div>
       <div class="actions">
+        <button id="wipeBtn" class="ghost">Reset upgrades</button>
         <button id="howBtn" class="ghost">How to play</button>
         <button id="beginBtn">Begin session</button>
       </div>
@@ -753,7 +759,7 @@
   const edCount = el("edCount"), edWarn = el("edWarn"), edRig = el("edRig");
   const edPlayBtn = el("edPlay"), edCloseBtn = el("edClose");
   const edClearBtn = el("edClear"), edDeleteBtn = el("edDelete");
-  const howBtn = el("howBtn");
+  const howBtn = el("howBtn"), wipeBtn = el("wipeBtn"), setupBtn = el("setupBtn");
   const tutorialEl = el("tutorial"), tguideEl = el("tguide"), tFig = el("tFig");
   const tTitle = el("tTitle"), tBody = el("tBody"), tExtra = el("tExtra");
   const tDots = el("tDots"), tEyebrow = el("tEyebrow"), tSkip = el("tSkip");
@@ -1188,7 +1194,7 @@
       blurb: "One specimen's worth of dose and no clock. Every electron you spend is specimen you do not get back, and blanking the beam is what makes the budget stretch.",
       budget: true, seconds: 0, winFrac: WIN_FRAC, earns: true,
       hints: [{ k: ["A", "D"], t: "move" }, { k: ["Space"], t: "jump" },
-              { k: ["Shift"], t: "blank the beam", hl: 1 }, { k: ["Esc"], t: "modes" },
+              { k: ["Shift"], t: "blank the beam", hl: 1 }, { k: ["Esc"], t: "setup & upgrades" },
               { k: ["R"], t: "abandon run" }],
     },
     {
@@ -1197,7 +1203,7 @@
       blurb: "Stage drift smears the frame after about a minute, so a minute is all you get. Dose is free — blanking only costs you seconds. Cover as much lattice as the window allows.",
       budget: false, seconds: SPRINT_SECONDS, winFrac: WIN_FRAC, earns: false,
       hints: [{ k: ["A", "D"], t: "move" }, { k: ["Space"], t: "jump" },
-              { k: ["Esc"], t: "modes" }, { k: ["R"], t: "restart the clock" }],
+              { k: ["Esc"], t: "setup & upgrades" }, { k: ["R"], t: "restart the clock" }],
     },
     {
       id: "open", name: "Open survey",
@@ -1206,7 +1212,7 @@
       budget: false, seconds: 0, winFrac: 1, earns: false,
       hints: [{ k: ["A", "D"], t: "move" }, { k: ["Space"], t: "jump" },
               { k: ["Shift"], t: "blank the beam", hl: 1 },
-              { k: ["Enter"], t: "end the survey" }, { k: ["Esc"], t: "modes" }],
+              { k: ["Enter"], t: "end the survey" }, { k: ["Esc"], t: "setup & upgrades" }],
     },
   ];
   let MODE = MODES[0];
@@ -1864,7 +1870,42 @@
     if (save.picks > 0 && UPGRADES.some(u => levelOf(u) < MAX_LEVEL)) openLab();
     else resetGame();
   });
+  // the report screen's other door: straight to the between-sessions card,
+  // where the mode, the specimen and "Reset upgrades" live
+  setupBtn.addEventListener("click", openLab);
   beginBtn.addEventListener("click", resetGame);
+
+  // "Reset upgrades" drops every level and every banked pick, so the draft
+  // tree can be played again from the base instrument. Records, the field
+  // notebook, saved specimens and settings are knowledge rather than score,
+  // so they stay. Two clicks: the first arms the button, the second wipes,
+  // and it disarms itself after a few seconds or whenever the card re-renders.
+  let wipeArmed = 0, wipeTimer = null;
+  function disarmWipe() {
+    wipeArmed = 0;
+    clearTimeout(wipeTimer);
+    wipeBtn.classList.remove("danger");
+    wipeBtn.textContent = "Reset upgrades";
+  }
+  wipeBtn.addEventListener("click", () => {
+    if (!wipeArmed) {
+      wipeArmed = 1;
+      wipeBtn.classList.add("danger");
+      wipeBtn.textContent = "Confirm reset";
+      clearTimeout(wipeTimer);
+      wipeTimer = setTimeout(disarmWipe, 4000);
+      return;
+    }
+    disarmWipe();
+    save.picks = 0;
+    for (const u of UPGRADES) save.levels[u.id] = 0;
+    draftOffer = [];
+    writeSave();
+    applyUpgrades();
+    renderRig();
+    renderLab();
+    sfx.dopant();
+  });
 
   // ---------------------------------------------------------------------
   // Losing the probe. Where to put it back: the nearest column still standing
@@ -2160,10 +2201,15 @@
 
   function renderLab() {
     const anyLeft = UPGRADES.some(u => levelOf(u) < MAX_LEVEL);
+    const anyOwned = UPGRADES.some(u => levelOf(u) > 0);
     if (!anyLeft) save.picks = 0;
     if (save.picks > 0 && draftOffer.length === 0) rollDraft();
 
     draftEl.innerHTML = "";
+    // the reset is offered whenever there's something to clear — levels on
+    // the column, or picks banked from runs you never spent
+    wipeBtn.style.display = (anyOwned || save.picks > 0) ? "" : "none";
+    disarmWipe();
     if (save.picks > 0 && draftOffer.length) {
       labTitle.textContent = "Choose an upgrade";
       labText.textContent =
@@ -2206,7 +2252,7 @@
     renderSpecimens();
 
     rigSummary.innerHTML = "";
-    rigLabel.textContent = UPGRADES.some(u => levelOf(u) > 0) ? "Instrument so far" : "";
+    rigLabel.textContent = anyOwned ? "Instrument so far" : "";
     for (const u of UPGRADES) {
       const lvl = levelOf(u);
       if (!lvl) continue;
@@ -4543,10 +4589,11 @@
     tutorialOpen = false;
     tutorialEl.classList.remove("on");
     if (!save.guideSeen) { save.guideSeen = 1; writeSave(); }
-    // the first-ever open sits in front of a fresh, unstarted run — drop the
-    // player straight into it. Every later open lays over whatever was on
-    // screen (a live run, or the setup card) and just gets out of the way.
-    if (!tResumeOnClose) resetGame();
+    // the first-ever open sits in front of a fresh, unstarted run — hand the
+    // player the setup card so they can choose a mode and specimen before
+    // they begin. Every later open lays over whatever was on screen (a live
+    // run, or the setup card) and just gets out of the way.
+    if (!tResumeOnClose) openSetup();
   }
   function tutorialStep(d) {
     const next = tStepIdx + d;
