@@ -16,13 +16,22 @@ Falling isn't the end of the session, though. A real operator who loses the prob
 
 Open [`index.html`](index.html) in a browser. No build step, no dependencies, no server — it's one self-contained file.
 
-A seven-page **field guide** opens the first time you load the game — the probe, resolving by dwelling, the dose-is-damage bargain, blanking, permanent knock-out, stage re-insertion, and the win bar, each as a ray-diagram of the mechanic rather than a wall of text. It's reachable afterwards from **How to play** on the between-sessions card, or the **?** key from anywhere.
+A seven-page **field guide** opens the first time you load the game — the probe, resolving by dwelling, the dose-is-damage bargain, blanking, permanent knock-out, stage re-insertion, and the win bar, each as a ray-diagram of the mechanic rather than a wall of text. It's reachable afterwards from **Field guide** on the bench, or the **?** key from anywhere.
 
 It also runs inside the [PtychoHub](https://ptychohub.com) Kids section, which fetches this repo's `index.html` through an authenticated proxy route. While this repo is private that card is contributor-only and the route is session-gated, so the game isn't reachable by the public. Making the repo public is the switch that ships it.
 
+## The bench
+
+Between sessions you are on the **bench** — one page, not a dialog, holding
+everything you can decide: the scan report from the run you just finished, your
+**upgrades**, the **mode**, the **specimen**, and the **logbook**. A bar across
+the top names all five and jumps to any of them, and carries a count when there
+are upgrade picks waiting to be spent. **Esc** opens it from inside a run,
+abandoning the session.
+
 ## Modes
 
-Three of them, picked on the between-sessions card — **Esc** opens it from inside a run. All three run the same simulation and the same physics; knock-out is permanent in every one of them, because that is the specimen rather than a difficulty setting. What changes is which resource is scarce, and that turns out to be enough to change what playing well means.
+Three of them, picked on the bench — **Esc** opens it from inside a run. All three run the same simulation and the same physics; knock-out is permanent in every one of them, because that is the specimen rather than a difficulty setting. What changes is which resource is scarce, and that turns out to be enough to change what playing well means.
 
 | Mode | Scarce | What it asks of you |
 |------|--------|---------------------|
@@ -73,7 +82,7 @@ It's local: your runs, in `localStorage` with the rest of your progress, with no
 | ← → / A D | Move |
 | Space / ↑ / W | Jump — coyote time and jump buffering are on, so it forgives near-misses |
 | Shift (hold) | Blank the beam: no dose spent, no resolving, atoms cool off |
-| Esc | Abandon the run and open the card — modes, specimens, upgrades |
+| Esc | Abandon the run and open the bench — report, upgrades, modes, specimens, logbook |
 | ? / H | Open the field guide — the illustrated tutorial |
 | Enter | End an open survey and read the report |
 | M | Mute / unmute |
@@ -93,7 +102,7 @@ Which means the level design falls out of the material rather than out of a diff
 
 ## Specimens
 
-Two lattices ship with the game, chosen from the card between sessions, and you can draw your own alongside them — see **Design your own specimen** below. The instrument you build carries across all of them; that's the point of having more than one, since a rig tuned on light carbon meets an oxide that punishes the same habits differently.
+Two lattices ship with the game, chosen from the bench between sessions, and you can draw your own alongside them — see **Design your own specimen** below. The instrument you build carries across all of them; that's the point of having more than one, since a rig tuned on light carbon meets an oxide that punishes the same habits differently.
 
 **Doped 2D lattice** — synthetic. A carbon sheet with three substitutions hidden in it and four vacancies to jump. Even ground, even columns; what it costs you is dose, not footing.
 
@@ -117,7 +126,7 @@ Calling the three site classes Pr / Sc / O is the one assumption in there — it
 
 ## Design your own specimen
 
-The card has a **＋ Design a specimen** slot next to the two shipped lattices. It opens a grid editor at the same 90 px pitch the real specimens run at: drag to paint columns, right-drag or **E** to erase, **1**–**6** to pick an element, **D** to make a column drift. Play it straight from the editor, and it plays under whichever mode is selected, on your current instrument.
+The bench's Specimen section has a **＋ Design a specimen** slot next to the two shipped lattices. It opens a grid editor at the same 90 px pitch the real specimens run at: drag to paint columns, right-drag or **E** to erase, **1**–**6** to pick an element, **D** to make a column drift. Play it straight from the editor, and it plays under whichever mode is selected, on your current instrument.
 
 Nothing about a lattice you drew is a special case in the engine. The designer emits exactly the atom array `scandate()` emits, so the hidden phase image, the fog, the opening survey scan, knock-on tolerance and the field notes all come along for free — that is what the `SPECIMENS` seam was for.
 
@@ -153,7 +162,7 @@ Synthesised at runtime — no samples, still one file. The only continuous sound
 
 ## Balance
 
-The tuning is measured rather than guessed, by driving the shipped game headlessly at a fixed timestep. Riding one row end to end converges half the lattice for 20 electrons; rows 1 and 4 together solve it for 33. That's the floor. A bot that actually has to jump spends about 90 and falls four times on the way, which is 48 electrons gone on re-alignment rather than on looking at anything — the end card says so in as many words.
+The tuning is measured rather than guessed, by driving the shipped game headlessly at a fixed timestep. Riding one row end to end converges half the lattice for 20 electrons; rows 1 and 4 together solve it for 33. That's the floor. A bot that actually has to jump spends about 90 and falls four times on the way, which is 48 electrons gone on re-alignment rather than on looking at anything — the scan report says so in as many words.
 
 Leaving the beam on costs roughly 30 percentage points and twenty destroyed columns against the same route played with blanking. That gap is the game.
 

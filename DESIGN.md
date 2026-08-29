@@ -97,8 +97,8 @@ A run carries `DOSE_BUDGET` (100) units of dose, before instrument upgrades. A r
 100 is measured, not estimated — see **Balance** below.
 
 A run ends one of three ways, none of which is a failure screen — the report and the upgrade pick are earned by what the scan recovered, however it stopped:
-- **Reconstruction solved** — `WIN_FRAC` (85%) of the lattice phased; the card reports what it cost.
-- **Beam exhausted** — the electrons ran out; the card reports how much of the lattice you got, and points at blanking.
+- **Reconstruction solved** — `WIN_FRAC` (85%) of the lattice phased; the report says what it cost.
+- **Beam exhausted** — the electrons ran out; the report says how much of the lattice you got, and points at blanking.
 - **Probe lost** — the probe struck the detector with too little beam left to recover.
 
 ### Losing the probe, and getting it back
@@ -118,7 +118,7 @@ the player back across specimen they have already paid to scan would charge
 them twice for one mistake. The beam stays blanked for `REALIGN_GRACE` (0.7s)
 while the stage settles, so you are never billed for frames you did not choose.
 
-The session still ends down there in two cases, and the card says which: there
+The session still ends down there in two cases, and the report says which: there
 is not enough beam left to pay for the re-align, or there is no resolved,
 undamaged column left to come back to. Knocking out the column you are standing
 on is a real way to fall, which is what ties the dose model to the platforming —
@@ -130,7 +130,7 @@ solved when the structure is unambiguous. Requiring all 152 columns made
 "complete" a bar the base instrument could not clear at any skill level, which
 turned the win state into decoration. `WIN_FRAC` is 0.85, drawn on the HUD
 meter as a tick so the goal is visible from inside the run rather than being a
-percentage in a sentence on the end card.
+percentage in a sentence on the scan report.
 
 ### Balance (measured)
 
@@ -202,7 +202,7 @@ fixed timestep:
 Two things fall out of this. Blanking is worth roughly 30 percentage points and
 twenty columns of the specimen, which is the lesson the game exists to teach.
 And a bot that falls four times has spent 48 of its 100 electrons on
-re-alignment — the end card says so in as many words, because "you lost the
+re-alignment — the scan report says so in as many words, because "you lost the
 probe four times, 48 of those electrons went on re-aligning it rather than on
 looking at anything" is the whole feedback loop in one line.
 
@@ -242,7 +242,7 @@ down. That is the blanking lesson delivered by ear, which is closer to
 teach-through-geometry than a line of text is.
 
 One-shots cover jump, landing (pitched by impact speed), resolve, knock-out,
-stage re-insertion, the low-budget warning and the three end cards. Resolve
+stage re-insertion, the low-budget warning and the three endings. Resolve
 pitch tracks `vib`, so a heavy column lands lower than a light one — the same
 sqrt(mass) that already drives wobble, flicker and dose tolerance.
 
@@ -333,7 +333,7 @@ Runs on a player's own lattice update neither.
 Mode support is one config object per mode, three `let`s (`budgetLimited`,
 `timeLimit`, `timeLeft`) and an `applyMode()` that rebuilds the HUD labels,
 the win count and the hint strip. Everything else reads those three. The end
-card grew two endings — `timeout` and `ended` — and the copy for the existing
+report grew two endings — `timeout` and `ended` — and the copy for the existing
 three now asks whether the budget was rationed before quoting it.
 
 ---
@@ -374,7 +374,7 @@ Ten lines, three levels each — 30 picks to max the instrument, so roughly 12�
 | PZT | Piezo focal stage | `JUMP_VELOCITY` ×1.12 → ×1.36 | A piezo objective steps the focal plane out of the specimen in milliseconds |
 | SHFT | Beam-shift deflectors | airborne speed ×1.2 → ×1.7 | Shift coils translate the probe laterally without touching focus |
 
-FOV is the only one with a genuine downside, and the card says so: a wider field irradiates everything it takes in. That is the trade a real operator makes.
+FOV is the only one with a genuine downside, and its draft card says so: a wider field irradiates everything it takes in. That is the trade a real operator makes.
 
 #### What each line is worth against dose
 The table above says what each upgrade scales. This says what it buys you
@@ -541,7 +541,7 @@ coverage that did not solve, and solved runs separate on the seconds left over
 (`rank` returns `1000 + left` for those). Without that tier, finishing early caps
 you at the win bar and a slower player who never got there out-ranks you.
 
-**The survey board deliberately does not rank damage**, even though the end card
+**The survey board deliberately does not rank damage**, even though the scan report
 calls that "the only score that means anything" in a survey. The balance table
 says sweeping at full speed destroys nothing, so a damage board would tie at zero
 for everyone competent and rank patience for everyone else. Electrons-to-every-
@@ -612,16 +612,77 @@ withholds picks from them.
 
 Two surfaces, no new screen. On the scan report, one line under the earned block —
 the only moment the number is emotionally live — naming the gap rather than just
-the rank, because the gap is what sends you back in. On the between-sessions card,
-a block under Mode and Specimen, scoped to whichever two are selected: the board is
-keyed by exactly those, so switching either re-ranks it in place and choosing what
-to play and seeing what it is worth become one gesture. An empty board says what
-would qualify, never "no data".
+the rank, because the gap is what sends you back in. On the bench, its own
+section beside the Mode and Specimen rail, scoped to whichever two are selected:
+the board is keyed by exactly those, so switching either re-ranks it in place and
+choosing what to play and seeing what it is worth become one gesture. An empty
+board says what would qualify, never "no data".
 
 Cost: one config object per mode, a `runSeconds` accumulator, the mask pack/unpack
 pair, `specimenHash`, and the render. Nothing in `update()` changed. It is
 deliberately built so that a shared board is a layer over this rather than a
 rewrite of it — an entry already carries everything a server row would.
+
+---
+
+## The Bench
+
+Everything that happens between sessions lives on one page: the run you just
+finished, the upgrade draft, the mode, the specimen and the board. It is not a
+dialog over the game — it fills the frame, it is in the document, and it scrolls
+the way a page scrolls.
+
+### Why the card had to go
+
+The card it replaces was a fixed 780 px frame at `max-height: 88vh` with
+`overflow-y: auto`. Four sections were stacked inside it, so on a laptop the
+lower two were below the fold of a scroller that had no scrollbar of its own to
+advertise itself — the page behind did not move, and neither did anything else
+on screen. Players reported not being able to find the upgrade section while
+looking straight at the card that contained it, twice, after a first fix that
+only gave the draft a label. The label was not the problem. A section you have
+to discover a hidden scroller to reach is not on screen, whatever it says on it.
+
+Three things follow from making it a page:
+
+- **The scroller is the window's.** One scrollbar, in the place every scrollbar
+  is, moving the thing the pointer is over. Nothing nests. The rail was
+  prototyped as `position: sticky` and reverted for exactly this reason — pinned,
+  it outgrows the viewport once a player saves a few designs and has to grow a
+  scroller of its own, which is the original bug wearing a different hat.
+- **A bar names every section.** `Report · Upgrades · Mode · Specimen ·
+  Logbook`, fixed to the top, each one a jump. The section it lands on lights its
+  border for a moment, because a smooth scroll on a long page otherwise reads as
+  nothing having happened. `scroll-margin-top` keeps the landing clear of the bar.
+- **Banked picks are a count, not a mood.** The bar's Upgrades entry carries the
+  number of picks waiting in a mint badge, and the scan report's primary button
+  becomes *Choose an upgrade ↓* pointing at the same section. The one thing on
+  the page that is genuinely waiting on the player is the one thing with a number
+  attached to it.
+
+### Layout
+
+Two columns at ≥ 1040 px: **what just happened and what you do about it** on the
+left (report, upgrades, logbook), **what the next session is** in a 336 px rail
+on the right (mode, specimen). Below that width the two columns collapse into a
+single flow — `display: contents` on the wrappers lets the sections escape their
+columns and take an explicit `order`, so the reading order becomes report,
+upgrades, mode, specimen, logbook, which is the order the bar lists them in.
+No second copy of the markup.
+
+The scan report is the only section that comes and goes. Arriving from a finished
+run it heads the page; arriving from **Esc** or the field guide there is no run to
+report on, so it and its nav entry are removed rather than left showing the last
+session's numbers as though they were this one's.
+
+### What it cost
+
+The renderer stops while the bench is up. The page is opaque, so `loop()` skips
+`update()` and `draw()` the same way it already did for the designer and the
+field guide — a strict improvement over the old translucent card, which kept a
+finished run simulating behind a blur. `openBench(showReport)` and `closeBench()`
+replaced the `overlay.on` / `card.lab` class pair; `renderLab()`, the pickers, the
+board and every ending are untouched.
 
 ---
 
@@ -649,7 +710,7 @@ The renderer is deliberately layered so that art direction and game logic stay s
 
 **Instrumentation over decoration.** The dose radius is a rotating dashed circle with a hard edge, not a haze, so the boundary is measurable by eye. The standable surface of a sphere is drawn explicitly as a contact plane — but only for columns near the probe, because drawn on every column it stops being an affordance and starts looking like a scratch across the art.
 
-**HUD.** System font stack (no network dependency), a glass panel with segmented tracks, tabular numerals, and an end card carrying a stat grid and a thumbnail of exactly how much of the phase image the run recovered.
+**HUD.** System font stack (no network dependency), a glass panel with segmented tracks, tabular numerals, and a scan report carrying a stat grid and a thumbnail of exactly how much of the phase image the run recovered.
 
 **Resolution.** The canvas backing store is scaled by `devicePixelRatio` and the whole renderer works in CSS pixels, so nothing is soft on a retina display.
 
@@ -686,7 +747,7 @@ Specimens live in the `SPECIMENS` array. Each declares an id, display copy, the 
 - `wobble` — whether this column drifts once resolved
 - `dopantDef` — `{ symbol, r, fact }` for a column worth a field note
 
-`loadSpecimen(id)` rebuilds the lattice, everything derived from it (world geometry, ground plane, scan-field edges, win count, spawn), the hidden phase image and the fog sheet over it. Nothing in the game holds a reference across that call, so swapping specimens mid-session is safe and is exactly what the picker on the between-sessions card does.
+`loadSpecimen(id)` rebuilds the lattice, everything derived from it (world geometry, ground plane, scan-field edges, win count, spawn), the hidden phase image and the fog sheet over it. Nothing in the game holds a reference across that call, so swapping specimens mid-session is safe and is exactly what the picker in the bench's rail does.
 
 The id `"sandbox"` is the one that is not in `SPECIMENS`: it resolves through `sandboxSpecimen()`, which wraps the player's active design in the same four fields and hands back the same shape. That is the whole of how a lattice a player drew is loaded — see **The Specimen Designer**. If the save points at a design that has since been deleted, the lookup falls through to `SPECIMENS[0]`.
 
@@ -698,7 +759,7 @@ Field notes are keyed `"<specimen id>:<symbol>"`, so oxygen found as a dopant in
 
 ## Specimens
 
-Two, chosen from the between-sessions card. The instrument carries across both, which is the reason to have two: a rig tuned on light carbon meets an oxide that punishes the same habits differently.
+Two, chosen from the bench. The instrument carries across both, which is the reason to have two: a rig tuned on light carbon meets an oxide that punishes the same habits differently.
 
 ### 1. Doped 2D lattice (synthetic)
 
@@ -839,7 +900,7 @@ against everything ever logged under that id.
 | → / D | Move right |
 | Space / ↑ / W | Jump (buffered + coyote-time forgiving) |
 | Shift (hold) | Blank the beam — no dose spent, no resolving |
-| Esc | Abandon the run and open the card: modes, specimens, upgrades |
+| Esc | Abandon the run and open the bench: report, upgrades, modes, specimens, logbook |
 | ? / H | Open the field guide |
 | Enter | End an open survey (untimed, unrationed) and print the report |
 | M | Mute / unmute (persists) |
@@ -854,10 +915,10 @@ closes.
 Seven pages, drawn in `TUT_STEPS` as `{ title, body, extra, fig }` where `fig`
 is an inline SVG. It auto-opens once — gated by `save.guideSeen` in the
 `localStorage` blob — and is reachable afterwards from **How to play** on the
-between-sessions card or the **?** / **H** key. While it is up, `loop()` holds
+bench or the **?** / **H** key. While it is up, `loop()` holds
 the frame the same way it does for the designer (`!editorOpen && !tutorialOpen`).
 Opened on the first-ever load it closes into a fresh `resetGame()`; opened later
-it lays over whatever is on screen — a live run, or the setup card — and closing
+it lays over whatever is on screen — a live run, or the bench — and closing
 just resumes it.
 
 Each page is a ray-diagram of one mechanic in the game's own vocabulary — cyan
@@ -882,9 +943,9 @@ names the vocabulary.
 - **No mobile/touch controls.** Keyboard only.
 - ~~**Potential tunneling at high fall speed.**~~ Fixed: landing is a swept test now, so a frame that carries the probe clean past a column top still lands it. Two related cases were fixed earlier — a collapsing column ejecting the probe sideways, and frame-rate-dependent damping.
 - **Sound is unmixed and unheard.** A full WebAudio pass is in (see **Sound**), but every level, filter cutoff and envelope in it was chosen by reading the code, not by listening — this environment has no audio device. Expect the balance between the hum and the one-shots to need real ears.
-- **Field notes are logged but barely surfaced.** Dopant facts now persist across sessions and the end card carries a Notes count, but there is no place to re-read one you have already found.
+- **Field notes are logged but barely surfaced.** Dopant facts now persist across sessions and the scan report carries a Notes count, but there is no place to re-read one you have already found.
 - **`DOSE_BUDGET` is measured against a bot, not a player.** 100 comes from headless simulation of routed sweeps and of naive edge-running (see **Balance**). Both are proxies; no human has played against the new number.
-- **A bad run still reads as *Probe lost*, because it is.** Stage re-insertion moved the pressure onto the budget — routed play now ends on *solved* or *beam exhausted* — but a random-input run falls seven times, spends 84 of its 94 electrons on re-alignment, and then hits the detector with nothing left to pay with. That ending is accurate and the card explains it, but the underlying precision demand of the platforming is untouched: unconverged lattice is not solid and cannot be converged on the way past (0.5s of dwell needed, under 0.3s in range at fall speed). Widening the columns further is the measured lever if playtesting says it is still too steep.
+- **A bad run still reads as *Probe lost*, because it is.** Stage re-insertion moved the pressure onto the budget — routed play now ends on *solved* or *beam exhausted* — but a random-input run falls seven times, spends 84 of its 94 electrons on re-alignment, and then hits the detector with nothing left to pay with. That ending is accurate and the report explains it, but the underlying precision demand of the platforming is untouched: unconverged lattice is not solid and cannot be converged on the way past (0.5s of dwell needed, under 0.3s in range at fall speed). Widening the columns further is the measured lever if playtesting says it is still too steep.
 - **85% is close to too *easy* a win bar for a good player.** The bar was moved down from all 152 columns because nothing could reach it. Over 15 page loads on a base instrument the loose-timing blanking bot now solves **13 of 15**, and the tightly routed one 5 of 15 — a 7-load sample taken right after the dose change read 7 of 7 and overstated it, which is what the wider sample is for. Two rows ridden end to end still cover 86% for 33 of the 100 electrons, so the ceiling is structural: a player who knows the route has nothing left to spend the budget on. Raising `WIN_FRAC` is a one-constant change, but the honest fix is a lattice whose coverage is not saturated by two horizontal sweeps.
 - **The two new modes are unmeasured.** 60 seconds and "every column" are both first guesses. The sprint has never been driven by the headless bots the way `DOSE_BUDGET` was — the only numbers that exist are for a probe nobody touches (18% phased, 19 columns destroyed, seven falls), which fixes the floor but says nothing about what a routed run scores or whether sixty seconds is the right window for it. The open survey has no failure state at all and may simply be boring; it earns its place as a way to look at a specimen, not as a game.
 - **The designer has no way to share a design.** Eight lattices, local to one browser, with no export string and no import. The data is four integers per column and would serialise to a URL fragment in a few lines, which is the obvious next move if anyone builds something worth showing someone.
@@ -912,7 +973,7 @@ names the vocabulary.
 
 ### Medium-term
 - ~~**Swap in a real reconstruction.**~~ Done. The perovskite scandate is traced off `obj_phase_roi_sum_Niter200.tiff` and the `SPECIMENS` contract took it without a change to game logic.
-- ~~**Multiple levels**, selectable like Explore mode.~~ Done for two; the picker is on the between-sessions card.
+- ~~**Multiple levels**, selectable like Explore mode.~~ Done for two; the picker is in the bench's rail.
 - **Balance the sprint.** Drive the same routed and loose-timing bots through the 60-second window that settled `DOSE_BUDGET`, and pick the clock from where a competent route lands rather than from the fact that a minute is a round number.
 - **A shared logbook.** The local board is built as the lower layer of one: an entry already carries everything a server row would (mask, rig, balance version, specimen hash). Inside PtychoHub the game is served same-origin from `/api/games/lattice-runner` behind `requireSession`, so identity is free — `getSessionUser(request).sub`, no name entry and no impersonation — and the write echoes the existing JS-readable `csrf_token` like every other write in the app. What it needs: one table, one GET/POST route, a plausibility gate (mask/percentage agreement, a dose floor set well under the measured 33-electron route, a duration floor, a known specimen hash), and the fetch-or-fall-back in the panel. Record the input trace from the first day even though nothing reads it, because that is what makes verification possible later without throwing the board away.
 - **Design sharing.** A design is four small integers per column; a base64 fragment in the URL would make a lattice something you can hand to someone, which is the only thing the designer is currently missing. It pairs with the board: a shared design has a stable hash, and a hash is a board key, which is the one honest way a sandbox lattice could ever earn one.
@@ -921,7 +982,7 @@ names the vocabulary.
 - **Probe modes** — a wide/defocused probe resolves safely but coarsely; a tight coherent probe is riskier but reveals rare defects. Unlocking modes recontextualizes earlier levels on replay (Metroidvania-style backtrack incentive) instead of a flat difficulty curve.
 
 ### Long-term
-- **Richer end card** — dose efficiency grade and defects found, on top of the current stat grid, recovered-image thumbnail and dose/knock-out summary.
+- **Richer scan report** — dose efficiency grade and defects found, on top of the current stat grid, recovered-image thumbnail and dose/knock-out summary.
 - **Mobile touch controls** if the Kids section audience needs them.
 
 ---

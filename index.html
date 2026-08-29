@@ -45,7 +45,8 @@
   #brand, #panel { position: relative; }
 
   #brand { display: flex; gap: 12px; align-items: center; }
-  #brand .mark {
+  /* the lockup is used twice: over the game, and at the head of the bench */
+  .mark {
     width: 36px; height: 36px; border-radius: 10px; display: grid; place-items: center;
     border: 1px solid var(--line-2);
     background: linear-gradient(150deg, rgba(90,212,255,0.16), rgba(90,212,255,0.02));
@@ -87,7 +88,7 @@
   }
   .track .fill { height: 100%; width: 0; border-radius: 4px; }
   /* the win bar, drawn on the track: "reconstructed" needs somewhere to
-     be heading, and a percentage in a sentence on the end card is not a
+     be heading, and a percentage in a sentence on the scan report is not a
      goal you can see from inside the run */
   .track .goal {
     position: absolute; top: 0; bottom: 0; width: 2px;
@@ -197,40 +198,144 @@
     text-transform: uppercase; color: #a794d8; font-style: normal; margin-bottom: 5px;
   }
 
-  /* ------------------------------------------------------------ endcard */
-  #overlay {
-    position: fixed; inset: 0; display: none; place-items: center;
-    background: rgba(3,6,12,0.55);
-    backdrop-filter: blur(7px); -webkit-backdrop-filter: blur(7px);
-    pointer-events: none; z-index: 5;
+  /* ------------------------------------------------------------- the bench
+     Everything that happens between sessions — the run just finished, the
+     upgrade draft, the mode, the specimen and the board — is one scrolling
+     page rather than a dialog laid over the game. The card this replaces
+     had to scroll inside a fixed frame, so its lower sections were
+     invisible unless you already knew they were there: players kept asking
+     where the upgrades had gone while standing on top of them. A page puts
+     every section in the document, names all of them in a bar that stays
+     put, and lets the browser do the scrolling. */
+  #bench {
+    position: fixed; inset: 0; z-index: 5; display: none;
+    overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
+    color: var(--ice);
+    background:
+      radial-gradient(130% 70% at 50% -12%, rgba(90,212,255,0.08), rgba(4,6,12,0) 60%),
+      var(--void);
   }
-  #overlay.on { display: grid; }
-  #card {
-    width: min(540px, 92vw); padding: 26px 28px 24px; border-radius: 18px;
-    pointer-events: auto;
-    background: linear-gradient(180deg, rgba(13,21,36,0.95), rgba(7,12,21,0.97));
-    border: 1px solid rgba(120,200,255,0.17);
-    box-shadow: 0 40px 120px rgba(0,0,0,0.72), inset 0 1px 0 rgba(255,255,255,0.06);
-    animation: rise 0.55s cubic-bezier(.2,.9,.25,1);
-  }
+  #bench.on { display: block; animation: benchIn 0.3s ease; }
+  @keyframes benchIn { from { opacity: 0; } }
   @keyframes rise { from { opacity: 0; transform: translateY(18px) scale(0.985); } }
-  #card .eyebrow {
+  #bench::-webkit-scrollbar { width: 10px; }
+  #bench::-webkit-scrollbar-thumb { background: rgba(120,200,255,0.16); border-radius: 5px; }
+  .eyebrow {
     font: 500 8.5px/1 var(--mono); letter-spacing: 0.26em;
     text-transform: uppercase; color: var(--dim);
   }
-  /* styled structurally, not by id — both panels in the card use them */
-  #card h1 {
-    margin: 10px 0 0; font: 300 28px/1.1 var(--sans);
+
+  /* the bar names every section from wherever you are on the page, and
+     carries the count of picks still waiting to be spent */
+  #benchBar {
+    position: sticky; top: 0; z-index: 3;
+    display: flex; align-items: center; gap: 14px 20px; flex-wrap: wrap;
+    padding: 13px 26px; border-bottom: 1px solid var(--line);
+    background: rgba(6,10,18,0.9);
+    backdrop-filter: blur(16px) saturate(1.2);
+    -webkit-backdrop-filter: blur(16px) saturate(1.2);
+  }
+  #benchId { display: flex; gap: 12px; align-items: center; }
+  #labTitle { margin-top: 6px; font: 400 15px/1 var(--sans); color: var(--mint); }
+  #benchNav { display: flex; gap: 3px; flex-wrap: wrap; margin: 0 auto; }
+  .bnav {
+    display: flex; align-items: center; gap: 7px; cursor: pointer;
+    padding: 9px 13px; border-radius: 9px;
+    background: none; border: 1px solid transparent; color: var(--dim);
+    font: 600 8.5px/1 var(--mono); letter-spacing: 0.18em; text-transform: uppercase;
+    transition: color .13s, background .13s, border-color .13s;
+  }
+  .bnav:hover { color: var(--ice); background: rgba(120,200,255,0.08); }
+  .bnav b {
+    padding: 3px 6px; border-radius: 20px; font: 700 8px/1 var(--mono);
+    color: #05131c; background: var(--mint); box-shadow: 0 0 12px rgba(125,255,196,0.5);
+  }
+  .bnav b:empty { display: none; }
+  #benchDo { display: flex; gap: 8px; align-items: center; }
+  .bbtn {
+    cursor: pointer; padding: 11px 16px; border-radius: 9px; border: 1px solid transparent;
+    font: 600 9.5px/1 var(--mono); letter-spacing: 0.18em; text-transform: uppercase;
+    color: #05131c; background: linear-gradient(180deg, #8affd0, #45d3a5);
+    box-shadow: 0 10px 26px rgba(80,220,170,0.2);
+    transition: transform .12s ease, filter .12s ease, background .14s ease;
+  }
+  .bbtn:hover { filter: brightness(1.08); transform: translateY(-1px); }
+  .bbtn:active { transform: translateY(0); }
+  .bbtn.ghost {
+    color: var(--ice); background: rgba(120,200,255,0.07);
+    border-color: var(--line-2); box-shadow: none;
+  }
+  .bbtn.ghost:hover { background: rgba(120,200,255,0.14); }
+  .bbtn.danger {
+    color: #ffb499; background: rgba(255,122,77,0.1); border-color: rgba(255,122,77,0.42);
+  }
+  .bbtn.danger:hover { background: rgba(255,122,77,0.18); }
+
+  /* Two columns: what just happened and what you do about it on the left,
+     what the next session *is* on the right. They collapse into a single
+     reading order on a narrow window. */
+  #benchDoc {
+    max-width: 1180px; margin: 0 auto; padding: 28px 26px 90px;
+    display: grid; grid-template-columns: minmax(0, 1fr) 336px;
+    gap: 24px; align-items: start;
+  }
+  .bcol { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+  /* The rail deliberately does not stick. Pinning it keeps the mode and
+     specimen beside the board they key, but a rail with more than a couple
+     of saved designs outgrows the window and has to grow a scrollbar of its
+     own — and a nested scroller is exactly the thing that hid these
+     sections in the first place. Everything on this page scrolls once. */
+  .bsec {
+    padding: 20px 22px 22px; border-radius: 16px;
+    border: 1px solid var(--line); scroll-margin-top: 96px;
+    background: linear-gradient(180deg, rgba(11,18,31,0.9), rgba(7,12,21,0.9));
+    transition: border-color .3s ease, box-shadow .3s ease;
+  }
+  /* a jump from the bar lands somewhere, and this is what says where */
+  .bsec.jump {
+    border-color: rgba(125,255,196,0.55);
+    box-shadow: 0 0 0 3px rgba(125,255,196,0.09);
+  }
+  .shead {
+    display: flex; align-items: baseline; gap: 10px 14px; flex-wrap: wrap;
+    padding-bottom: 12px; margin-bottom: 16px;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+  .shead h2 {
+    margin: 0; font: 600 9px/1 var(--mono); letter-spacing: 0.24em;
+    text-transform: uppercase; color: #c3e2f4;
+  }
+  .shead .meta {
+    margin-left: auto; font: 400 9.5px/1.4 var(--mono);
+    letter-spacing: 0.05em; color: var(--dim); text-align: right;
+  }
+  .subhead {
+    margin-top: 18px; padding-top: 14px;
+    border-top: 1px solid rgba(255,255,255,0.05);
+    font: 500 8.5px/1 var(--mono); letter-spacing: 0.2em;
+    text-transform: uppercase; color: var(--dim);
+  }
+  .bsec p {
+    margin: 0 0 15px; font: 400 12.5px/1.65 var(--sans);
+    color: #9fbdd0; max-width: 62ch;
+  }
+
+  /* --------------------------------------------------------- scan report */
+  #secReport { padding: 26px 26px 24px; }
+  #secReport h1 {
+    margin: 11px 0 0; font: 300 29px/1.1 var(--sans);
     letter-spacing: -0.015em; color: var(--mint);
   }
-  #card p {
-    margin: 11px 0 0; font: 400 13px/1.6 var(--sans);
-    color: #9fbdd0; max-width: 52ch;
+  #secReport p { margin: 12px 0 0; font-size: 13px; }
+  #reportBody {
+    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    gap: 18px; align-items: start; margin-top: 16px;
   }
+  #secReport .actions button { flex: 0 0 auto; padding: 13px 26px; }
   .stats {
-    display: grid; grid-template-columns: repeat(5, 1fr); gap: 1px;
+    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px;
     background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 11px; overflow: hidden; margin: 20px 0 16px;
+    border-radius: 11px; overflow: hidden; margin: 20px 0 0;
   }
   .stats div { background: #0a1220; padding: 12px 5px; text-align: center; }
   .stats .n {
@@ -276,7 +381,7 @@
   /* ---------------------------------------------------- upgrades earned */
   #earned {
     display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-    margin-top: 16px; padding: 13px 16px; border-radius: 11px;
+    padding: 13px 16px; border-radius: 11px;
     background: linear-gradient(180deg, rgba(90,212,255,0.09), rgba(90,212,255,0.03));
     border: 1px solid rgba(90,212,255,0.2);
   }
@@ -291,25 +396,19 @@
   #earnBrk { font: 400 10.5px/1.55 var(--mono); color: var(--dim); letter-spacing: 0.02em; }
 
   /* ------------------------------------------------------- upgrade draft */
-  #panelLab { display: none; }
-  #card.lab #panelReport { display: none; }
-  #card.lab #panelLab { display: block; }
-  #card { max-height: 88vh; overflow-y: auto; scrollbar-width: thin; transition: width 0.2s ease; }
-  #card.lab { width: min(780px, 94vw); }
   #labDone { display: none; }
-  #card.lab .actions {
-    position: sticky; bottom: -24px; z-index: 2;
-    margin-top: 18px; padding: 14px 0 24px;
-    background: linear-gradient(180deg, rgba(8,13,23,0) 0%, rgba(8,13,23,0.93) 32%, rgba(8,13,23,0.99) 100%);
-  }
-  #card::-webkit-scrollbar { width: 8px; }
-  #card::-webkit-scrollbar-thumb { background: rgba(120,200,255,0.16); border-radius: 4px; }
-
+  /* the count of picks waiting is the loudest thing in the section header,
+     because it is the one number that tells you there is something to do */
   #pickLeft {
-    margin: 18px 0 0; font: 500 8.5px/1 var(--mono); letter-spacing: 0.2em;
+    margin-left: auto; font: 600 8.5px/1 var(--mono); letter-spacing: 0.16em;
     text-transform: uppercase; color: var(--dim);
   }
-  #draft { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 12px 0 4px; }
+  #pickLeft:not(:empty) {
+    padding: 6px 11px; border-radius: 20px; color: var(--mint);
+    background: rgba(125,255,196,0.13); border: 1px solid rgba(125,255,196,0.3);
+  }
+  #draft { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  #draft:empty { display: none; }
   .dcard {
     display: flex; flex-direction: column; gap: 8px; text-align: left;
     padding: 15px 14px; border-radius: 12px; cursor: pointer; font: inherit; color: inherit;
@@ -345,23 +444,13 @@
   .dots i.next { border-color: var(--mint); border-width: 1.5px; box-shadow: 0 0 7px rgba(125,255,196,0.4); }
 
   #labDone {
-    margin: 18px 0 0; padding: 14px 16px; border-radius: 11px;
+    padding: 14px 16px; border-radius: 11px;
     background: rgba(125,255,196,0.06); border: 1px solid rgba(125,255,196,0.2);
     font: 400 12px/1.6 var(--sans); color: #a8e6c8;
   }
 
   /* ------------------------------------------------- specimen picker */
-  /* Instrument, Mode, Specimen and Logbook are the four things on this card,
-     and each one keeps its label whether or not it has anything in it. The
-     draft used to have none — with no pick banked the whole section
-     collapsed into the card's title, so a player looking for upgrades was
-     looking for something that was not on screen at all. */
-  #specLabel, #modeLabel, #draftLabel {
-    margin-top: 18px; font: 500 8.5px/1 var(--mono); letter-spacing: 0.2em;
-    text-transform: uppercase; color: var(--dim);
-  }
-  #draftLabel { margin-top: 22px; }
-  #specPick, #modePick { display: flex; gap: 8px; margin-top: 9px; flex-wrap: wrap; }
+  #specPick, #modePick { display: flex; gap: 8px; flex-wrap: wrap; }
   .scard {
     flex: 1 1 200px; text-align: left; cursor: pointer;
     padding: 11px 13px; border-radius: 10px;
@@ -382,17 +471,13 @@
   .scard .bl { display: block; margin-top: 7px; font: 400 11px/1.55 var(--sans); color: #93a6bb; }
 
   /* ------------------------------------------------------------ logbook */
-  /* Scoped to the mode and specimen chosen directly above it, because that
-     is what a board is keyed by — switching either re-ranks in place. Each
-     row carries the picture that run recovered rather than a number
-     standing in for it, which is the same argument the end card's
-     thumbnail makes, applied to a table. */
-  #logLabel {
-    margin-top: 20px; font: 500 8.5px/1 var(--mono); letter-spacing: 0.2em;
-    text-transform: uppercase; color: var(--dim);
-  }
+  /* Scoped to the mode and specimen picked in the rail beside it, because
+     that is what a board is keyed by — switching either re-ranks it in
+     place. Each row carries the picture that run recovered rather than a
+     number standing in for it, which is the same argument the scan
+     report's thumbnail makes, applied to a table. */
   #logHead {
-    display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-top: 9px;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
     font: 400 9.5px/1.5 var(--mono); letter-spacing: 0.04em; color: var(--dim);
   }
   #logTabs { display: flex; gap: 5px; margin-left: auto; }
@@ -502,10 +587,7 @@
   }
   #editor.on { display: flex; }
   #edTop { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
-  #edTop .eyebrow {
-    font: 500 8.5px/1 var(--mono); letter-spacing: 0.2em;
-    text-transform: uppercase; color: var(--dim); margin-bottom: 6px;
-  }
+  #edTop .eyebrow { letter-spacing: 0.2em; margin-bottom: 6px; }
   #edTop h2 { margin: 0; font: 600 15px/1 var(--sans); color: var(--ice); }
   #edName {
     background: rgba(255,255,255,0.04); border: 1px solid var(--line);
@@ -567,7 +649,7 @@
 
   /* ------------------------------------------------- field guide (tutorial)
      A paged, illustrated primer. Auto-opens once on a first-ever load and is
-     reachable afterwards from the setup card or the ? key. Each page is a
+     reachable afterwards from the bench or the ? key. Each page is a
      ray-diagram of the mechanic it teaches, drawn in the same instrument
      vocabulary as the game — cyan is the probe, mint is resolved, warm is
      dose — so the picture carries the lesson and the prose only names it. */
@@ -587,10 +669,6 @@
   }
   #tguide::-webkit-scrollbar { width: 8px; }
   #tguide::-webkit-scrollbar-thumb { background: rgba(120,200,255,0.16); border-radius: 4px; }
-  #tguide .eyebrow {
-    font: 500 8.5px/1 var(--mono); letter-spacing: 0.26em;
-    text-transform: uppercase; color: var(--dim);
-  }
   #tFig {
     margin: 15px 0 2px; border-radius: 12px; overflow: hidden;
     background: radial-gradient(120% 100% at 50% 0%, rgba(90,212,255,0.06), rgba(4,8,14,0.45));
@@ -650,12 +728,38 @@
   }
   #tSkip button:hover { color: var(--ice); }
 
+  /* One column, and the rail's two pickers fall back into reading order
+     between the draft and the board rather than after them — the same order
+     the bar lists. display:contents lets the sections escape their columns
+     without a second copy of the markup. */
+  @media (max-width: 1040px) {
+    #benchDoc { display: flex; flex-direction: column; gap: 22px; }
+    .bcol { display: contents; }
+    #secReport { order: 1; }
+    #secDraft  { order: 2; }
+    #secMode   { order: 3; }
+    #secSpec   { order: 4; }
+    #secLog    { order: 5; }
+  }
   @media (max-width: 720px) {
     #panel { width: 210px; }
     #brand p { display: none; }
     #hints { display: none; }
     #editor { padding: 12px 12px 10px; }
     #edName { width: 140px; }
+    #benchBar { padding: 11px 14px; gap: 12px; }
+    #benchDoc { padding: 20px 14px 70px; }
+    #benchNav { margin: 0; width: 100%; }
+    /* the bar wraps to three rows down here, so a jump has further to clear */
+    .bsec { scroll-margin-top: 186px; }
+    #secReport { padding: 20px 18px 18px; }
+    #secReport h1 { font-size: 24px; }
+    .bsec { padding: 17px 18px 19px; }
+    #reportBody, #draft { grid-template-columns: minmax(0, 1fr); }
+    .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    .lrow { grid-template-columns: 18px 80px 1fr; }
+    .lrow canvas { width: 80px; }
+    .lrow .sc { grid-column: 3; text-align: right; }
   }
 </style>
 </head>
@@ -720,54 +824,98 @@
   <div class="body"><em id="toastKind">Dopant resolved</em><span id="toastText"></span></div>
 </div>
 
-<div id="overlay">
-  <div id="card">
-    <div id="panelReport">
-      <div class="eyebrow" id="reportEyebrow">Scan report</div>
-      <h1 id="overlayTitle">Reconstruction complete</h1>
-      <p id="overlayText"></p>
-      <div class="stats">
-        <div><div class="n" id="statPct">0<small>%</small></div><div class="l">Resolved</div></div>
-        <div><div class="n" id="statDose">0</div><div class="l">Dose spent</div></div>
-        <div><div class="n" id="statKo">0</div><div class="l">Knocked out</div></div>
-        <div><div class="n" id="statRe">0</div><div class="l">Re-inserts</div></div>
-        <div><div class="n" id="statNotes">0</div><div class="l">Notes</div></div>
+<!-- The bench. Not a dialog: a page, with a nav that names every section on
+     it, so nothing you can do between sessions is ever off-screen. -->
+<div id="bench">
+  <div id="benchBar">
+    <div id="benchId">
+      <div class="mark">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#7fe3ff" stroke-width="1.2">
+          <path d="M12 3.2 18.5 7v8L12 18.8 5.5 15V7z" opacity=".55"/>
+          <circle cx="12" cy="3.2" r="1.5" fill="#bff0ff" stroke="none"/>
+          <circle cx="18.5" cy="7" r="1.5" fill="#7fe3ff" stroke="none"/>
+          <circle cx="18.5" cy="15" r="1.5" fill="#7fe3ff" stroke="none"/>
+          <circle cx="12" cy="18.8" r="1.5" fill="#7fe3ff" stroke="none"/>
+          <circle cx="5.5" cy="15" r="1.5" fill="#7fe3ff" stroke="none"/>
+          <circle cx="5.5" cy="7" r="1.5" fill="#7fe3ff" stroke="none"/>
+          <circle cx="12" cy="11" r="2.1" fill="#ffe08a" stroke="none"/>
+        </svg>
       </div>
-      <div id="thumbWrap"><canvas id="thumb"></canvas><span>Recovered phase image</span></div>
-      <div id="earned">
-        <div class="big"><span id="earnVal">1</span><em id="earnUnit">upgrades earned</em></div>
-        <div id="earnBrk"></div>
-      </div>
-      <div id="logSlug"></div>
-      <div class="actions">
-        <button id="setupBtn" class="ghost">Setup &amp; upgrades</button>
-        <button id="restartBtn">Choose an upgrade</button>
+      <div>
+        <div class="eyebrow">Between sessions</div>
+        <div id="labTitle">Choose an upgrade</div>
       </div>
     </div>
 
-    <div id="panelLab">
-      <div class="eyebrow">Between sessions</div>
-      <h1 id="labTitle">Choose an upgrade</h1>
-      <p id="labText">Every option here is a real technique microscopists use to get more picture out of fewer electrons. What you take carries into every session from now on.</p>
-      <div id="draftLabel">Instrument</div>
-      <div id="pickLeft"></div>
-      <div id="draft"></div>
-      <div id="labDone"></div>
-      <div id="rigSummary"></div>
-      <div id="modeLabel">Mode</div>
-      <div id="modePick"></div>
-      <div id="specLabel">Specimen</div>
-      <div id="specPick"></div>
-      <div id="logLabel">Logbook</div>
-      <div id="logHead"><span id="logScope"></span><span id="logTabs"></span></div>
-      <div id="logBoard"></div>
-      <div id="logEmpty"></div>
-      <div class="actions">
-        <button id="wipeBtn" class="ghost">Reset upgrades</button>
-        <button id="howBtn" class="ghost">How to play</button>
-        <button id="beginBtn">Begin session</button>
-      </div>
+    <nav id="benchNav">
+      <button class="bnav" id="navReport" data-sec="secReport">Report</button>
+      <button class="bnav" data-sec="secDraft">Upgrades<b id="navPicks"></b></button>
+      <button class="bnav" data-sec="secMode">Mode</button>
+      <button class="bnav" data-sec="secSpec">Specimen</button>
+      <button class="bnav" data-sec="secLog">Logbook</button>
+    </nav>
+
+    <div id="benchDo">
+      <button id="wipeBtn" class="bbtn ghost">Reset upgrades</button>
+      <button id="howBtn" class="bbtn ghost">Field guide</button>
+      <button id="beginBtn" class="bbtn">Begin session</button>
     </div>
+  </div>
+
+  <div id="benchDoc">
+    <div class="bcol">
+      <section class="bsec" id="secReport">
+        <div class="eyebrow" id="reportEyebrow">Scan report</div>
+        <h1 id="overlayTitle">Reconstruction complete</h1>
+        <p id="overlayText"></p>
+        <div class="stats">
+          <div><div class="n" id="statPct">0<small>%</small></div><div class="l">Resolved</div></div>
+          <div><div class="n" id="statDose">0</div><div class="l">Dose spent</div></div>
+          <div><div class="n" id="statKo">0</div><div class="l">Knocked out</div></div>
+          <div><div class="n" id="statRe">0</div><div class="l">Re-inserts</div></div>
+          <div><div class="n" id="statNotes">0</div><div class="l">Notes</div></div>
+        </div>
+        <div id="reportBody">
+          <div id="thumbWrap"><canvas id="thumb"></canvas><span>Recovered phase image</span></div>
+          <div>
+            <div id="earned">
+              <div class="big"><span id="earnVal">1</span><em id="earnUnit">upgrades earned</em></div>
+              <div id="earnBrk"></div>
+            </div>
+            <div id="logSlug"></div>
+          </div>
+        </div>
+        <div class="actions"><button id="restartBtn">Scan again</button></div>
+      </section>
+
+      <section class="bsec" id="secDraft">
+        <div class="shead"><h2>Upgrades</h2><span id="pickLeft"></span></div>
+        <p id="labText">Every option here is a real technique microscopists use to get more picture out of fewer electrons. What you take carries into every session from now on.</p>
+        <div id="draft"></div>
+        <div id="labDone"></div>
+        <div class="subhead">On the column</div>
+        <div id="rigSummary"></div>
+      </section>
+
+      <section class="bsec" id="secLog">
+        <div class="shead"><h2>Logbook</h2></div>
+        <div id="logHead"><span id="logScope"></span><span id="logTabs"></span></div>
+        <div id="logBoard"></div>
+        <div id="logEmpty"></div>
+      </section>
+    </div>
+
+    <aside class="bcol" id="benchRail">
+      <section class="bsec" id="secMode">
+        <div class="shead"><h2>Mode</h2><span class="meta">What the session rations</span></div>
+        <div id="modePick"></div>
+      </section>
+
+      <section class="bsec" id="secSpec">
+        <div class="shead"><h2>Specimen</h2><span class="meta">What you are looking at</span></div>
+        <div id="specPick"></div>
+      </section>
+    </aside>
   </div>
 </div>
 
@@ -828,18 +976,20 @@
   const meterFill = el("meterFill"), meterPct = el("meterPct");
   const doseVal = el("doseVal"), doseFill = el("doseFill");
   const dmgVal = el("dmgVal"), beamState = el("beamState"), panel = el("panel");
-  const overlay = el("overlay"), overlayTitle = el("overlayTitle"), overlayText = el("overlayText");
+  const benchEl = el("bench"), overlayTitle = el("overlayTitle"), overlayText = el("overlayText");
   const restartBtn = el("restartBtn"), warningEl = el("warning"), warnText = el("warnText");
   const toastEl = el("toast"), toastChip = el("toastChip"), toastText = el("toastText"), toastKind = el("toastKind");
   const hintsEl = el("hints"), thumb = el("thumb");
   const statPct = el("statPct"), statDose = el("statDose"), statKo = el("statKo");
   const statRe = el("statRe"), statNotes = el("statNotes"), meterGoal = el("meterGoal");
-  const card = el("card"), reportEyebrow = el("reportEyebrow"), rigEl = el("rig");
+  const reportEyebrow = el("reportEyebrow"), rigEl = el("rig");
+  const secReport = el("secReport"), navReport = el("navReport"), navPicks = el("navPicks");
+  const benchNav = el("benchNav");
   const earnVal = el("earnVal"), earnUnit = el("earnUnit"), earnBrk = el("earnBrk");
   const labTitle = el("labTitle"), labText = el("labText"), pickLeft = el("pickLeft");
   const draftEl = el("draft"), labDone = el("labDone"), rigSummary = el("rigSummary");
   const specPick = el("specPick"), brandSub = el("brandSub");
-  const logLabel = el("logLabel"), logScope = el("logScope"), logTabs = el("logTabs");
+  const logScope = el("logScope"), logTabs = el("logTabs");
   const logBoard = el("logBoard"), logEmpty = el("logEmpty"), logSlug = el("logSlug");
   const beginBtn = el("beginBtn");
   const modePick = el("modePick");
@@ -849,7 +999,7 @@
   const edCount = el("edCount"), edWarn = el("edWarn"), edRig = el("edRig");
   const edPlayBtn = el("edPlay"), edCloseBtn = el("edClose");
   const edClearBtn = el("edClear"), edDeleteBtn = el("edDelete");
-  const howBtn = el("howBtn"), wipeBtn = el("wipeBtn"), setupBtn = el("setupBtn");
+  const howBtn = el("howBtn"), wipeBtn = el("wipeBtn");
   const tutorialEl = el("tutorial"), tguideEl = el("tguide"), tFig = el("tFig");
   const tTitle = el("tTitle"), tBody = el("tBody"), tExtra = el("tExtra");
   const tDots = el("tDots"), tEyebrow = el("tEyebrow"), tSkip = el("tSkip");
@@ -1338,7 +1488,7 @@
   //   sprint   most lattice phased inside the drift window
   //   open     fewest electrons to phase every column
   //
-  // The survey board does not rank damage, even though the end card calls
+  // The survey board does not rank damage, even though the scan report calls
   // that the only score meaning anything there: the balance table says
   // sweeping at full speed destroys nothing, so a damage board would tie at
   // zero for everyone competent and rank patience for everyone else.
@@ -1348,7 +1498,7 @@
   // overexpose something you had not already resolved.
   // ---------------------------------------------------------------------
   const LOG_KEEP = 10;  // entries kept per board
-  const LOG_SHOW = 5;   // entries shown on the card
+  const LOG_SHOW = 5;   // entries shown on the bench
   // These two live up here with the rest of the logbook's constants rather
   // than beside sanitiseLog(), which is what uses them: loadSave() runs long
   // before that section, and a const it reaches early throws — into a catch
@@ -1781,7 +1931,7 @@
   // Everything a mode changes about a run, in one place: what the second
   // HUD track is counting down, what "solved" means in columns, and what
   // the hint strip says. Called from loadSpecimen() and resetGame(), so a
-  // mode picked on the card lands on the next session and nothing ever
+  // mode picked on the bench lands on the next session and nothing ever
   // half-switches under a run already in progress.
   function applyMode() {
     MODE = MODES.find(m => m.id === save.mode) || MODES[0];
@@ -1967,7 +2117,7 @@
     if (editorOpen) { editorKey(k, e); return; }
     if (tutorialOpen) { tutorialKey(k, e); return; }
     // the field guide is reachable from anywhere — mid-run it pauses and
-    // resumes, from the setup card it lays back over it
+    // resumes, from the bench it lays back over it
     if ((k === "?" || k === "h") && !e.repeat) { openTutorial(true); return; }
     if (!e.repeat && JUMP_KEYS.has(k)) player.jumpBufferTimer = JUMP_BUFFER_TIME;
     if (MOVE_KEYS.has(k)) hintsArmed = true;
@@ -2022,8 +2172,7 @@
     draftOffer = [];
     resetFog();
     SEEDED.forEach(i => eraseFogAt(world[i]));
-    overlay.classList.remove("on");
-    card.classList.remove("lab");
+    closeBench();
     // a new mode has a new hint strip; bring it back rather than leaving it
     // faded out from the last session
     hintsEl.classList.remove("faded");
@@ -2031,34 +2180,71 @@
     toastEl.classList.remove("on");
     renderRig();
   }
-  // Esc is the way back to the card from inside a run. It abandons the
-  // session exactly the way R does and earns nothing: a mode picker that let
-  // you bank a good run and reroll a bad one would be a scoreboard exploit
+  // ---------------------------------------------------------------------
+  // Opening and closing the bench. The scan report is the only section that
+  // comes and goes: arriving from a finished run it heads the page, and
+  // arriving from Esc or the field guide there is no run to report on, so
+  // it and its nav entry are taken out rather than left showing the last
+  // session's numbers as if they were this one's.
+  // ---------------------------------------------------------------------
+  let benchOpen = false;
+  function openBench(showReport) {
+    secReport.style.display = showReport ? "" : "none";
+    navReport.style.display = showReport ? "" : "none";
+    benchOpen = true;
+    benchEl.classList.add("on");
+    renderLab();
+    benchEl.scrollTop = 0;
+  }
+  function closeBench() {
+    benchOpen = false;
+    benchEl.classList.remove("on");
+  }
+
+  // Esc is the way to the bench from inside a run. It abandons the session
+  // exactly the way R does and earns nothing: a mode picker that let you
+  // bank a good run and reroll a bad one would be a scoreboard exploit
   // wearing a menu.
   function openSetup() {
+    if (benchOpen) return;
     if (!runOver) {
       runOver = true;
       beamOn = false;
       sfx.beam(false, 0);
     }
-    overlay.classList.add("on");
-    openLab();
+    openBench(false);
   }
 
+  // A jump from the bar has to say where it landed, or a page this long
+  // reads as if nothing happened — the section it scrolled to lights its
+  // border for a moment.
+  let jumpTimer = null;
+  function jumpTo(id) {
+    const s = el(id);
+    if (!s || s.style.display === "none") return;
+    s.scrollIntoView({ behavior: "smooth", block: "start" });
+    clearTimeout(jumpTimer);
+    for (const b of document.querySelectorAll(".bsec.jump")) b.classList.remove("jump");
+    s.classList.add("jump");
+    jumpTimer = setTimeout(() => s.classList.remove("jump"), 1400);
+  }
+  for (const b of benchNav.querySelectorAll(".bnav")) {
+    b.addEventListener("click", () => { jumpTo(b.dataset.sec); sfx.dopant(); });
+  }
+
+  // banked picks are the one thing on this page that is genuinely waiting on
+  // the player, so the report's button points at them rather than past them
   restartBtn.addEventListener("click", () => {
-    if (save.picks > 0 && UPGRADES.some(u => levelOf(u) < MAX_LEVEL)) openLab();
+    if (save.picks > 0 && UPGRADES.some(u => levelOf(u) < MAX_LEVEL)) jumpTo("secDraft");
     else resetGame();
   });
-  // the report screen's other door: straight to the between-sessions card,
-  // where the mode, the specimen and "Reset upgrades" live
-  setupBtn.addEventListener("click", openLab);
   beginBtn.addEventListener("click", resetGame);
 
   // "Reset upgrades" drops every level and every banked pick, so the draft
   // tree can be played again from the base instrument. Records, the field
   // notebook, saved specimens and settings are knowledge rather than score,
   // so they stay. Two clicks: the first arms the button, the second wipes,
-  // and it disarms itself after a few seconds or whenever the card re-renders.
+  // and it disarms itself after a few seconds or whenever the bench re-renders.
   let wipeArmed = 0, wipeTimer = null;
   function disarmWipe() {
     wipeArmed = 0;
@@ -2110,7 +2296,7 @@
     const home = recoveryAtom(x);
     // Two ways the retract genuinely cannot happen: nothing left standing to
     // re-insert onto, or not enough beam left to re-find focus. Both end the
-    // session down here, and the card says which.
+    // session down here, and the report says which.
     if (!home || (budgetLimited && doseBudgetEff - doseSpent < REALIGN_COST)) { endRun("lost"); return; }
 
     doseSpent = budgetLimited
@@ -2255,11 +2441,9 @@
       earnUnit.textContent = "% best session";
       earnBrk.textContent = "Instrument fully upgraded — this is the rig you finish on";
     }
-    restartBtn.textContent = (save.picks > 0 && anyLeft) ? "Choose an upgrade" : "Scan again";
+    restartBtn.textContent = (save.picks > 0 && anyLeft) ? "Choose an upgrade ↓" : "Scan again";
     renderLogSlug(posted);
-
-    card.classList.remove("lab");
-    overlay.classList.add("on");
+    openBench(true);
   }
 
   // How much of the picture you recovered is the score, and the score is
@@ -2403,7 +2587,7 @@
   // Called from endRun() while the run's state is still standing. Returns
   // what the scan report needs to say where the run landed, or null when
   // this mode and specimen keep no board at all.
-  let logJustPosted = 0;   // marks the most recent entry on the card
+  let logJustPosted = 0;   // marks the most recent entry on the board
   function logRun(kind, pct) {
     const B = BOARDS[MODE.id];
     if (!B || SPEC.id === SANDBOX_ID) return null;
@@ -2481,7 +2665,7 @@
   // The phase image and the specimen are already in memory for whichever
   // lattice the board is scoped to, so a row draws its own picture out of
   // 19 bytes of coverage instead of storing one. Two layers, the same two
-  // the end card composites: the reconstruction, and fog punched through
+  // the scan report composites: the reconstruction, and fog punched through
   // wherever that run converged a column.
   function paintLogThumb(cv, mask) {
     const w = 104;
@@ -2620,13 +2804,8 @@
     return out + "</div>";
   }
 
-  function openLab() {
-    card.classList.add("lab");
-    renderLab();
-  }
-
   // design names are player text and go through innerHTML with the rest of
-  // the card, so they get escaped on the way
+  // the page, so they get escaped on the way
   function esc(t) {
     return String(t).replace(/[&<>"]/g, c =>
       ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
@@ -2641,7 +2820,7 @@
     return b;
   }
 
-  // The mode is picked in the same place and the same shape as the specimen,
+  // The mode is picked in the same rail and the same shape as the specimen,
   // because they are the same kind of decision: what you are looking at, and
   // what you are short of while you look at it.
   function renderModes() {
@@ -2716,6 +2895,7 @@
     // the column, or picks banked from runs you never spent
     wipeBtn.style.display = (anyOwned || save.picks > 0) ? "" : "none";
     disarmWipe();
+    navPicks.textContent = save.picks > 0 ? String(save.picks) : "";
     if (save.picks > 0 && draftOffer.length) {
       labTitle.textContent = "Choose an upgrade";
       labText.textContent =
@@ -4685,7 +4865,7 @@
     }
     save.designId = d.id;
     writeSave();
-    // if the card behind the designer is sitting on this lattice, rebuild it
+    // if the bench behind the designer is sitting on this lattice, rebuild it
     // so the edit is what the next session runs on
     if (SPEC.id === SANDBOX_ID) loadSpecimen(SANDBOX_ID);
     return d;
@@ -4792,7 +4972,7 @@
 
   // ---------------------------------------------------------------------
   // Field guide. A paged primer that opens once on a first-ever load and is
-  // reachable afterwards from the setup card, the "How to play" button, or
+  // reachable afterwards from the bench, its "Field guide" button, or
   // the ? key. Every page is a ray-diagram of the mechanic it names, drawn
   // in the game's own vocabulary — cyan probe, mint resolved, warm dose —
   // so the picture carries the lesson and the prose only labels it. Nothing
@@ -5046,13 +5226,16 @@
          '<tr><td><kbd>&larr;</kbd> <kbd>&rarr;</kbd></td><td>Move the probe</td></tr>' +
          '<tr><td><kbd>Space</kbd></td><td>Jump — forgiving on late presses</td></tr>' +
          '<tr><td><kbd>Shift</kbd></td><td>Blank the beam — no dose, no resolving</td></tr>' +
-         '<tr><td><kbd>Esc</kbd></td><td>Abandon the run, open the setup card</td></tr>' +
+         '<tr><td><kbd>Esc</kbd></td><td>Abandon the run, open the bench</td></tr>' +
          '<tr><td><kbd>R</kbd></td><td>Restart the run (earns no upgrade)</td></tr>' +
          '<tr><td><kbd>M</kbd></td><td>Mute / unmute &nbsp;·&nbsp; <kbd>?</kbd> reopen this guide</td></tr>' +
          '</table>' +
-         '<p>The setup card offers three modes — a 100-electron session, a ' +
-         '60-second acquisition, or an open survey with nothing scarce. Only the ' +
-         'dose-limited session earns instrument upgrades.</p>',
+         '<p>Between sessions you are on the bench — one page holding the run ' +
+         'you just finished, your upgrades, the mode, the specimen and the ' +
+         'logbook, with a bar across the top that jumps to any of them. It ' +
+         'offers three modes: a 100-electron session, a 60-second acquisition, ' +
+         'or an open survey with nothing scarce. Only the dose-limited session ' +
+         'earns instrument upgrades.</p>',
       fig: `<svg viewBox="0 0 480 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The reconstruction emerging from fog with a marker at the 85 percent solved threshold">
   <defs>
     <pattern id="f7h" width="7" height="7" patternUnits="userSpaceOnUse"><path d="M0 7 L7 0" stroke="#8fb2c8" stroke-width="1"/></pattern>
@@ -5107,9 +5290,9 @@
     tutorialEl.classList.remove("on");
     if (!save.guideSeen) { save.guideSeen = 1; writeSave(); }
     // the first-ever open sits in front of a fresh, unstarted run — hand the
-    // player the setup card so they can choose a mode and specimen before
+    // player the bench so they can choose a mode and specimen before
     // they begin. Every later open lays over whatever was on screen (a live
-    // run, or the setup card) and just gets out of the way.
+    // run, or the bench) and just gets out of the way.
     if (!tResumeOnClose) openSetup();
   }
   function tutorialStep(d) {
@@ -5132,9 +5315,9 @@
   function loop(now) {
     const dt = Math.min(0.033, (now - lastTime) / 1000);
     lastTime = now;
-    // the designer and the field guide each cover the frame, so there is
-    // nothing to simulate or draw behind them
-    if (!editorOpen && !tutorialOpen) { update(dt); draw(); }
+    // the bench, the designer and the field guide each cover the frame, so
+    // there is nothing to simulate or draw behind them
+    if (!editorOpen && !tutorialOpen && !benchOpen) { update(dt); draw(); }
     requestAnimationFrame(loop);
   }
 
