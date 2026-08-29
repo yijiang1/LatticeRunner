@@ -351,10 +351,16 @@
   }
 
   /* ------------------------------------------------- specimen picker */
-  #specLabel, #modeLabel {
+  /* Instrument, Mode, Specimen and Logbook are the four things on this card,
+     and each one keeps its label whether or not it has anything in it. The
+     draft used to have none — with no pick banked the whole section
+     collapsed into the card's title, so a player looking for upgrades was
+     looking for something that was not on screen at all. */
+  #specLabel, #modeLabel, #draftLabel {
     margin-top: 18px; font: 500 8.5px/1 var(--mono); letter-spacing: 0.2em;
     text-transform: uppercase; color: var(--dim);
   }
+  #draftLabel { margin-top: 22px; }
   #specPick, #modePick { display: flex; gap: 8px; margin-top: 9px; flex-wrap: wrap; }
   .scard {
     flex: 1 1 200px; text-align: left; cursor: pointer;
@@ -456,15 +462,13 @@
   #logSlug.miss b { color: #bfd8e8; }
 
   /* ------------------------------------------------- in-run rig strip */
-  #rig, #rigSummary { display: flex; flex-wrap: wrap; gap: 6px; }
+  #rig, #rigSummary { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   #rig { margin-top: 11px; padding-top: 11px; border-top: 1px solid rgba(255,255,255,0.06); }
   #rig:empty { display: none; margin: 0; padding: 0; border: 0; }
   #rigSummary { margin-top: 10px; }
-  #rigLabel {
-    margin-top: 20px; font: 500 8.5px/1 var(--mono); letter-spacing: 0.2em;
-    text-transform: uppercase; color: var(--dim);
-  }
-  #rigLabel:empty { display: none; }
+  /* an instrument with nothing on it still says so, and says where the
+     levels come from — this is the spot a player goes looking */
+  .rnone { font: 400 11.5px/1.5 var(--sans); color: #93a6bb; }
   .rchip {
     display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px;
     background: rgba(90,212,255,0.07); border: 1px solid rgba(90,212,255,0.16);
@@ -745,9 +749,11 @@
       <div class="eyebrow">Between sessions</div>
       <h1 id="labTitle">Choose an upgrade</h1>
       <p id="labText">Every option here is a real technique microscopists use to get more picture out of fewer electrons. What you take carries into every session from now on.</p>
+      <div id="draftLabel">Instrument</div>
       <div id="pickLeft"></div>
       <div id="draft"></div>
       <div id="labDone"></div>
+      <div id="rigSummary"></div>
       <div id="modeLabel">Mode</div>
       <div id="modePick"></div>
       <div id="specLabel">Specimen</div>
@@ -756,8 +762,6 @@
       <div id="logHead"><span id="logScope"></span><span id="logTabs"></span></div>
       <div id="logBoard"></div>
       <div id="logEmpty"></div>
-      <div id="rigLabel"></div>
-      <div id="rigSummary"></div>
       <div class="actions">
         <button id="wipeBtn" class="ghost">Reset upgrades</button>
         <button id="howBtn" class="ghost">How to play</button>
@@ -834,7 +838,6 @@
   const earnVal = el("earnVal"), earnUnit = el("earnUnit"), earnBrk = el("earnBrk");
   const labTitle = el("labTitle"), labText = el("labText"), pickLeft = el("pickLeft");
   const draftEl = el("draft"), labDone = el("labDone"), rigSummary = el("rigSummary");
-  const rigLabel = el("rigLabel");
   const specPick = el("specPick"), brandSub = el("brandSub");
   const logLabel = el("logLabel"), logScope = el("logScope"), logTabs = el("logTabs");
   const logBoard = el("logBoard"), logEmpty = el("logEmpty"), logSlug = el("logSlug");
@@ -2756,7 +2759,14 @@
     renderLogbook();
 
     rigSummary.innerHTML = "";
-    rigLabel.textContent = anyOwned ? "Instrument so far" : "";
+    if (!anyOwned) {
+      const none = document.createElement("div");
+      none.className = "rnone";
+      none.textContent = save.picks > 0
+        ? "Nothing on the column yet — take one of the three above."
+        : "Nothing on the column yet. Picks settle on a dose-limited session over a shipped specimen, one for finishing at all and three past 70%.";
+      rigSummary.appendChild(none);
+    }
     for (const u of UPGRADES) {
       const lvl = levelOf(u);
       if (!lvl) continue;
