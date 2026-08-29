@@ -16,6 +16,8 @@ Falling isn't the end of the session, though. A real operator who loses the prob
 
 Open [`index.html`](index.html) in a browser. No build step, no dependencies, no server — it's one self-contained file.
 
+A seven-page **field guide** opens the first time you load the game — the probe, resolving by dwelling, the dose-is-damage bargain, blanking, permanent knock-out, stage re-insertion, and the win bar, each as a ray-diagram of the mechanic rather than a wall of text. It's reachable afterwards from **How to play** on the between-sessions card, or the **?** key from anywhere.
+
 It also runs inside the [PtychoHub](https://ptychohub.com) Kids section, which fetches this repo's `index.html` through an authenticated proxy route. While this repo is private that card is contributor-only and the route is session-gated, so the game isn't reachable by the public. Making the repo public is the switch that ships it.
 
 ## Modes
@@ -50,6 +52,7 @@ On a stock instrument a solved reconstruction is reachable but tight — it leav
 | Space / ↑ / W | Jump — coyote time and jump buffering are on, so it forgives near-misses |
 | Shift (hold) | Blank the beam: no dose spent, no resolving, atoms cool off |
 | Esc | Abandon the run and open the card — modes, specimens, upgrades |
+| ? / H | Open the field guide — the illustrated tutorial |
 | Enter | End an open survey and read the report |
 | M | Mute / unmute |
 | R | Abandon the run and restart (earns no upgrade) |

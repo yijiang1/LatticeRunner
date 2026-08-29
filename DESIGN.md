@@ -705,6 +705,7 @@ against everything ever logged under that id.
 | Space / ↑ / W | Jump (buffered + coyote-time forgiving) |
 | Shift (hold) | Blank the beam — no dose spent, no resolving |
 | Esc | Abandon the run and open the card: modes, specimens, upgrades |
+| ? / H | Open the field guide |
 | Enter | End an open survey (untimed, unrationed) and print the report |
 | M | Mute / unmute (persists) |
 | R | Restart |
@@ -712,6 +713,27 @@ against everything ever logged under that id.
 In the designer: **1**–**6** pick an element, **E** toggles the eraser, **D**
 toggles scan drift on what you paint, **Enter** plays it, **Esc** saves and
 closes.
+
+### Field guide
+
+Seven pages, drawn in `TUT_STEPS` as `{ title, body, extra, fig }` where `fig`
+is an inline SVG. It auto-opens once — gated by `save.guideSeen` in the
+`localStorage` blob — and is reachable afterwards from **How to play** on the
+between-sessions card or the **?** / **H** key. While it is up, `loop()` holds
+the frame the same way it does for the designer (`!editorOpen && !tutorialOpen`).
+Opened on the first-ever load it closes into a fresh `resetGame()`; opened later
+it lays over whatever is on screen — a live run, or the setup card — and closing
+just resumes it.
+
+Each page is a ray-diagram of one mechanic in the game's own vocabulary — cyan
+probe, mint resolved, warm dose — so the picture carries the lesson and the
+prose only names it: the probe as a converging cone on a focal spot, a column
+sharpening through three focus stages, the dose arc winding and unwinding, the
+blanked beam as a dashed outline, a column collapsing into a hole, stage
+re-insertion for 12 electrons, and the 85% bar with the reconstruction emerging
+from fog. It is a primer, **not** the "level 1-1" geometry the roadmap still
+wants for blanking — a safe opening stretch teaches the reflex; the guide only
+names the vocabulary.
 
 ---
 

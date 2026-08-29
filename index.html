@@ -477,6 +477,91 @@
   #edWarn:empty { display: none; }
   #edHelp { font: 400 10.5px/1.5 var(--sans); color: #5f7c92; }
 
+  /* ------------------------------------------------- field guide (tutorial)
+     A paged, illustrated primer. Auto-opens once on a first-ever load and is
+     reachable afterwards from the setup card or the ? key. Each page is a
+     ray-diagram of the mechanic it teaches, drawn in the same instrument
+     vocabulary as the game — cyan is the probe, mint is resolved, warm is
+     dose — so the picture carries the lesson and the prose only names it. */
+  #tutorial {
+    position: fixed; inset: 0; z-index: 40; display: none; place-items: center;
+    background: rgba(4,6,12,0.9);
+    backdrop-filter: blur(10px); -webkit-backdrop-filter: blur(10px);
+  }
+  #tutorial.on { display: grid; }
+  #tguide {
+    width: min(560px, 94vw); max-height: 92vh; overflow-y: auto;
+    padding: 26px 28px 20px; border-radius: 18px; scrollbar-width: thin;
+    background: linear-gradient(180deg, rgba(13,21,36,0.97), rgba(7,12,21,0.98));
+    border: 1px solid rgba(120,200,255,0.17);
+    box-shadow: 0 40px 120px rgba(0,0,0,0.72), inset 0 1px 0 rgba(255,255,255,0.06);
+    animation: rise 0.5s cubic-bezier(.2,.9,.25,1);
+  }
+  #tguide::-webkit-scrollbar { width: 8px; }
+  #tguide::-webkit-scrollbar-thumb { background: rgba(120,200,255,0.16); border-radius: 4px; }
+  #tguide .eyebrow {
+    font: 500 8.5px/1 var(--mono); letter-spacing: 0.26em;
+    text-transform: uppercase; color: var(--dim);
+  }
+  #tFig {
+    margin: 15px 0 2px; border-radius: 12px; overflow: hidden;
+    background: radial-gradient(120% 100% at 50% 0%, rgba(90,212,255,0.06), rgba(4,8,14,0.45));
+    border: 1px solid rgba(120,200,255,0.1);
+  }
+  #tFig svg { display: block; width: 100%; height: auto; }
+  #tStep h3 {
+    margin: 16px 0 0; font: 300 21px/1.2 var(--sans);
+    letter-spacing: -0.01em; color: var(--mint);
+  }
+  #tStep p {
+    margin: 10px 0 0; font: 400 13px/1.62 var(--sans);
+    color: #9fbdd0; max-width: 52ch;
+  }
+  .tkeys { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 13px; }
+  .tkeys span {
+    display: inline-flex; align-items: center; gap: 6px;
+    font: 500 9px/1 var(--mono); letter-spacing: 0.13em;
+    text-transform: uppercase; color: var(--dim);
+  }
+  .tref { width: 100%; border-collapse: collapse; margin-top: 10px; }
+  .tref td {
+    padding: 7px 2px; border-top: 1px solid rgba(255,255,255,0.06);
+    font: 400 11.5px/1.45 var(--sans); color: #9fbdd0; vertical-align: middle;
+  }
+  .tref tr:first-child td { border-top: none; }
+  .tref td:first-child { width: 92px; white-space: nowrap; }
+  #tNav { display: flex; align-items: center; gap: 12px; margin-top: 20px; }
+  #tDots { display: flex; gap: 6px; flex: 1; }
+  #tDots i {
+    width: 7px; height: 7px; border-radius: 50%;
+    border: 1px solid rgba(120,200,255,0.4);
+  }
+  #tDots i.on {
+    background: var(--cyan); border-color: var(--cyan);
+    box-shadow: 0 0 8px rgba(90,212,255,0.6);
+  }
+  #tNav button {
+    padding: 11px 18px; border-radius: 10px; cursor: pointer;
+    font: 600 10px/1 var(--mono); letter-spacing: 0.18em; text-transform: uppercase;
+    border: 1px solid var(--line-2); background: rgba(120,200,255,0.07); color: var(--ice);
+    transition: filter 0.12s ease, background 0.12s ease;
+  }
+  #tNav button:hover { background: rgba(120,200,255,0.14); }
+  #tNav button.primary {
+    border-color: transparent; color: #05131c;
+    background: linear-gradient(180deg, #8affd0, #45d3a5);
+  }
+  #tNav button.primary:hover { filter: brightness(1.08); }
+  #tBack[disabled] { opacity: 0.32; cursor: default; }
+  #tBack[disabled]:hover { background: rgba(120,200,255,0.07); }
+  #tSkip { margin-top: 11px; text-align: center; }
+  #tSkip button {
+    background: none; border: none; cursor: pointer;
+    font: 500 9px/1 var(--mono); letter-spacing: 0.16em; text-transform: uppercase;
+    color: var(--dim); padding: 4px;
+  }
+  #tSkip button:hover { color: var(--ice); }
+
   @media (max-width: 720px) {
     #panel { width: 210px; }
     #brand p { display: none; }
@@ -535,6 +620,7 @@
   <span class="grp"><kbd>A</kbd><kbd>D</kbd> move</span>
   <span class="grp"><kbd>Space</kbd> jump</span>
   <span class="grp hl"><kbd>Shift</kbd> blank the beam</span>
+  <span class="grp"><kbd>?</kbd> field guide</span>
   <span class="grp"><kbd>M</kbd> sound</span>
   <span class="grp"><kbd>R</kbd> abandon run</span>
 </div>
@@ -583,6 +669,7 @@
       <div id="rigLabel"></div>
       <div id="rigSummary"></div>
       <div class="actions">
+        <button id="howBtn" class="ghost">How to play</button>
         <button id="beginBtn">Begin session</button>
       </div>
     </div>
@@ -613,6 +700,24 @@
     <span id="edWarn"></span>
     <span class="sp" style="flex:1"></span>
     <span id="edHelp">Drag to paint · right-drag or E to erase · 1-6 pick an element</span>
+  </div>
+</div>
+
+<div id="tutorial">
+  <div id="tguide">
+    <div class="eyebrow" id="tEyebrow">Field guide · 1 / 7</div>
+    <div id="tFig"></div>
+    <div id="tStep">
+      <h3 id="tTitle"></h3>
+      <p id="tBody"></p>
+      <div id="tExtra"></div>
+    </div>
+    <div id="tNav">
+      <div id="tDots"></div>
+      <button id="tBack">Back</button>
+      <button id="tNext" class="primary">Next</button>
+    </div>
+    <div id="tSkip"><button id="tSkipBtn">Skip — I'll pick it up as I go</button></div>
   </div>
 </div>
 
@@ -648,6 +753,11 @@
   const edCount = el("edCount"), edWarn = el("edWarn"), edRig = el("edRig");
   const edPlayBtn = el("edPlay"), edCloseBtn = el("edClose");
   const edClearBtn = el("edClear"), edDeleteBtn = el("edDelete");
+  const howBtn = el("howBtn");
+  const tutorialEl = el("tutorial"), tguideEl = el("tguide"), tFig = el("tFig");
+  const tTitle = el("tTitle"), tBody = el("tBody"), tExtra = el("tExtra");
+  const tDots = el("tDots"), tEyebrow = el("tEyebrow"), tSkip = el("tSkip");
+  const tBack = el("tBack"), tNext = el("tNext"), tSkipBtn = el("tSkipBtn");
 
   // ---------------------------------------------------------------------
   // Small colour helpers. Art definitions below are authored as hex so the
@@ -1279,7 +1389,7 @@
   // iframes. The game has to run there too — just without carrying progress.
   const SAVE_KEY = "latticeRunner.v1";
   const save = { sessions: 0, picks: 0, best: 0, levels: {}, found: {}, muted: false,
-                 taughtBlank: 0, specimen: SPECIMENS[0].id,
+                 taughtBlank: 0, guideSeen: 0, specimen: SPECIMENS[0].id,
                  mode: MODES[0].id, bests: {}, designs: [], designId: null };
   (function loadSave() {
     try {
@@ -1299,6 +1409,7 @@
         }
         save.muted = !!p.muted;
         save.taughtBlank = p.taughtBlank ? 1 : 0;
+        save.guideSeen = p.guideSeen ? 1 : 0;
         if (p.specimen === SANDBOX_ID || SPECIMENS.some(sp => sp.id === p.specimen)) save.specimen = p.specimen;
         if (MODES.some(m => m.id === p.mode)) save.mode = p.mode;
         if (p.bests && typeof p.bests === "object") {
@@ -1669,6 +1780,10 @@
     const k = e.key.toLowerCase();
     sfx.unlock(); // an AudioContext needs a gesture; this is the first one
     if (editorOpen) { editorKey(k, e); return; }
+    if (tutorialOpen) { tutorialKey(k, e); return; }
+    // the field guide is reachable from anywhere — mid-run it pauses and
+    // resumes, from the setup card it lays back over it
+    if ((k === "?" || k === "h") && !e.repeat) { openTutorial(true); return; }
     if (!e.repeat && JUMP_KEYS.has(k)) player.jumpBufferTimer = JUMP_BUFFER_TIME;
     if (MOVE_KEYS.has(k)) hintsArmed = true;
     keys[k] = true;
@@ -4112,12 +4227,350 @@
     if (ev.key === "Enter") edNameInput.blur();
   });
 
+  // ---------------------------------------------------------------------
+  // Field guide. A paged primer that opens once on a first-ever load and is
+  // reachable afterwards from the setup card, the "How to play" button, or
+  // the ? key. Every page is a ray-diagram of the mechanic it names, drawn
+  // in the game's own vocabulary — cyan probe, mint resolved, warm dose —
+  // so the picture carries the lesson and the prose only labels it. Nothing
+  // here touches the simulation: while the guide is up, loop() holds the
+  // frame the same way it does for the designer.
+  // ---------------------------------------------------------------------
+  const SPHERE_STOPS =
+    '<stop offset="0" stop-color="#cfeeff"/><stop offset="45%" stop-color="#5ab2dc"/>' +
+    '<stop offset="100%" stop-color="#132c44"/>';
+
+  function f7grid() {
+    let s = "";
+    for (let ci = 0; ci < 11; ci++) {
+      for (let ri = 0; ri < 4; ri++) {
+        const x = 80 + ci * 32, y = 46 + ri * 28, mint = (ci + ri) % 2 === 0;
+        s += `<circle cx="${x}" cy="${y}" r="3.4" fill="${mint ? "#7dffc4" : "#5ad4ff"}" opacity="${mint ? 0.6 : 0.48}"/>`;
+      }
+    }
+    return s;
+  }
+
+  const TUT_STEPS = [
+    {
+      t: "The probe",
+      b: "You fly a focused electron probe across an atomic lattice. Electrons " +
+         "stream down the illumination cone and converge on the bright focal " +
+         "spot — that spot is you, and it is what scans. Move with the arrow " +
+         "keys, jump with Space; a late press off a ledge still fires, so jumps " +
+         "are forgiving.",
+      x: '<div class="tkeys"><span><kbd>&larr;</kbd><kbd>&rarr;</kbd> move</span>' +
+         '<span><kbd>Space</kbd> jump</span></div>',
+      fig: `<svg viewBox="0 0 480 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Ray diagram of the focused electron probe converging on a focal spot above the detector">
+  <style>
+    .f1 text{font:600 8.5px ui-monospace,monospace;letter-spacing:.14em;fill:#6f92aa}
+    .f1 .hi{fill:#dff2ff}
+    .f1 .stream{stroke:#5ad4ff;stroke-width:1.4;stroke-linecap:round;stroke-dasharray:4 10;animation:f1s 1s linear infinite}
+    @keyframes f1s{to{stroke-dashoffset:-28}}
+    .f1 .ap{animation:f1a 2.6s ease-in-out infinite}
+    @keyframes f1a{0%,100%{opacity:.16}50%{opacity:.55}}
+  </style>
+  <g class="f1">
+    <line x1="26" y1="100" x2="454" y2="100" stroke="#6f92aa" stroke-width="1" stroke-dasharray="2 5" opacity=".5"/>
+    <text x="28" y="94">SPECIMEN PLANE</text>
+    <path d="M182 10 L240 100 L298 10 Z" fill="#5ad4ff" fill-opacity=".05"/>
+    <line x1="182" y1="10" x2="240" y2="100" stroke="#5ad4ff" stroke-width="1.4"/>
+    <line x1="298" y1="10" x2="240" y2="100" stroke="#5ad4ff" stroke-width="1.4"/>
+    <line class="stream" x1="224" y1="16" x2="238" y2="92"/>
+    <line class="stream" x1="240" y1="12" x2="240" y2="94" style="animation-delay:-.33s"/>
+    <line class="stream" x1="256" y1="16" x2="242" y2="92" style="animation-delay:-.66s"/>
+    <path d="M240 100 L156 174 L324 174 Z" fill="#5ad4ff" fill-opacity=".03"/>
+    <line x1="240" y1="100" x2="156" y2="174" stroke="#5ad4ff" stroke-width="1" opacity=".4"/>
+    <line x1="240" y1="100" x2="324" y2="174" stroke="#5ad4ff" stroke-width="1" opacity=".4"/>
+    <circle class="ap" cx="240" cy="100" r="19" fill="none" stroke="#5ad4ff"/>
+    <circle cx="240" cy="100" r="11" fill="none" stroke="#9fe6ff" opacity=".5"/>
+    <circle cx="240" cy="100" r="6" fill="#dff2ff"/>
+    <rect x="140" y="176" width="200" height="7" rx="2" fill="#6f92aa" fill-opacity=".16" stroke="#6f92aa" stroke-opacity=".4"/>
+    <text x="340" y="170" text-anchor="end">DETECTOR</text>
+    <text x="262" y="103" class="hi">THE PROBE</text>
+  </g>
+</svg>`
+    },
+    {
+      t: "Columns resolve when you linger",
+      b: "Atom columns are your platforms, but they start as dim, out-of-focus " +
+         "ghosts. Stay near one and it sharpens into solid ground — the way a " +
+         "real reconstruction builds up scan position by scan position. There is " +
+         "no progress bar: the picture pulling into focus behind the fog is the " +
+         "progress bar. Leave too soon and the column slides back out of focus.",
+      x: "",
+      fig: `<svg viewBox="0 0 480 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="A column sharpening from a blurred ghost into solid ground as the probe lingers">
+  <defs>
+    <radialGradient id="f2s" cx="37%" cy="33%" r="72%">${SPHERE_STOPS}</radialGradient>
+    <filter id="f2b" x="-60%" y="-60%" width="220%" height="220%"><feGaussianBlur stdDeviation="3.6"/></filter>
+  </defs>
+  <style>
+    .f2 text{font:600 8.5px ui-monospace,monospace;letter-spacing:.13em;fill:#6f92aa}
+    .f2 .hi{fill:#7dffc4}
+    .f2 .fog{fill:#8fb2c8;animation:f2f 3.4s ease-in-out infinite}
+    @keyframes f2f{0%,100%{opacity:.17}50%{opacity:.05}}
+  </style>
+  <g class="f2">
+    <line x1="26" y1="128" x2="454" y2="128" stroke="#6f92aa" stroke-width="1" stroke-dasharray="2 5" opacity=".4"/>
+    <circle cx="82" cy="104" r="26" fill="url(#f2s)" opacity=".38" filter="url(#f2b)"/>
+    <circle cx="82" cy="104" r="27" fill="none" stroke="#5ad4ff" stroke-width="1" stroke-dasharray="3 5" opacity=".5"/>
+    <text x="82" y="156" text-anchor="middle">GHOST</text>
+    <path d="M132 104 h16 m-6 -5 l6 5 l-6 5" stroke="#6f92aa" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="204" cy="104" r="22" fill="url(#f2s)" opacity=".7" filter="url(#f2b)"/>
+    <circle cx="204" cy="104" r="22" fill="url(#f2s)" opacity=".42"/>
+    <text x="204" y="156" text-anchor="middle">DWELLING</text>
+    <path d="M254 104 h16 m-6 -5 l6 5 l-6 5" stroke="#6f92aa" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <rect x="330" y="72" width="6" height="6" fill="#7dffc4" opacity=".55"/>
+    <rect x="368" y="112" width="6" height="6" fill="#5ad4ff" opacity=".5"/>
+    <rect x="376" y="70" width="6" height="6" fill="#ffc078" opacity=".45"/>
+    <rect x="336" y="116" width="6" height="6" fill="#5ad4ff" opacity=".4"/>
+    <rect x="392" y="92" width="6" height="6" fill="#7dffc4" opacity=".4"/>
+    <circle cx="350" cy="104" r="22" fill="url(#f2s)"/>
+    <ellipse cx="342" cy="96" rx="7" ry="5" fill="#eafaff" opacity=".8"/>
+    <circle cx="350" cy="104" r="24" fill="none" stroke="#7dffc4" stroke-width="1.4" opacity=".7"/>
+    <text x="350" y="156" text-anchor="middle" class="hi">SOLID GROUND</text>
+    <rect class="fog" x="22" y="46" width="250" height="104"/>
+  </g>
+</svg>`
+    },
+    {
+      t: "Seeing a column is the same act as breaking it",
+      b: "The electrons that resolve an atom also knock it loose. Proximity does " +
+         "both — one action, two consequences — so the orange arc winding around " +
+         "a column is dose going in. It is a net gauge: back away and it unwinds, " +
+         "jump and it stalls, because leaving the specimen plane defocuses the " +
+         "probe. Step out of the scan field and the reading freezes where you " +
+         "left it.",
+      x: "",
+      fig: `<svg viewBox="0 0 480 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Dose winding around a column while the probe lingers, easing off as it moves away or jumps">
+  <defs><radialGradient id="f3s" cx="37%" cy="33%" r="72%">${SPHERE_STOPS}</radialGradient></defs>
+  <style>
+    .f3 text{font:600 8.5px ui-monospace,monospace;letter-spacing:.13em;fill:#6f92aa}
+    .f3 .warm{fill:#ffb27a}.f3 .g{fill:#7dffc4}.f3 .c{fill:#9fe6ff}
+    .f3 .arc{animation:f3w 2.1s linear infinite}
+    @keyframes f3w{to{stroke-dashoffset:-100}}
+  </style>
+  <g class="f3">
+    <line x1="26" y1="132" x2="454" y2="132" stroke="#6f92aa" stroke-width="1" stroke-dasharray="2 5" opacity=".4"/>
+    <ellipse cx="216" cy="102" rx="62" ry="48" fill="#ff7a4d" fill-opacity=".06"/>
+    <circle cx="216" cy="100" r="26" fill="url(#f3s)"/>
+    <circle class="arc" cx="216" cy="100" r="37" fill="none" stroke="#ff7a4d" stroke-width="5" stroke-linecap="round" pathLength="100" stroke-dasharray="72 28" transform="rotate(-120 216 100)"/>
+    <circle cx="166" cy="104" r="5" fill="#dff2ff"/>
+    <line x1="158" y1="90" x2="166" y2="100" stroke="#5ad4ff" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <line x1="174" y1="90" x2="166" y2="100" stroke="#5ad4ff" stroke-width="1.2" stroke-dasharray="3 3"/>
+    <text x="150" y="150">PROBE</text>
+    <path d="M262 108 q34 12 52 -6" stroke="#7dffc4" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+    <path d="M314 102 l6 0 m-6 -5 l6 5 l-6 5" stroke="#7dffc4" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="326" y="98" class="g">MOVE OFF</text>
+    <text x="326" y="112">ARC WINDS DOWN</text>
+    <path d="M216 60 l0 -22 m-6 8 l6 -8 l6 8" stroke="#9fe6ff" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="216" y="28" text-anchor="middle" class="c">JUMP = BEST ESCAPE</text>
+    <text x="216" y="176" text-anchor="middle" class="warm">DOSE — THE SAME ELECTRONS THAT RESOLVE IT</text>
+  </g>
+</svg>`
+    },
+    {
+      t: "Blank the beam with Shift",
+      b: "Hold Shift and the beam blanks: no dose spent, no resolving, columns " +
+         "cool off. Crossing ground you have already scanned then costs nothing. " +
+         "This is the whole skill — a good run is routing, not speed. The beam " +
+         "hum stops when you blank; that is the cue you are spending nothing.",
+      x: '<div class="tkeys"><span><kbd>Shift</kbd> hold to blank the beam</span></div>',
+      fig: `<svg viewBox="0 0 480 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The probe crossing already-resolved columns with the beam blanked to a dashed outline">
+  <defs><radialGradient id="f4s" cx="37%" cy="33%" r="72%">${SPHERE_STOPS}</radialGradient></defs>
+  <style>
+    .f4 text{font:600 8.5px ui-monospace,monospace;letter-spacing:.13em;fill:#6f92aa}
+    .f4 .hi{fill:#9fe6ff}.f4 .g{fill:#7dffc4}
+  </style>
+  <g class="f4">
+    <line x1="26" y1="132" x2="454" y2="132" stroke="#6f92aa" stroke-width="1" stroke-dasharray="2 5" opacity=".4"/>
+    <circle cx="150" cy="108" r="20" fill="url(#f4s)"/><circle cx="150" cy="108" r="21" fill="none" stroke="#7dffc4" stroke-width="1.2" opacity=".5"/>
+    <circle cx="240" cy="108" r="20" fill="url(#f4s)"/><circle cx="240" cy="108" r="21" fill="none" stroke="#7dffc4" stroke-width="1.2" opacity=".5"/>
+    <circle cx="330" cy="108" r="20" fill="url(#f4s)"/><circle cx="330" cy="108" r="21" fill="none" stroke="#7dffc4" stroke-width="1.2" opacity=".5"/>
+    <line x1="212" y1="30" x2="240" y2="72" stroke="#5ad4ff" stroke-width="1.2" stroke-dasharray="4 4" opacity=".55"/>
+    <line x1="268" y1="30" x2="240" y2="72" stroke="#5ad4ff" stroke-width="1.2" stroke-dasharray="4 4" opacity=".55"/>
+    <circle cx="240" cy="74" r="7" fill="none" stroke="#9fe6ff" stroke-width="2"/>
+    <line x1="234" y1="74" x2="246" y2="74" stroke="#9fe6ff" stroke-width="2"/>
+    <g transform="translate(304,32)" stroke="#6f92aa" stroke-width="1.5" fill="none" stroke-linecap="round">
+      <path d="M0 5 h5 l7 -6 v18 l-7 -6 h-5 z" fill="#6f92aa" fill-opacity=".22"/>
+      <line x1="18" y1="1" x2="30" y2="17"/><line x1="30" y1="1" x2="18" y2="17"/>
+    </g>
+    <text x="300" y="28">HUM OFF</text>
+    <text x="240" y="20" text-anchor="middle" class="hi">SHIFT — BEAM BLANKED</text>
+    <text x="240" y="158" text-anchor="middle" class="g">ALREADY-SCANNED GROUND CROSSES FOR FREE</text>
+  </g>
+</svg>`
+    },
+    {
+      t: "Knock-out is permanent",
+      b: "Push a column past its dose tolerance and it collapses out of its site " +
+         "for good. The platform you were standing on becomes the hole you fall " +
+         "through, and under the lattice there is only the detector. Heavier " +
+         "atoms take far more dose than light ones — gold is a bench you can " +
+         "think on, oxygen is the first thing you lose.",
+      x: "",
+      fig: `<svg viewBox="0 0 480 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="An over-exposed column collapsing, leaving a gap the probe falls through toward the detector">
+  <defs>
+    <radialGradient id="f5d" cx="50%" cy="45%" r="60%"><stop offset="0" stop-color="#ff9a5c"/><stop offset="100%" stop-color="#3a1206"/></radialGradient>
+  </defs>
+  <style>
+    .f5 text{font:600 8.5px ui-monospace,monospace;letter-spacing:.13em;fill:#6f92aa}
+    .f5 .warm{fill:#ffb27a}
+    .f5 .fall{animation:f5f 1.5s ease-in infinite}
+    @keyframes f5f{0%{transform:translateY(-8px);opacity:0}25%{opacity:1}100%{transform:translateY(42px);opacity:.15}}
+  </style>
+  <g class="f5">
+    <line x1="26" y1="120" x2="150" y2="120" stroke="#6f92aa" stroke-width="1" stroke-dasharray="2 5" opacity=".4"/>
+    <circle cx="86" cy="96" r="24" fill="url(#f5d)"/>
+    <circle cx="86" cy="96" r="34" fill="none" stroke="#ff7a4d" stroke-width="5" stroke-linecap="round" opacity=".9"/>
+    <path d="M74 82 l10 12 l-6 8 M94 80 l-5 16 l10 6" stroke="#2a0d05" stroke-width="1.6" fill="none"/>
+    <g stroke="#ffb27a" stroke-width="1.6" stroke-linecap="round">
+      <line x1="86" y1="58" x2="86" y2="48"/><line x1="116" y1="78" x2="126" y2="72"/>
+      <line x1="112" y1="114" x2="122" y2="122"/><line x1="56" y1="80" x2="46" y2="74"/>
+    </g>
+    <text x="86" y="150" text-anchor="middle" class="warm">KNOCKED OUT</text>
+    <path d="M162 96 h150 m-10 -7 l10 7 l-10 7" stroke="#6f92aa" stroke-width="1.5" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <text x="238" y="86" text-anchor="middle">GONE FOR THE REST OF THE RUN</text>
+    <line x1="330" y1="120" x2="370" y2="120" stroke="#6f92aa" stroke-width="1" stroke-dasharray="2 5" opacity=".4"/>
+    <line x1="404" y1="120" x2="454" y2="120" stroke="#6f92aa" stroke-width="1" stroke-dasharray="2 5" opacity=".4"/>
+    <circle cx="387" cy="96" r="22" fill="none" stroke="#6f92aa" stroke-width="1.2" stroke-dasharray="3 5" opacity=".55"/>
+    <g class="fall">
+      <circle cx="387" cy="98" r="5" fill="#dff2ff"/>
+      <line x1="387" y1="80" x2="387" y2="94" stroke="#9fe6ff" stroke-width="1.4" opacity=".6"/>
+    </g>
+    <rect x="336" y="168" width="118" height="7" rx="2" fill="#6f92aa" fill-opacity=".18" stroke="#6f92aa" stroke-opacity=".4"/>
+    <text x="395" y="162" text-anchor="middle">ONLY THE DETECTOR BELOW</text>
+  </g>
+</svg>`
+    },
+    {
+      t: "Falling costs electrons, not the run",
+      b: "Hit the detector and the stage retracts, re-inserts and re-finds focus: " +
+         "twelve electrons, and you are set back down on the nearest column still " +
+         "standing. Falling is survivable, over and over — the run only ends down " +
+         "there when there is nothing left to pay with.",
+      x: "",
+      fig: `<svg viewBox="0 0 480 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The probe recovered from the detector back onto the nearest standing column for twelve electrons">
+  <defs><radialGradient id="f6s" cx="37%" cy="33%" r="72%">${SPHERE_STOPS}</radialGradient></defs>
+  <style>
+    .f6 text{font:600 8.5px ui-monospace,monospace;letter-spacing:.13em;fill:#6f92aa}
+    .f6 .warm{fill:#ffc078}.f6 .g{fill:#7dffc4}
+    .f6 .march{stroke-dasharray:5 6;animation:f6m 1s linear infinite}
+    @keyframes f6m{to{stroke-dashoffset:-22}}
+  </style>
+  <g class="f6">
+    <rect x="40" y="158" width="400" height="8" rx="2" fill="#6f92aa" fill-opacity=".16" stroke="#6f92aa" stroke-opacity=".4"/>
+    <text x="430" y="150" text-anchor="end">DETECTOR</text>
+    <circle cx="360" cy="146" r="5" fill="#dff2ff"/>
+    <path class="march" d="M352 140 q-118 -40 -210 -32" fill="none" stroke="#9fe6ff" stroke-width="1.6" stroke-linecap="round"/>
+    <path d="M136 116 l6 -9 l6 9" stroke="#9fe6ff" stroke-width="1.6" fill="none" stroke-linecap="round" stroke-linejoin="round"/>
+    <line x1="98" y1="96" x2="178" y2="96" stroke="#6f92aa" stroke-width="1" stroke-dasharray="2 5" opacity=".5"/>
+    <circle cx="138" cy="76" r="20" fill="url(#f6s)"/>
+    <circle cx="138" cy="76" r="21" fill="none" stroke="#7dffc4" stroke-width="1.2" opacity=".5"/>
+    <text x="138" y="126" text-anchor="middle" class="g">NEAREST COLUMN STANDING</text>
+    <text x="262" y="40" text-anchor="middle" class="warm">−12 ELECTRONS TO RETRACT &amp; REFOCUS</text>
+    <text x="240" y="182" text-anchor="middle">THE RUN ENDS HERE ONLY WITH NOTHING LEFT TO PAY</text>
+  </g>
+</svg>`
+    },
+    {
+      t: "The goal",
+      b: "A session ends when the electrons run out or the reconstruction is " +
+         "solved — 85% of the lattice, the point where the structure stops being " +
+         "ambiguous. Your score is how much of the picture you recovered. Every " +
+         "electron you did not spend is specimen that survived.",
+      x: '<table class="tref">' +
+         '<tr><td><kbd>&larr;</kbd> <kbd>&rarr;</kbd></td><td>Move the probe</td></tr>' +
+         '<tr><td><kbd>Space</kbd></td><td>Jump — forgiving on late presses</td></tr>' +
+         '<tr><td><kbd>Shift</kbd></td><td>Blank the beam — no dose, no resolving</td></tr>' +
+         '<tr><td><kbd>Esc</kbd></td><td>Abandon the run, open the setup card</td></tr>' +
+         '<tr><td><kbd>R</kbd></td><td>Restart the run (earns no upgrade)</td></tr>' +
+         '<tr><td><kbd>M</kbd></td><td>Mute / unmute &nbsp;·&nbsp; <kbd>?</kbd> reopen this guide</td></tr>' +
+         '</table>' +
+         '<p>The setup card offers three modes — a 100-electron session, a ' +
+         '60-second acquisition, or an open survey with nothing scarce. Only the ' +
+         'dose-limited session earns instrument upgrades.</p>',
+      fig: `<svg viewBox="0 0 480 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The reconstruction emerging from fog with a marker at the 85 percent solved threshold">
+  <defs>
+    <pattern id="f7h" width="7" height="7" patternUnits="userSpaceOnUse"><path d="M0 7 L7 0" stroke="#8fb2c8" stroke-width="1"/></pattern>
+  </defs>
+  <style>
+    .f7 text{font:600 8.5px ui-monospace,monospace;letter-spacing:.13em;fill:#6f92aa}
+    .f7 .g{fill:#7dffc4}
+    .f7 .fog{animation:f7f 3.6s ease-in-out infinite}
+    @keyframes f7f{0%,100%{opacity:.26}50%{opacity:.1}}
+  </style>
+  <g class="f7">
+    <rect x="60" y="26" width="360" height="120" rx="4" fill="#04070d" stroke="#6f92aa" stroke-opacity=".35"/>
+    ${f7grid()}
+    <rect class="fog" x="60" y="26" width="252" height="120" fill="url(#f7h)"/>
+    <rect class="fog" x="60" y="26" width="252" height="120" fill="#8fb2c8" opacity=".08"/>
+    <line x1="366" y1="18" x2="366" y2="152" stroke="#7dffc4" stroke-width="1.6"/>
+    <path d="M366 18 l14 5 l-14 5 z" fill="#7dffc4"/>
+    <text x="358" y="168" text-anchor="middle" class="g">SOLVED · 85% OF THE LATTICE</text>
+    <text x="150" y="168" text-anchor="middle">THE PICTURE IS THE PROGRESS BAR</text>
+  </g>
+</svg>`
+    }
+  ];
+
+  let tutorialOpen = false, tStepIdx = 0, tResumeOnClose = true;
+
+  function renderTutorialStep() {
+    const s = TUT_STEPS[tStepIdx], last = tStepIdx === TUT_STEPS.length - 1;
+    tFig.innerHTML = s.fig;
+    tTitle.textContent = s.t;
+    tBody.textContent = s.b;
+    tExtra.innerHTML = s.x || "";
+    tEyebrow.textContent = `Field guide · ${tStepIdx + 1} / ${TUT_STEPS.length}`;
+    tDots.innerHTML = TUT_STEPS.map((_, i) => `<i class="${i === tStepIdx ? "on" : ""}"></i>`).join("");
+    tBack.disabled = tStepIdx === 0;
+    tNext.textContent = last ? (tResumeOnClose ? "Done" : "Start scanning") : "Next";
+    tSkip.style.display = last ? "none" : "";
+    tguideEl.scrollTop = 0;
+  }
+
+  function openTutorial(resumeOnClose) {
+    if (editorOpen) return;
+    tResumeOnClose = resumeOnClose !== false;
+    tStepIdx = 0;
+    tutorialOpen = true;
+    tutorialEl.classList.add("on");
+    sfx.beam(false, 0); // no hum behind the guide
+    renderTutorialStep();
+  }
+  function closeTutorial() {
+    tutorialOpen = false;
+    tutorialEl.classList.remove("on");
+    if (!save.guideSeen) { save.guideSeen = 1; writeSave(); }
+    // the first-ever open sits in front of a fresh, unstarted run — drop the
+    // player straight into it. Every later open lays over whatever was on
+    // screen (a live run, or the setup card) and just gets out of the way.
+    if (!tResumeOnClose) resetGame();
+  }
+  function tutorialStep(d) {
+    const next = tStepIdx + d;
+    if (next < 0) return;
+    if (next >= TUT_STEPS.length) { closeTutorial(); return; }
+    tStepIdx = next;
+    renderTutorialStep();
+  }
+  function tutorialKey(k, e) {
+    if (k === "escape") { e.preventDefault(); closeTutorial(); }
+    else if (k === "arrowright" || k === "d" || k === "enter" || k === " ") { e.preventDefault(); tutorialStep(1); }
+    else if (k === "arrowleft" || k === "a") { e.preventDefault(); tutorialStep(-1); }
+  }
+  tBack.addEventListener("click", () => tutorialStep(-1));
+  tNext.addEventListener("click", () => tutorialStep(1));
+  tSkipBtn.addEventListener("click", closeTutorial);
+  howBtn.addEventListener("click", () => openTutorial(true));
+
   function loop(now) {
     const dt = Math.min(0.033, (now - lastTime) / 1000);
     lastTime = now;
-    // the designer covers the frame, so there is nothing to simulate or
-    // draw behind it
-    if (!editorOpen) { update(dt); draw(); }
+    // the designer and the field guide each cover the frame, so there is
+    // nothing to simulate or draw behind them
+    if (!editorOpen && !tutorialOpen) { update(dt); draw(); }
     requestAnimationFrame(loop);
   }
 
@@ -4125,6 +4578,7 @@
   // it is the thing every frame reads from.
   loadSpecimen(save.specimen);
   resetGame();
+  if (!save.guideSeen) openTutorial(false);
   requestAnimationFrame(loop);
 })();
 </script>
