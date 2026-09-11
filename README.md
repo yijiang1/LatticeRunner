@@ -35,19 +35,19 @@ Three of them, picked on the bench — **Esc** opens it from inside a run. All t
 
 | Mode | Scarce | What it asks of you |
 |------|--------|---------------------|
-| **Dose-limited session** | 100 electrons, no clock | The campaign. Route, blank, and spend the budget on picture instead of on re-alignment. The only mode that earns upgrades. |
-| **60-second acquisition** | 60 seconds, dose free | Stage drift smears a frame after about a minute, so a minute is what you get. Blanking now costs you seconds and saves you nothing, so the whole skill is coverage per second — the exact inverse of a session. |
+| **Dose-limited session** | 100 electrons, no clock | Route, blank, and spend the budget on picture instead of on re-alignment. Completed runs earn upgrades. |
+| **30-second acquisition** | 30 seconds, dose free | Stage drift limits the acquisition window. Blanking now costs you seconds and saves you nothing, so the whole skill is coverage per second — the exact inverse of a session. Completed runs also earn upgrades. |
 | **Open survey** | nothing | No clock, no budget, and the bar moves from 85% to every last column. Knock-out still bites, so the lattice can still be ruined; it just can't be hurried. **Enter** ends the run and prints the report. |
 
 The sprint is the interesting one, because it inverts the lesson. In a session the beam is the resource and standing still is what costs you; in a sprint the clock is the resource and blanking is what costs you — but leaving the beam on while you loiter still destroys the columns you are about to want to stand on. Two opposite pressures, one dose model.
 
-Only the dose-limited session feeds the draft, and only on a specimen that shipped with the game. The other two modes, and any lattice you drew yourself, keep their own best-percentage but pay no picks — a mode with nothing scarce in it would out-earn the one the balance is tuned against within a couple of runs. All three keep a **logbook**, though, because a board that ranks the scarce resource can't be farmed the way picks can.
+Dose-limited sessions and 30-second acquisitions feed the draft when played on a specimen that shipped with the game. Open surveys and lattices you drew yourself pay no picks; without a natural end or with a deliberately easy layout, they would make the upgrade economy meaningless. All three keep a **logbook**, though, because a board that ranks the scarce resource can't be farmed the way picks can.
 
 ## Runs and upgrades
 
 A session ends when the electrons run out or the reconstruction is solved — 85% of the lattice, which is where a real reconstruction stops being ambiguous — and then you draft. Three instruments are offered, you keep one, and it carries into every session after. How much of the picture you recovered decides how many picks you get: one always, two at 40%, three at 70%. Abandoning a run with **R** earns nothing.
 
-Picks settle only on a dose-limited session over a specimen that shipped with the game — see **Modes**. Every upgrade is a real technique for getting more picture out of fewer electrons — an 80 kV column that sits under carbon's knock-on threshold, mixed-state reconstruction, a direct electron detector, a fast blanker, wide-field scan coils, a cryo stage, sparse scanning. Three more buy handling rather than picture: a faster scan generator to slew the probe between positions, a piezo focal stage that steps further out of the specimen plane — which is what a jump is here — and beam-shift deflectors to carry the probe sideways while it's up there. Ten lines, three levels each. Progress is kept in `localStorage`; if that's unavailable the game still runs, it just won't remember.
+Picks settle on a completed dose-limited session or 30-second acquisition over a specimen that shipped with the game — see **Modes**. Every upgrade is a real technique for getting more picture out of fewer electrons — an 80 kV column that sits under carbon's knock-on threshold, mixed-state reconstruction, a direct electron detector, a fast blanker, wide-field scan coils, a cryo stage, sparse scanning. Three more buy handling rather than picture: a faster scan generator to slew the probe between positions, a piezo focal stage that steps further out of the specimen plane — which is what a jump is here — and beam-shift deflectors to carry the probe sideways while it's up there. Ten lines, three levels each. Progress is kept in `localStorage`; if that's unavailable the game still runs, it just won't remember.
 
 Fully rigged, those three take the probe from 117 to 163 px/s, from a 109px jump to a 203px one, and from clearing one 90px lattice gap to clearing two and a half. They're the only upgrades that change which routes exist rather than what a route costs.
 
@@ -62,7 +62,7 @@ Percent resolved is the wrong number to rank on. The win bar is 85%, a routed pl
 | Mode | Qualifies | Ranked on |
 |------|-----------|-----------|
 | **Dose-limited session** | solved — 85% phased | fewest electrons |
-| **60-second acquisition** | ran the full drift window | most lattice phased |
+| **30-second acquisition** | ran the full drift window | most lattice phased |
 | **Open survey** | every last column | fewest electrons |
 
 There is always a cheaper route, so the board never tops out — which finally gives a player who knows the route something to do with the budget they had nothing left to spend on. The survey board is the hard one: every column has to be phased, and a column knocked out before you resolve it can never be resolved, so one careless dwell puts 100% out of reach for the rest of the run.
@@ -82,7 +82,7 @@ It's local: your runs, in `localStorage` with the rest of your progress, with no
 | ← → / A D | Move |
 | Space / ↑ / W | Jump — coyote time and jump buffering are on, so it forgives near-misses |
 | Shift (hold) | Blank the beam: no dose spent, no resolving, atoms cool off |
-| Esc | Abandon the run and open the bench — report, upgrades, modes, specimens, logbook |
+| Esc | Abandon the run and open the bench — mode, specimen, upgrades, report, logbook |
 | ? / H | Open the field guide — the illustrated tutorial |
 | Enter | End an open survey and read the report |
 | M | Mute / unmute |
@@ -168,7 +168,7 @@ Leaving the beam on costs roughly 30 percentage points and twenty destroyed colu
 
 Sweeping at full speed destroys nothing, and neither does 90 px/s. Slow to 70 and it costs thirty-six columns. Hovering is the only thing the dose model punishes, which is the point.
 
-The two new modes are not tuned to that standard yet, and the doc says so. The one sprint number that exists is the floor: a probe nobody touches at all still phases 18% of the carbon sheet in its sixty seconds, while destroying 19 columns and falling seven times. What a routed sprint scores — and therefore whether sixty seconds is the right window — is unmeasured.
+The two new modes are not tuned to that standard yet, and the doc says so. The only unattended-probe sprint measurement predates the current clock: over the old sixty-second window it phased 18% of the carbon sheet, destroyed 19 columns, and fell seven times. The new thirty-second window still needs measuring with both unattended and routed runs.
 
 One fix worth calling out: horizontal damping used to be applied per frame rather than per second, so the probe's top speed depended on your refresh rate — 237 px/s at 30 Hz, 118 at 60, 49 at 144. Above about 90 Hz it could no longer clear a gap in the lattice, which made the game close to unplayable on a 120 Hz display. Top speed is now ~120 px/s on any monitor.
 

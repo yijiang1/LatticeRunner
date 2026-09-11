@@ -200,7 +200,7 @@
 
   /* ------------------------------------------------------------- the bench
      Everything that happens between sessions — the run just finished, the
-     upgrade draft, the mode, the specimen and the board — is one scrolling
+     mode, specimen, upgrade draft, run report and board — is one scrolling
      page rather than a dialog laid over the game. The card this replaces
      had to scroll inside a fixed frame, so its lower sections were
      invisible unless you already knew they were there: players kept asking
@@ -271,20 +271,12 @@
   }
   .bbtn.danger:hover { background: rgba(255,122,77,0.18); }
 
-  /* Two columns: what just happened and what you do about it on the left,
-     what the next session *is* on the right. They collapse into a single
-     reading order on a narrow window. */
+  /* One column keeps the setup choices in decision order: choose the mode,
+     choose the specimen, then configure the instrument. */
   #benchDoc {
-    max-width: 1180px; margin: 0 auto; padding: 28px 26px 90px;
-    display: grid; grid-template-columns: minmax(0, 1fr) 336px;
-    gap: 24px; align-items: start;
+    max-width: 1000px; margin: 0 auto; padding: 28px 26px 90px;
   }
   .bcol { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
-  /* The rail deliberately does not stick. Pinning it keeps the mode and
-     specimen beside the board they key, but a rail with more than a couple
-     of saved designs outgrows the window and has to grow a scrollbar of its
-     own — and a nested scroller is exactly the thing that hid these
-     sections in the first place. Everything on this page scrolls once. */
   .bsec {
     padding: 20px 22px 22px; border-radius: 16px;
     border: 1px solid var(--line); scroll-margin-top: 96px;
@@ -407,6 +399,52 @@
     padding: 6px 11px; border-radius: 20px; color: var(--mint);
     background: rgba(125,255,196,0.13); border: 1px solid rgba(125,255,196,0.3);
   }
+  #upgradeNotice {
+    display: none; align-items: center; gap: 12px;
+    margin: 0 0 16px; padding: 12px 14px; border-radius: 11px;
+    color: #bfffe1; background: rgba(125,255,196,0.09);
+    border: 1px solid rgba(125,255,196,0.32);
+    box-shadow: 0 0 24px rgba(90,220,170,0.08);
+  }
+  #upgradeNotice.on { display: flex; animation: upgradeReady .45s ease; }
+  @keyframes upgradeReady {
+    from { opacity: 0; transform: translateY(-5px); }
+  }
+  #upgradeNotice .signal {
+    width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%;
+    background: var(--mint); box-shadow: 0 0 13px rgba(125,255,196,0.8);
+  }
+  #upgradeNotice strong {
+    display: block; font: 700 9px/1 var(--mono); letter-spacing: 0.18em;
+    text-transform: uppercase;
+  }
+  #upgradeNotice span:last-child {
+    display: block; margin-top: 5px; font: 400 11.5px/1.45 var(--sans);
+    color: #9fcbb8;
+  }
+  #upgradeRules {
+    margin: 0 0 16px; padding: 14px; border-radius: 11px;
+    background: rgba(90,212,255,0.045); border: 1px solid rgba(90,212,255,0.16);
+  }
+  #upgradeRules h3 {
+    margin: 0 0 7px; font: 650 9px/1 var(--mono); letter-spacing: 0.18em;
+    text-transform: uppercase; color: var(--cyan);
+  }
+  #upgradeRules p { margin: 0 0 11px; font-size: 11.5px; line-height: 1.5; }
+  #upgradeTiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
+  .upgradeTier {
+    padding: 9px 10px; border-radius: 8px; text-align: center;
+    background: rgba(4,8,15,0.45); border: 1px solid rgba(255,255,255,0.07);
+    font: 500 8px/1.4 var(--mono); letter-spacing: 0.08em;
+    text-transform: uppercase; color: var(--dim);
+  }
+  .upgradeTier b { display: block; margin-bottom: 4px; font: 500 18px/1 var(--sans); color: var(--ice); }
+  #upgradeEligibility {
+    margin-top: 10px; font: 600 9px/1.45 var(--mono); letter-spacing: 0.04em;
+    color: var(--mint);
+  }
+  #upgradeEligibility.off { color: #ffc078; }
+  #upgradeProgress { margin-top: 5px; font: 400 10px/1.45 var(--mono); color: var(--dim); }
   #draft { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
   #draft:empty { display: none; }
   .dcard {
@@ -728,17 +766,13 @@
   }
   #tSkip button:hover { color: var(--ice); }
 
-  /* One column, and the rail's two pickers fall back into reading order
-     between the draft and the board rather than after them — the same order
-     the bar lists. display:contents lets the sections escape their columns
-     without a second copy of the markup. */
+  /* Keep the same reading order on narrower windows. */
   @media (max-width: 1040px) {
-    #benchDoc { display: flex; flex-direction: column; gap: 22px; }
-    .bcol { display: contents; }
-    #secReport { order: 1; }
-    #secDraft  { order: 2; }
-    #secMode   { order: 3; }
-    #secSpec   { order: 4; }
+    #benchDoc { padding-left: 20px; padding-right: 20px; }
+    #secMode   { order: 1; }
+    #secSpec   { order: 2; }
+    #secDraft  { order: 3; }
+    #secReport { order: 4; }
     #secLog    { order: 5; }
   }
   @media (max-width: 720px) {
@@ -848,10 +882,10 @@
     </div>
 
     <nav id="benchNav">
-      <button class="bnav" id="navReport" data-sec="secReport">Report</button>
-      <button class="bnav" data-sec="secDraft">Upgrades<b id="navPicks"></b></button>
       <button class="bnav" data-sec="secMode">Mode</button>
       <button class="bnav" data-sec="secSpec">Specimen</button>
+      <button class="bnav" data-sec="secDraft">Upgrades<b id="navPicks"></b></button>
+      <button class="bnav" id="navReport" data-sec="secReport">Report</button>
       <button class="bnav" data-sec="secLog">Logbook</button>
     </nav>
 
@@ -864,6 +898,40 @@
 
   <div id="benchDoc">
     <div class="bcol">
+      <section class="bsec" id="secMode">
+        <div class="shead"><h2>Mode</h2><span class="meta">What the session rations</span></div>
+        <div id="modePick"></div>
+      </section>
+
+      <section class="bsec" id="secSpec">
+        <div class="shead"><h2>Specimen</h2><span class="meta">What you are looking at</span></div>
+        <div id="specPick"></div>
+      </section>
+
+      <section class="bsec" id="secDraft">
+        <div class="shead"><h2>Upgrades</h2><span id="pickLeft"></span></div>
+        <div id="upgradeNotice" role="status" aria-live="polite">
+          <span class="signal" aria-hidden="true"></span>
+          <span><strong>New upgrade available</strong><span id="upgradeNoticeText"></span></span>
+        </div>
+        <div id="upgradeRules">
+          <h3>When upgrades are awarded</h3>
+          <p>Finish a <strong>dose-limited session</strong> or <strong>30-second acquisition</strong> on a supplied specimen. Each run awards picks based on the percentage resolved:</p>
+          <div id="upgradeTiers">
+            <div class="upgradeTier"><b>1</b>Any result</div>
+            <div class="upgradeTier"><b>2</b>40% or more</div>
+            <div class="upgradeTier"><b>3</b>70% or more</div>
+          </div>
+          <div id="upgradeEligibility"></div>
+          <div id="upgradeProgress"></div>
+        </div>
+        <p id="labText">Every option here is a real technique microscopists use to get more picture out of fewer electrons. What you take carries into every session from now on.</p>
+        <div id="draft"></div>
+        <div id="labDone"></div>
+        <div class="subhead">On the column</div>
+        <div id="rigSummary"></div>
+      </section>
+
       <section class="bsec" id="secReport">
         <div class="eyebrow" id="reportEyebrow">Scan report</div>
         <h1 id="overlayTitle">Reconstruction complete</h1>
@@ -888,15 +956,6 @@
         <div class="actions"><button id="restartBtn">Scan again</button></div>
       </section>
 
-      <section class="bsec" id="secDraft">
-        <div class="shead"><h2>Upgrades</h2><span id="pickLeft"></span></div>
-        <p id="labText">Every option here is a real technique microscopists use to get more picture out of fewer electrons. What you take carries into every session from now on.</p>
-        <div id="draft"></div>
-        <div id="labDone"></div>
-        <div class="subhead">On the column</div>
-        <div id="rigSummary"></div>
-      </section>
-
       <section class="bsec" id="secLog">
         <div class="shead"><h2>Logbook</h2></div>
         <div id="logHead"><span id="logScope"></span><span id="logTabs"></span></div>
@@ -905,17 +964,6 @@
       </section>
     </div>
 
-    <aside class="bcol" id="benchRail">
-      <section class="bsec" id="secMode">
-        <div class="shead"><h2>Mode</h2><span class="meta">What the session rations</span></div>
-        <div id="modePick"></div>
-      </section>
-
-      <section class="bsec" id="secSpec">
-        <div class="shead"><h2>Specimen</h2><span class="meta">What you are looking at</span></div>
-        <div id="specPick"></div>
-      </section>
-    </aside>
   </div>
 </div>
 
@@ -987,6 +1035,8 @@
   const benchNav = el("benchNav");
   const earnVal = el("earnVal"), earnUnit = el("earnUnit"), earnBrk = el("earnBrk");
   const labTitle = el("labTitle"), labText = el("labText"), pickLeft = el("pickLeft");
+  const upgradeNotice = el("upgradeNotice"), upgradeNoticeText = el("upgradeNoticeText");
+  const upgradeEligibility = el("upgradeEligibility"), upgradeProgress = el("upgradeProgress");
   const draftEl = el("draft"), labDone = el("labDone"), rigSummary = el("rigSummary");
   const specPick = el("specPick"), brandSub = el("brandSub");
   const logScope = el("logScope"), logTabs = el("logTabs");
@@ -1390,7 +1440,7 @@
   // being comparable, so they stop being shown. Three of those constants
   // are on the roadmap to be settled by a single playtest, which is exactly
   // why this exists before the first entry does.
-  const BALANCE_VERSION = 1;
+  const BALANCE_VERSION = 2;
 
   const RESOLVE_RADIUS = 150;      // must be this close to build resolve progress
   const RESOLVE_TIME = 0.5;        // seconds of continuous presence to fully resolve
@@ -1432,11 +1482,11 @@
   //            the bar moves from 85% to every last column: with nothing to
   //            spend there is no reason to stop at "unambiguous".
   //
-  // Only `session` earns upgrade picks. The other two are where you learn a
-  // specimen and try a route, and a mode with no scarcity in it would
-  // out-earn the one the economy is tuned against within a couple of runs.
+  // `session` and `sprint` earn upgrade picks. Open survey is where you learn
+  // a specimen and try a route; without a natural end, it could out-earn the
+  // modes the economy is tuned against within a couple of runs.
   // ---------------------------------------------------------------------
-  const SPRINT_SECONDS = 60;
+  const SPRINT_SECONDS = 30;
   const MODES = [
     {
       id: "session", name: "Dose-limited session",
@@ -1449,9 +1499,9 @@
     },
     {
       id: "sprint", name: `${SPRINT_SECONDS}-second acquisition`,
-      tag: `Timed · ${SPRINT_SECONDS}s · dose unlimited`,
-      blurb: "Stage drift smears the frame after about a minute, so a minute is all you get. Dose is free — blanking only costs you seconds. Cover as much lattice as the window allows.",
-      budget: false, seconds: SPRINT_SECONDS, winFrac: WIN_FRAC, earns: false,
+      tag: `Timed · ${SPRINT_SECONDS}s · dose unlimited · earns upgrades`,
+      blurb: "Stage drift limits the acquisition window to 30 seconds. Dose is free — blanking only costs you seconds. Cover as much lattice as the window allows.",
+      budget: false, seconds: SPRINT_SECONDS, winFrac: WIN_FRAC, earns: true,
       hints: [{ k: ["A", "D"], t: "move" }, { k: ["Space"], t: "jump" },
               { k: ["Esc"], t: "setup & upgrades" }, { k: ["R"], t: "restart the clock" }],
     },
@@ -2399,12 +2449,11 @@
     paintThumbnail();
 
     save.sessions++;
-    // The draft pays out on dose-limited sessions over shipped specimens and
-    // nowhere else. A mode with nothing scarce in it, or a lattice the player
-    // laid out to be easy, would out-earn the run the economy is tuned
-    // against inside a couple of sessions — and then the upgrade tree stops
-    // meaning anything. Bests are tracked per mode for the same reason: a
-    // sprint percentage and a session percentage are not the same number.
+    // The draft pays out on completed dose-limited sessions and timed
+    // acquisitions over shipped specimens. A mode with no natural end, or a
+    // lattice the player laid out to be easy, would make the upgrade tree
+    // meaningless. Bests are tracked per mode because a sprint percentage
+    // and a session percentage are not the same number.
     const shipped = SPEC.id !== SANDBOX_ID;
     const eligible = MODE.earns && shipped;
     if (shipped) {
@@ -2416,9 +2465,9 @@
     // once every line is maxed there is nothing to bank picks against, so
     // don't let the save quietly accumulate them
     save.picks = anyLeft ? save.picks + earned : 0;
-    // The logbook takes a wider set of runs than the draft does — a sprint
-    // and a survey are ranked even though they pay nothing, because a board
-    // that ranks the scarce resource cannot be farmed the way picks can.
+    // The logbook takes a wider set of runs than the draft does — a survey is
+    // ranked even though it pays nothing, because a board that ranks the
+    // scarce resource cannot be farmed the way picks can.
     // Only an abandoned run is excluded, and that happens by never getting
     // here: R and Esc leave without an ending.
     const posted = logRun(kind, pct);
@@ -2429,7 +2478,7 @@
       earnVal.textContent = String(pct);
       earnUnit.textContent = shipped ? `% — best here ${save.bests[MODE.id] | 0}%` : "% of your lattice";
       earnBrk.textContent = shipped
-        ? "Practice mode — the draft only pays out on a dose-limited session"
+        ? "Practice mode — upgrades are awarded in dose-limited and 30-second runs"
         : "Specimens you designed don't earn upgrades — the instrument is earned on real data";
     } else if (anyLeft) {
       earnVal.textContent = String(earned);
@@ -2437,8 +2486,8 @@
       earnBrk.textContent =
         `${pct}% resolved — ${PICK_TIER_1}% earns a second pick, ${PICK_TIER_2}% a third`;
     } else {
-      earnVal.textContent = String(save.best);
-      earnUnit.textContent = "% best session";
+      earnVal.textContent = String(save.bests[MODE.id] | 0);
+      earnUnit.textContent = `% best ${MODE.id === "sprint" ? "acquisition" : "session"}`;
       earnBrk.textContent = "Instrument fully upgraded — this is the rig you finish on";
     }
     restartBtn.textContent = (save.picks > 0 && anyLeft) ? "Choose an upgrade ↓" : "Scan again";
@@ -2896,6 +2945,31 @@
     wipeBtn.style.display = (anyOwned || save.picks > 0) ? "" : "none";
     disarmWipe();
     navPicks.textContent = save.picks > 0 ? String(save.picks) : "";
+    upgradeNotice.classList.toggle("on", save.picks > 0 && anyLeft);
+    upgradeNoticeText.textContent = save.picks > 1
+      ? `${save.picks} picks are ready. Choose an instrument upgrade below.`
+      : "One pick is ready. Choose an instrument upgrade below.";
+    const shipped = SPEC.id !== SANDBOX_ID;
+    const eligibleSetup = MODE.earns && shipped;
+    upgradeEligibility.classList.toggle("off", !eligibleSetup);
+    upgradeEligibility.textContent = eligibleSetup
+      ? "✓ Current setup will award upgrade picks when the run ends."
+      : !MODE.earns
+        ? "Open survey awards no upgrades — choose Dose-limited or 30-second mode above."
+        : "Custom specimens award no upgrades — choose a supplied specimen above.";
+    const best = MODE.earns
+      ? Math.max(save.bests[MODE.id] | 0, MODE.id === "session" ? save.best | 0 : 0)
+      : Math.max(save.best | 0, save.bests.sprint | 0);
+    const bestLabel = MODE.earns
+      ? `Best ${MODE.id === "sprint" ? "acquisition" : "session"}`
+      : "Best eligible run";
+    upgradeProgress.textContent = best >= PICK_TIER_2
+      ? `${bestLabel}: ${best}%. You have reached the maximum payout of 3 picks per run.`
+      : best >= PICK_TIER_1
+        ? `${bestLabel}: ${best}%. Reach ${PICK_TIER_2}% in one run to earn 3 picks.`
+        : best > 0
+          ? `${bestLabel}: ${best}%. Reach ${PICK_TIER_1}% in one run to earn 2 picks.`
+          : `Your first eligible run earns 1 pick; reach ${PICK_TIER_1}% for 2 or ${PICK_TIER_2}% for 3.`;
     if (save.picks > 0 && draftOffer.length) {
       labTitle.textContent = "Choose an upgrade";
       labText.textContent =
@@ -2930,7 +3004,7 @@
       beginBtn.textContent = "Begin session";
       beginBtn.classList.remove("ghost");
       labDone.textContent = anyLeft
-        ? `Best session so far: ${save.best}% of the lattice recovered.`
+        ? `${bestLabel}: ${best}% of the lattice recovered.`
         : `Fully upgraded after ${save.sessions} session${save.sessions === 1 ? "" : "s"}. Best so far: ${save.best}%.`;
     }
 
@@ -2944,7 +3018,7 @@
       none.className = "rnone";
       none.textContent = save.picks > 0
         ? "Nothing on the column yet — take one of the three above."
-        : "Nothing on the column yet. Picks settle on a dose-limited session over a shipped specimen, one for finishing at all and three past 70%.";
+        : "Nothing on the column yet. Picks settle on a dose-limited or 30-second run over a shipped specimen, one for finishing at all and three past 70%.";
       rigSummary.appendChild(none);
     }
     for (const u of UPGRADES) {
@@ -5230,12 +5304,12 @@
          '<tr><td><kbd>R</kbd></td><td>Restart the run (earns no upgrade)</td></tr>' +
          '<tr><td><kbd>M</kbd></td><td>Mute / unmute &nbsp;·&nbsp; <kbd>?</kbd> reopen this guide</td></tr>' +
          '</table>' +
-         '<p>Between sessions you are on the bench — one page holding the run ' +
-         'you just finished, your upgrades, the mode, the specimen and the ' +
+         '<p>Between sessions you are on the bench — one page holding ' +
+         'your mode, specimen, upgrades, latest report and the ' +
          'logbook, with a bar across the top that jumps to any of them. It ' +
-         'offers three modes: a 100-electron session, a 60-second acquisition, ' +
-         'or an open survey with nothing scarce. Only the dose-limited session ' +
-         'earns instrument upgrades.</p>',
+         'offers three modes: a 100-electron session, a 30-second acquisition, ' +
+         'or an open survey with nothing scarce. Dose-limited sessions and ' +
+         '30-second acquisitions earn instrument upgrades.</p>',
       fig: `<svg viewBox="0 0 480 190" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="The reconstruction emerging from fog with a marker at the 85 percent solved threshold">
   <defs>
     <pattern id="f7h" width="7" height="7" patternUnits="userSpaceOnUse"><path d="M0 7 L7 0" stroke="#8fb2c8" stroke-width="1"/></pattern>

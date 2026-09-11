@@ -286,13 +286,13 @@ be enough to change what playing well means.
 | Mode | `budget` | `seconds` | `winFrac` | `earns` |
 |---|---|---|---|---|
 | Dose-limited session | true | 0 | 0.85 | yes |
-| 60-second acquisition | false | 60 | 0.85 | no |
+| 30-second acquisition | false | 30 | 0.85 | yes |
 | Open survey | false | 0 | 1.0 | no |
 
 **Dose-limited session** is the game everything above is measured against:
 100 electrons, no clock, blanking as the lever that makes them stretch.
 
-**The 60-second acquisition inverts the lesson**, which is the reason it
+**The 30-second acquisition inverts the lesson**, which is the reason it
 exists rather than being a timer bolted onto the same run. A real stage
 drifts, so a frame taken slowly smears — which is precisely why fast
 acquisition is a technique at all. So the clock here is wall time, not beam
@@ -303,10 +303,10 @@ seconds, and the whole skill collapses to coverage per second.
 The dose model still bites, though, and that is what keeps the mode honest:
 electrons are unrationed, but loitering with the beam on still knocks out the
 columns you are about to want to stand on. Two opposite pressures, one
-mechanic. Measured on a probe that is never touched at all, sixty seconds on
-the carbon sheet destroys 19 columns, drops the probe seven times, and still
-phases 18% of the lattice — the survey scan and the columns that resolve
-around a stationary beam. That 18% is the floor a sprint score has to beat.
+mechanic. In the former sixty-second window, a probe that was never touched on
+the carbon sheet destroyed 19 columns, dropped seven times, and still
+phased 18% of the lattice — the survey scan and the columns that resolved
+around a stationary beam. The floor under the new clock has not been measured.
 
 **Open survey** removes scarcity entirely and moves the bar from 85% to every
 column, on the argument that "unambiguous" is a judgement about *where to stop
@@ -315,14 +315,13 @@ also the only mode with no natural end, so **Enter** ends it and prints the
 report. It exists for learning a specimen and for looking at the picture,
 which is what the game is nominally about.
 
-### Only sessions pay
+### Sessions and timed acquisitions pay
 
-Picks settle on a dose-limited session over a shipped specimen and nowhere
-else. Two modes with nothing scarce in them, or a lattice the player laid out
-to be trivially crossable, would out-earn the run the economy is tuned against
-within a couple of sessions — and at that point the upgrade tree stops meaning
-anything. This is the same argument that makes abandoning with **R** earn
-nothing.
+Picks settle on a completed dose-limited session or 30-second acquisition over
+a shipped specimen and nowhere else. Open survey has no natural end, and a
+lattice the player laid out to be trivially crossable would be farmable; either
+would make the upgrade tree meaningless. This is the same argument that makes
+abandoning with **R** earn nothing.
 
 Bests are tracked per mode (`save.bests`), because a sprint percentage and a
 session percentage are not the same number and averaging them would be a lie.
@@ -343,10 +342,10 @@ three now asks whether the budget was rationed before quoting it.
 A session is one run; the game is the sequence of them.
 
 ### Draft, not a shop
-Every completed run ends in a draft: three instruments are offered, the player keeps **one**, and it applies permanently from the next session. No currency, no shop, no inventory to manage — one decision, taken while the scan report is still on screen.
+Every eligible completed run ends in a draft: three instruments are offered, the player keeps **one**, and it applies permanently from the next session. No currency, no shop, no inventory to manage — one decision, taken while the scan report is still on screen.
 
 ### Picks are the score
-How much of the lattice a run recovered decides how many picks it earns:
+How much of the lattice an eligible run recovered decides how many picks it earns:
 
 | Resolved | Picks |
 |----------|-------|
@@ -356,7 +355,7 @@ How much of the lattice a run recovered decides how many picks it earns:
 
 One pick is guaranteed so a bad run still moves you forward, and the thresholds mean the reward for playing well is *more choices*, not a bigger number. Picks bank in the save file, so closing the tab mid-draft doesn't lose them.
 
-Abandoning a run with **R** or **Esc** earns nothing — credits only settle when the beam actually runs out, the probe is lost for good, or the lattice is solved. Without that, resolving the ten easy atoms near spawn and restarting would out-earn playing a full session. For the same reason, only a dose-limited session over a shipped specimen pays at all; see **Modes**.
+Abandoning a run with **R** or **Esc** earns nothing — credits only settle when the beam runs out, the acquisition clock closes, the probe is lost for good, or the lattice is solved. Without that, resolving the ten easy atoms near spawn and restarting would out-earn playing a full run. Dose-limited sessions and 30-second acquisitions over shipped specimens pay; see **Modes**.
 
 ### The upgrades
 Ten lines, three levels each — 30 picks to max the instrument, so roughly 12–20 sessions. Every one is a real technique, because "how do you get more picture out of fewer electrons" is the actual subject of the game and the draft is where it gets taught.
@@ -527,7 +526,7 @@ which also hands the player the limitations section complains about, the one wit
 | Mode | Qualify | Ranked on | Tiebreak |
 |---|---|---|---|
 | Dose-limited session | solved (≥ 85%) | fewest electrons ↑ | fewest knocked out, then quicker, then earlier |
-| 60-second acquisition | ran the full window | most lattice phased ↓ | as above |
+| 30-second acquisition | ran the full window | most lattice phased ↓ | as above |
 | Open survey | every last column | fewest electrons ↑ | as above |
 
 Dose is already accumulated in every mode — `doseSpent += BEAM_DRAIN * dt` runs
@@ -627,8 +626,8 @@ rewrite of it — an entry already carries everything a server row would.
 
 ## The Bench
 
-Everything that happens between sessions lives on one page: the run you just
-finished, the upgrade draft, the mode, the specimen and the board. It is not a
+Everything that happens between sessions lives on one page: the mode, the
+specimen, the upgrade draft, the run you just finished and the board. It is not a
 dialog over the game — it fills the frame, it is in the document, and it scrolls
 the way a page scrolls.
 
@@ -650,30 +649,30 @@ Three things follow from making it a page:
   prototyped as `position: sticky` and reverted for exactly this reason — pinned,
   it outgrows the viewport once a player saves a few designs and has to grow a
   scroller of its own, which is the original bug wearing a different hat.
-- **A bar names every section.** `Report · Upgrades · Mode · Specimen ·
+- **A bar names every section.** `Mode · Specimen · Upgrades · Report ·
   Logbook`, fixed to the top, each one a jump. The section it lands on lights its
   border for a moment, because a smooth scroll on a long page otherwise reads as
   nothing having happened. `scroll-margin-top` keeps the landing clear of the bar.
 - **Banked picks are a count, not a mood.** The bar's Upgrades entry carries the
-  number of picks waiting in a mint badge, and the scan report's primary button
-  becomes *Choose an upgrade ↓* pointing at the same section. The one thing on
-  the page that is genuinely waiting on the player is the one thing with a number
-  attached to it.
+  number of picks waiting in a mint badge, the Upgrades section opens with a
+  *New upgrade available* reminder, and the scan report's primary button becomes
+  *Choose an upgrade ↓* pointing at the same section. The one thing on the page
+  that is genuinely waiting on the player is the one thing with a number attached
+  to it. A permanent guide in the section also spells out the eligibility rule
+  (an eligible mode plus a supplied specimen), the 1/2/3-pick thresholds, whether
+  the current setup qualifies, and progress from the player's best session.
 
 ### Layout
 
-Two columns at ≥ 1040 px: **what just happened and what you do about it** on the
-left (report, upgrades, logbook), **what the next session is** in a 336 px rail
-on the right (mode, specimen). Below that width the two columns collapse into a
-single flow — `display: contents` on the wrappers lets the sections escape their
-columns and take an explicit `order`, so the reading order becomes report,
-upgrades, mode, specimen, logbook, which is the order the bar lists them in.
-No second copy of the markup.
+The bench is one column at every width, ordered by the decisions for the next
+run: mode, specimen, then upgrades. The latest report and the scoped logbook
+follow those setup controls. This keeps the visual order and the bar order the
+same, without a second copy of the markup or a nested scroller.
 
 The scan report is the only section that comes and goes. Arriving from a finished
-run it heads the page; arriving from **Esc** or the field guide there is no run to
-report on, so it and its nav entry are removed rather than left showing the last
-session's numbers as though they were this one's.
+run includes it after the setup controls; arriving from **Esc** or the field guide
+removes it and its nav entry rather than showing the last session's numbers as
+though they were this one's.
 
 ### What it cost
 
@@ -900,7 +899,7 @@ against everything ever logged under that id.
 | → / D | Move right |
 | Space / ↑ / W | Jump (buffered + coyote-time forgiving) |
 | Shift (hold) | Blank the beam — no dose spent, no resolving |
-| Esc | Abandon the run and open the bench: report, upgrades, modes, specimens, logbook |
+| Esc | Abandon the run and open the bench: mode, specimen, upgrades, report, logbook |
 | ? / H | Open the field guide |
 | Enter | End an open survey (untimed, unrationed) and print the report |
 | M | Mute / unmute (persists) |
@@ -947,7 +946,7 @@ names the vocabulary.
 - **`DOSE_BUDGET` is measured against a bot, not a player.** 100 comes from headless simulation of routed sweeps and of naive edge-running (see **Balance**). Both are proxies; no human has played against the new number.
 - **A bad run still reads as *Probe lost*, because it is.** Stage re-insertion moved the pressure onto the budget — routed play now ends on *solved* or *beam exhausted* — but a random-input run falls seven times, spends 84 of its 94 electrons on re-alignment, and then hits the detector with nothing left to pay with. That ending is accurate and the report explains it, but the underlying precision demand of the platforming is untouched: unconverged lattice is not solid and cannot be converged on the way past (0.5s of dwell needed, under 0.3s in range at fall speed). Widening the columns further is the measured lever if playtesting says it is still too steep.
 - **85% is close to too *easy* a win bar for a good player.** The bar was moved down from all 152 columns because nothing could reach it. Over 15 page loads on a base instrument the loose-timing blanking bot now solves **13 of 15**, and the tightly routed one 5 of 15 — a 7-load sample taken right after the dose change read 7 of 7 and overstated it, which is what the wider sample is for. Two rows ridden end to end still cover 86% for 33 of the 100 electrons, so the ceiling is structural: a player who knows the route has nothing left to spend the budget on. Raising `WIN_FRAC` is a one-constant change, but the honest fix is a lattice whose coverage is not saturated by two horizontal sweeps.
-- **The two new modes are unmeasured.** 60 seconds and "every column" are both first guesses. The sprint has never been driven by the headless bots the way `DOSE_BUDGET` was — the only numbers that exist are for a probe nobody touches (18% phased, 19 columns destroyed, seven falls), which fixes the floor but says nothing about what a routed run scores or whether sixty seconds is the right window for it. The open survey has no failure state at all and may simply be boring; it earns its place as a way to look at a specimen, not as a game.
+- **The two new modes are unmeasured.** The new 30-second sprint window and "every column" are both first guesses. The sprint has never been driven by the headless bots the way `DOSE_BUDGET` was — its only numbers come from an unattended probe under the former 60-second clock (18% phased, 19 columns destroyed, seven falls), so the current floor and routed score are unknown. The open survey has no failure state at all and may simply be boring; it earns its place as a way to look at a specimen, not as a game.
 - **The designer has no way to share a design.** Eight lattices, local to one browser, with no export string and no import. The data is four integers per column and would serialise to a URL fragment in a few lines, which is the obvious next move if anyone builds something worth showing someone.
 - **The reachability model is conservative and one-way.** It uses the standing-start horizontal reach, so a run-up crosses more than it promises; it treats a drop as always crossable when the pads overlap, so it will call a region reachable that you cannot climb back out of; and it says nothing about whether a route is *pleasant*. It answers "can the probe get there", which is the question that stops a player building something unplayable, and not the question of whether the layout is any good.
 - **A player's lattice can be trivially easy and there is nothing to stop that.** Picks are withheld from sandbox specimens, which removes the incentive to farm, but the mode/specimen matrix means a flat gold row under an open survey is a legal thing to build and sit in. That seems fine — it is a sandbox — but it does mean the game's difficulty claims stop applying the moment you leave the shipped specimens.
@@ -974,7 +973,7 @@ names the vocabulary.
 ### Medium-term
 - ~~**Swap in a real reconstruction.**~~ Done. The perovskite scandate is traced off `obj_phase_roi_sum_Niter200.tiff` and the `SPECIMENS` contract took it without a change to game logic.
 - ~~**Multiple levels**, selectable like Explore mode.~~ Done for two; the picker is in the bench's rail.
-- **Balance the sprint.** Drive the same routed and loose-timing bots through the 60-second window that settled `DOSE_BUDGET`, and pick the clock from where a competent route lands rather than from the fact that a minute is a round number.
+- **Balance the sprint.** Drive the same routed and loose-timing bots through the 30-second window that settled `DOSE_BUDGET`, and tune the clock from where a competent route lands.
 - **A shared logbook.** The local board is built as the lower layer of one: an entry already carries everything a server row would (mask, rig, balance version, specimen hash). Inside PtychoHub the game is served same-origin from `/api/games/lattice-runner` behind `requireSession`, so identity is free — `getSessionUser(request).sub`, no name entry and no impersonation — and the write echoes the existing JS-readable `csrf_token` like every other write in the app. What it needs: one table, one GET/POST route, a plausibility gate (mask/percentage agreement, a dose floor set well under the measured 33-electron route, a duration floor, a known specimen hash), and the fetch-or-fall-back in the panel. Record the input trace from the first day even though nothing reads it, because that is what makes verification possible later without throwing the board away.
 - **Design sharing.** A design is four small integers per column; a base64 fragment in the URL would make a lattice something you can hand to someone, which is the only thing the designer is currently missing. It pairs with the board: a shared design has a stable hash, and a hash is a board key, which is the one honest way a sandbox lattice could ever earn one.
 - **Balance the perovskite.** The one thing the new specimen ships without. Run the headless bots against it the way `DOSE_BUDGET` was settled for the carbon sheet, and check whether 85% of 203 columns is the right bar when coverage comes faster but falls come more often.
