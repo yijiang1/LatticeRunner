@@ -200,7 +200,7 @@
 
   /* ------------------------------------------------------------- the bench
      Everything that happens between sessions — the run just finished, the
-     mode, specimen, upgrade draft, run report and board — is one scrolling
+     mode, sample, upgrade draft, run report and board — is one scrolling
      page rather than a dialog laid over the game. The card this replaces
      had to scroll inside a fixed frame, so its lower sections were
      invisible unless you already knew they were there: players kept asking
@@ -272,7 +272,7 @@
   .bbtn.danger:hover { background: rgba(255,122,77,0.18); }
 
   /* One column keeps the setup choices in decision order: choose the mode,
-     choose the specimen, then configure the instrument. */
+     choose the sample, then configure the instrument. */
   #benchDoc {
     max-width: 1000px; margin: 0 auto; padding: 28px 26px 90px;
   }
@@ -487,8 +487,8 @@
     font: 400 12px/1.6 var(--sans); color: #a8e6c8;
   }
 
-  /* ------------------------------------------------- specimen picker */
-  #specPick, #modePick { display: flex; gap: 8px; flex-wrap: wrap; }
+  /* --------------------------------------------------- sample picker */
+  #samplePick, #modePick { display: flex; gap: 8px; flex-wrap: wrap; }
   .scard {
     flex: 1 1 200px; text-align: left; cursor: pointer;
     padding: 11px 13px; border-radius: 10px;
@@ -509,7 +509,7 @@
   .scard .bl { display: block; margin-top: 7px; font: 400 11px/1.55 var(--sans); color: #93a6bb; }
 
   /* ------------------------------------------------------------ logbook */
-  /* Scoped to the mode and specimen picked in the rail beside it, because
+  /* Scoped to the mode and sample picked above it, because
      that is what a board is keyed by — switching either re-ranks it in
      place. Each row carries the picture that run recovered rather than a
      number standing in for it, which is the same argument the scan
@@ -604,7 +604,7 @@
   }
 
   /* the ghost card that opens the designer, and the edit affordance on a
-     specimen you built yourself */
+     sample you built yourself */
   .scard.ghost {
     border-style: dashed; color: var(--dim);
     display: flex; flex-direction: column; justify-content: center;
@@ -617,7 +617,7 @@
   }
   .scard .ed:hover { background: rgba(120,200,255,0.22); color: #eaf9ff; }
 
-  /* ------------------------------------------------ specimen designer */
+  /* -------------------------------------------------- sample designer */
   #editor {
     position: fixed; inset: 0; z-index: 30; display: none;
     flex-direction: column; gap: 11px; padding: 16px 20px 14px;
@@ -770,7 +770,7 @@
   @media (max-width: 1040px) {
     #benchDoc { padding-left: 20px; padding-right: 20px; }
     #secMode   { order: 1; }
-    #secSpec   { order: 2; }
+    #secSample { order: 2; }
     #secDraft  { order: 3; }
     #secReport { order: 4; }
     #secLog    { order: 5; }
@@ -883,7 +883,7 @@
 
     <nav id="benchNav">
       <button class="bnav" data-sec="secMode">Mode</button>
-      <button class="bnav" data-sec="secSpec">Specimen</button>
+      <button class="bnav" data-sec="secSample">Sample</button>
       <button class="bnav" data-sec="secDraft">Upgrades<b id="navPicks"></b></button>
       <button class="bnav" id="navReport" data-sec="secReport">Report</button>
       <button class="bnav" data-sec="secLog">Logbook</button>
@@ -903,9 +903,9 @@
         <div id="modePick"></div>
       </section>
 
-      <section class="bsec" id="secSpec">
-        <div class="shead"><h2>Specimen</h2><span class="meta">What you are looking at</span></div>
-        <div id="specPick"></div>
+      <section class="bsec" id="secSample">
+        <div class="shead"><h2>Sample</h2><span class="meta">What you are looking at</span></div>
+        <div id="samplePick"></div>
       </section>
 
       <section class="bsec" id="secDraft">
@@ -916,7 +916,7 @@
         </div>
         <div id="upgradeRules">
           <h3>When upgrades are awarded</h3>
-          <p>Finish a <strong>dose-limited session</strong> or <strong>30-second acquisition</strong> on a supplied specimen. Each run awards picks based on the percentage resolved:</p>
+          <p>Finish a <strong>dose-limited session</strong> or <strong>30-second acquisition</strong> on a supplied sample. Each run awards picks based on the percentage resolved:</p>
           <div id="upgradeTiers">
             <div class="upgradeTier"><b>1</b>Any result</div>
             <div class="upgradeTier"><b>2</b>40% or more</div>
@@ -970,10 +970,10 @@
 <div id="editor">
   <div id="edTop">
     <div>
-      <div class="eyebrow">Specimen designer</div>
+      <div class="eyebrow">Sample designer</div>
       <h2>Build a lattice</h2>
     </div>
-    <input id="edName" maxlength="32" spellcheck="false" aria-label="Specimen name">
+    <input id="edName" maxlength="32" spellcheck="false" aria-label="Sample name">
     <span class="sp"></span>
     <button class="ebtn" id="edClear">Clear</button>
     <button class="ebtn warn" id="edDelete">Delete</button>
@@ -1038,7 +1038,7 @@
   const upgradeNotice = el("upgradeNotice"), upgradeNoticeText = el("upgradeNoticeText");
   const upgradeEligibility = el("upgradeEligibility"), upgradeProgress = el("upgradeProgress");
   const draftEl = el("draft"), labDone = el("labDone"), rigSummary = el("rigSummary");
-  const specPick = el("specPick"), brandSub = el("brandSub");
+  const samplePick = el("samplePick"), brandSub = el("brandSub");
   const logScope = el("logScope"), logTabs = el("logTabs");
   const logBoard = el("logBoard"), logEmpty = el("logEmpty"), logSlug = el("logSlug");
   const beginBtn = el("beginBtn");
@@ -1099,7 +1099,7 @@
   // scales roughly as 1/sqrt(mass), so lighter atoms jiggle faster and
   // wider, and — once damaged — flicker out of solidity faster too. It is
   // also what sets each column's dose tolerance, so this one table is
-  // responsible for most of how a specimen feels to run across.
+  // responsible for most of how a sample feels to run across.
   const ATOMIC_MASS = { C: 12.011, N: 14.007, O: 15.999, Sc: 44.956, Au: 196.97, Pr: 140.91 };
   const REF_MASS = ATOMIC_MASS.C;
   function vibrationFactor(element) {
@@ -1139,7 +1139,7 @@
   const WORLD_SCALE = 90; // px per lattice unit
 
   // =====================================================================
-  // SPECIMENS
+  // SAMPLES
   // Each one is a lattice to run across, plus everything that is true about
   // that lattice: which elements are in it, which sites are worth a field
   // note, and which ones drift. `build()` returns the atom array; `spawn`
@@ -1205,7 +1205,7 @@
   }
 
   // ---------------------------------------------------------------------
-  // Specimen 2 is not invented. It is measured.
+  // Sample 2 is not invented. It is measured.
   //
   // Source: obj_phase_roi_sum_Niter200.tiff — a 277x277 px electron
   // ptychography phase reconstruction, 200 iterations. 253 column peaks
@@ -1244,7 +1244,7 @@
   //
   // ELEMENT LABELS ARE THE ONE ASSUMPTION HERE. The site *classes* are
   // measured; calling them Pr / Sc / O is the rare-earth-scandate reading
-  // of an A:B integrated-intensity ratio of 2.4. If the specimen is a
+  // of an A:B integrated-intensity ratio of 2.4. If the sample is a
   // different perovskite, change the three symbols in SITES below and
   // nothing else — the geometry and the physics stay correct.
   //
@@ -1262,7 +1262,7 @@
   // Packed as "x,y,site,intensity" per column, space separated. x and y are
   // in hundredths of a lattice unit (1 unit = half a pseudo-cubic cell, so
   // nearest-neighbour columns sit 1 unit / 90 px apart, the same pitch the
-  // graphene specimen runs at). intensity is the measured peak phase,
+  // graphene sample runs at). intensity is the measured peak phase,
   // rescaled to 0..1, in hundredths.
   const SCANDATE_COLUMNS = `
     12,0,2,19 112,22,1,94 212,45,2,20 311,22,1,93 412,3,2,20 513,23,1,93 612,45,2,19 713,23,1,95
@@ -1343,7 +1343,7 @@
     });
   }
 
-  const SPECIMENS = [
+  const SAMPLES = [
     {
       id: "graphene",
       name: "Doped 2D lattice",
@@ -1376,7 +1376,7 @@
   const DOSE_PEAK = 1.7;        // dose/sec delivered at the focal spot
   const DOSE_FALLOFF = 70;      // px; intensity is halved around here
   const DOSE_ANNEAL = 0.25;     // dose/sec bleeding off, always, everywhere
-  // The probe is focused *in* the specimen plane. Leaving that plane
+  // The probe is focused *in* the sample plane. Leaving that plane
   // defocuses it, and a defocused probe spreads the same current over a much
   // larger disc, so the dose density on any one column drops fast. Vertical
   // distance therefore counts for more than horizontal: this is the factor it
@@ -1393,7 +1393,7 @@
   // The global budget. A real beam runs at a fixed current, so total
   // electrons spent is just beam-on time — which makes the budget a clock
   // you control rather than one that runs regardless. Blanking the beam
-  // (a standard trick for beam-sensitive specimens) stops the drain, but
+  // (a standard trick for beam-sensitive samples) stops the drain, but
   // also stops resolving: you can cross ground you've already scanned for
   // free, and that route planning is the actual skill.
   // Measured, not guessed. Riding row 1 from end to end converges 49% of the
@@ -1412,7 +1412,7 @@
   // electrons still unspent. The resource the whole game is about was never
   // the thing that ran out.
   //
-  // A real operator who loses the probe does not throw the specimen away.
+  // A real operator who loses the probe does not throw the sample away.
   // They retract the stage, re-insert, and re-find focus — and that costs
   // beam time. So does this. Falling is now expensive instead of terminal,
   // and the cost lands on the dose budget, which is where the pressure was
@@ -1462,10 +1462,10 @@
   }
 
   // ---------------------------------------------------------------------
-  // Modes. The specimen decides what you are looking at; the mode decides
+  // Modes. The sample decides what you are looking at; the mode decides
   // what you are short of while you look at it. All three run the same
   // simulation and the same physics — knock-out is permanent in every one
-  // of them, because that is the specimen, not a difficulty setting. What
+  // of them, because that is the sample, not a difficulty setting. What
   // changes is which resource is scarce, and that is enough to change what
   // playing well means:
   //
@@ -1478,12 +1478,12 @@
   //            precisely why fast acquisition exists. Dose is free here, so
   //            blanking buys nothing but lost seconds, and coverage per
   //            second is the whole skill. It is the inverse of a session.
-  //   open     nothing is scarce but the specimen. No clock, no budget, and
+  //   open     nothing is scarce but the sample. No clock, no budget, and
   //            the bar moves from 85% to every last column: with nothing to
   //            spend there is no reason to stop at "unambiguous".
   //
   // `session` and `sprint` earn upgrade picks. Open survey is where you learn
-  // a specimen and try a route; without a natural end, it could out-earn the
+  // a sample and try a route; without a natural end, it could out-earn the
   // modes the economy is tuned against within a couple of runs.
   // ---------------------------------------------------------------------
   const SPRINT_SECONDS = 30;
@@ -1491,7 +1491,7 @@
     {
       id: "session", name: "Dose-limited session",
       tag: `Campaign · ${DOSE_BUDGET} electrons · earns upgrades`,
-      blurb: "One specimen's worth of dose and no clock. Every electron you spend is specimen you do not get back, and blanking the beam is what makes the budget stretch.",
+      blurb: "One sample's worth of dose and no clock. Every electron you spend is sample you do not get back, and blanking the beam is what makes the budget stretch.",
       budget: true, seconds: 0, winFrac: WIN_FRAC, earns: true,
       hints: [{ k: ["A", "D"], t: "move" }, { k: ["Space"], t: "jump" },
               { k: ["Shift"], t: "blank the beam", hl: 1 }, { k: ["Esc"], t: "setup & upgrades" },
@@ -1597,10 +1597,10 @@
   };
 
   // ---------------------------------------------------------------------
-  // Sandbox specimens. The data contract a specimen has to satisfy is four
+  // Sandbox samples. The data contract a sample has to satisfy is four
   // fields wide, so a lattice a player built is not a special case in the
   // engine — it is another build(). The designer edits a grid of cells at
-  // the same 90px pitch the shipped specimens run at, and emits exactly the
+  // the same 90px pitch the shipped samples run at, and emits exactly the
   // atom array scandate() emits. Everything downstream — the hidden phase
   // image, the fog, the survey scan, knock-on tolerance, the field notes —
   // falls out of that for free, which is the whole point of having kept the
@@ -1625,7 +1625,7 @@
     { el: "Au", r: 21, intensity: 0.97, name: "Gold" },
   ];
   // One note per element, fired the first time that element is resolved in a
-  // design. Same notebook, same keys as the shipped specimens.
+  // design. Same notebook, same keys as the shipped samples.
   const DESIGN_FACTS = {
     C: "C — carbon is the lightest thing you will stand on and the first the beam displaces: knock-on tolerance goes as the square root of mass.",
     N: "N — a single substituted nitrogen atom can change how an entire 2D material conducts electricity.",
@@ -1656,7 +1656,7 @@
     if (!cells.length) return null;
     return {
       id: typeof d.id === "string" && /^[a-z0-9]{1,12}$/.test(d.id) ? d.id : newDesignId(),
-      name: typeof d.name === "string" && d.name.trim() ? d.name.trim().slice(0, 32) : "Untitled specimen",
+      name: typeof d.name === "string" && d.name.trim() ? d.name.trim().slice(0, 32) : "Untitled sample",
       cells,
     };
   }
@@ -1692,7 +1692,7 @@
     });
   }
 
-  function sandboxSpecimen() {
+  function sandboxSample() {
     const d = activeDesign();
     if (!d) return null;
     const n = d.cells.length;
@@ -1722,16 +1722,16 @@
       blurb: "Drop the accelerating voltage below carbon's knock-on threshold and the beam stops displacing atoms outright.",
       steps: [1.3, 1.65, 2.1],
       effect: (v) => `Atoms survive ${Math.round((v - 1) * 100)}% more dose` },
-    { id: "recon", code: "MSR", name: "Mixed-state reconstruction", identity: 1,
-      blurb: "Modelling the probe as several partially coherent modes lets the phase converge from far fewer scan positions.",
+    { id: "recon", code: "GPU", name: "GPU reconstruction accelerator", identity: 1,
+      blurb: "A faster GPU processes diffraction frames in real time, so the scan can move on as soon as the live phase estimate converges.",
       steps: [0.82, 0.68, 0.55],
-      effect: (v) => `Columns resolve ${Math.round((1 - v) * 100)}% faster` },
+      effect: (v) => `Live reconstruction runs ${Math.round((1 - v) * 100)}% faster` },
     { id: "det", code: "DED", name: "Direct electron detector", identity: 0,
       blurb: "Counting single electrons instead of integrating a current means the same picture for a fraction of the dose.",
       steps: [22, 48, 78],
       effect: (v) => `+${v} electrons of budget` },
     { id: "blank", code: "BLNK", name: "Fast electrostatic blanker", identity: 1,
-      blurb: "A blanker that switches in microseconds gives the specimen real rest between scan positions.",
+      blurb: "A blanker that switches in microseconds gives the sample real rest between scan positions.",
       steps: [2, 3, 4.2],
       effect: (v) => `Damage anneals ${v}× faster with the beam off` },
     { id: "fov", code: "FOV", name: "Wide-field scan coils", identity: 0,
@@ -1739,7 +1739,7 @@
       steps: [26, 54, 88],
       effect: (v) => `+${v}px scan field` },
     { id: "cryo", code: "CRYO", name: "Cryogenic stage", identity: 1,
-      blurb: "Cooling the specimen suppresses thermal motion, so drifting columns hold much closer to their true positions.",
+      blurb: "Cooling the sample suppresses thermal motion, so drifting columns hold much closer to their true positions.",
       steps: [0.7, 0.48, 0.3],
       effect: (v) => `Scan drift cut by ${Math.round((1 - v) * 100)}%` },
     { id: "sparse", code: "SPRS", name: "Sparse scan strategy", identity: 1,
@@ -1757,7 +1757,7 @@
       steps: [1.16, 1.3, 1.45],
       effect: (v) => `Probe traverses ${Math.round((v - 1) * 100)}% faster` },
     { id: "piezo", code: "PZT", name: "Piezo focal stage", identity: 1,
-      blurb: "A piezo-driven objective steps the focal plane out of the specimen and back in milliseconds, so the probe can pull much further off the lattice.",
+      blurb: "A piezo-driven objective steps the focal plane out of the sample and back in milliseconds, so the probe can pull much further off the lattice.",
       steps: [1.12, 1.24, 1.36],
       // apex is v²/2g, so the useful number to quote is the square
       effect: (v) => `Jumps reach ${Math.round((v * v - 1) * 100)}% higher` },
@@ -1771,7 +1771,7 @@
   // iframes. The game has to run there too — just without carrying progress.
   const SAVE_KEY = "latticeRunner.v1";
   const save = { sessions: 0, picks: 0, best: 0, levels: {}, found: {}, muted: false,
-                 taughtBlank: 0, guideSeen: 0, specimen: SPECIMENS[0].id,
+                 taughtBlank: 0, guideSeen: 0, sample: SAMPLES[0].id,
                  mode: MODES[0].id, bests: {}, designs: [], designId: null, log: {} };
   (function loadSave() {
     try {
@@ -1784,15 +1784,18 @@
         if (p.levels && typeof p.levels === "object") Object.assign(save.levels, p.levels);
         // the dopant facts are the one thing worth carrying between runs that
         // isn't an upgrade — a field notebook, not a score
-        // keys are "<specimen id>:<symbol>", so the same element found in two
-        // different specimens is two different notes
+        // keys are "<sample id>:<symbol>", so the same element found in two
+        // different samples is two different notes
         if (p.found && typeof p.found === "object") {
           for (const k of Object.keys(p.found)) if (/^[a-z]+:[A-Z][a-z]?$/.test(k)) save.found[k] = 1;
         }
         save.muted = !!p.muted;
         save.taughtBlank = p.taughtBlank ? 1 : 0;
         save.guideSeen = p.guideSeen ? 1 : 0;
-        if (p.specimen === SANDBOX_ID || SPECIMENS.some(sp => sp.id === p.specimen)) save.specimen = p.specimen;
+        // `specimen` was the selection key before the UI terminology changed
+        // to Sample. Read it as a fallback so older saves migrate in place.
+        const savedSample = typeof p.sample === "string" ? p.sample : p.specimen;
+        if (savedSample === SANDBOX_ID || SAMPLES.some(sample => sample.id === savedSample)) save.sample = savedSample;
         if (MODES.some(m => m.id === p.mode)) save.mode = p.mode;
         if (p.bests && typeof p.bests === "object") {
           for (const m of MODES) save.bests[m.id] = Math.max(0, Math.min(100, p.bests[m.id] | 0));
@@ -1804,9 +1807,9 @@
         if (save.designs.some(d => d.id === p.designId)) save.designId = p.designId;
       }
     } catch (e) { /* no persistence here; play on */ }
-    // a saved design can go away without the specimen pointer going with it
+    // a saved design can go away without the sample pointer going with it
     if (!save.designId && save.designs.length) save.designId = save.designs[0].id;
-    if (save.specimen === SANDBOX_ID && !activeDesign()) save.specimen = SPECIMENS[0].id;
+    if (save.sample === SANDBOX_ID && !activeDesign()) save.sample = SAMPLES[0].id;
     for (const u of UPGRADES) {
       save.levels[u.id] = Math.max(0, Math.min(MAX_LEVEL, save.levels[u.id] | 0));
     }
@@ -1980,7 +1983,7 @@
 
   // Everything a mode changes about a run, in one place: what the second
   // HUD track is counting down, what "solved" means in columns, and what
-  // the hint strip says. Called from loadSpecimen() and resetGame(), so a
+  // the hint strip says. Called from loadSample() and resetGame(), so a
   // mode picked on the bench lands on the next session and nothing ever
   // half-switches under a run already in progress.
   function applyMode() {
@@ -1996,7 +1999,7 @@
     budgetLabel.textContent = timeLimit ? "Time remaining"
       : budgetLimited ? "Dose remaining" : "Electrons spent";
     budgetTrack.style.display = (timeLimit || budgetLimited) ? "" : "none";
-    brandSub.textContent = `${SPEC.name} · ${MODE.name.toLowerCase()}`;
+    brandSub.textContent = `${SAMPLE.name} · ${MODE.name.toLowerCase()}`;
     hintsEl.innerHTML = MODE.hints.map(h =>
       `<span class="grp${h.hl ? " hl" : ""}">` +
       h.k.map(k => `<kbd>${k}</kbd>`).join("") + ` ${h.t}</span>`).join("");
@@ -2005,10 +2008,10 @@
   // the three instruments currently on offer; rerolled per pick and per session
   let draftOffer = [];
 
-  // Everything below is rebuilt whenever a specimen is loaded. It was all
+  // Everything below is rebuilt whenever a sample is loaded. It was all
   // const when there was only one lattice to run across.
-  let SPEC, rawLattice, SEEDED, world, NOTES_BY_SYMBOL, NOTES_TOTAL, SPEC_HASH;
-  let worldWidth, worldHeight, GROUND_Y, SPECIMEN_LEFT, SPECIMEN_RIGHT;
+  let SAMPLE, rawLattice, SEEDED, world, NOTES_BY_SYMBOL, NOTES_TOTAL, SAMPLE_HASH;
+  let worldWidth, worldHeight, GROUND_Y, SAMPLE_LEFT, SAMPLE_RIGHT;
   let totalResolvable, WIN_COUNT;
 
   function buildWorld() {
@@ -2067,20 +2070,20 @@
     });
   }
 
-  // Swapping specimens rebuilds the lattice, the geometry derived from it,
+  // Swapping samples rebuilds the lattice, the geometry derived from it,
   // the hidden phase image and the fog sheet over it. Nothing else in the
   // game holds a reference to any of that across a call, so this is the
   // whole of loading a map.
-  function loadSpecimen(id) {
+  function loadSample(id) {
     // a design the player built is looked up the same way a shipped one is;
     // if the save points at a design that has since been deleted, fall back
-    SPEC = (id === SANDBOX_ID ? sandboxSpecimen() : null) ||
-           SPECIMENS.find(sp => sp.id === id) || SPECIMENS[0];
-    save.specimen = SPEC.id;
-    rawLattice = SPEC.build();
-    SEEDED = surveyScan(rawLattice, SPEC.spawn);
+    SAMPLE = (id === SANDBOX_ID ? sandboxSample() : null) ||
+             SAMPLES.find(sample => sample.id === id) || SAMPLES[0];
+    save.sample = SAMPLE.id;
+    rawLattice = SAMPLE.build();
+    SEEDED = surveyScan(rawLattice, SAMPLE.spawn);
     world = buildWorld();
-    SPEC_HASH = specimenHash(rawLattice);
+    SAMPLE_HASH = sampleHash(rawLattice);
 
     NOTES_BY_SYMBOL = {};
     for (const a of rawLattice) if (a.dopantDef) NOTES_BY_SYMBOL[a.dopantDef.symbol] = a.dopantDef;
@@ -2091,16 +2094,16 @@
     GROUND_Y = worldHeight - 60;
     // the scan field ends on the outermost columns: the probe can stand over
     // the last one but not walk off into empty frame past it
-    SPECIMEN_LEFT = Math.min(...world.map(a => a.x)) - 10;
-    SPECIMEN_RIGHT = Math.max(...world.map(a => a.x)) - 10;
+    SAMPLE_LEFT = Math.min(...world.map(a => a.x)) - 10;
+    SAMPLE_RIGHT = Math.max(...world.map(a => a.x)) - 10;
 
     totalResolvable = world.length;
     // what "solved" means, in columns rather than as a percentage, belongs to
     // the mode now: applyMode(), at the foot of this function, sets WIN_COUNT
 
     // centred on the spawn column, not clipping its left edge
-    SPAWN.x = world[SPEC.spawn].x - 10;
-    SPAWN.y = world[SPEC.spawn].y - 200;
+    SPAWN.x = world[SAMPLE.spawn].x - 10;
+    SPAWN.y = world[SAMPLE.spawn].y - 200;
 
     renderTargetImage();
     buildFog();
@@ -2135,7 +2138,7 @@
   // ---------------------------------------------------------------------
   // Player (the scanning probe)
   // ---------------------------------------------------------------------
-  // set by loadSpecimen(), which knows which column the probe drops onto
+  // set by loadSample(), which knows which column the probe drops onto
   const SPAWN = { x: 0, y: 0 };
   const player = {
     x: SPAWN.x, y: SPAWN.y, w: 20, h: 26,
@@ -2292,7 +2295,7 @@
 
   // "Reset upgrades" drops every level and every banked pick, so the draft
   // tree can be played again from the base instrument. Records, the field
-  // notebook, saved specimens and settings are knowledge rather than score,
+  // notebook, saved samples and settings are knowledge rather than score,
   // so they stay. Two clicks: the first arms the button, the second wipes,
   // and it disarms itself after a few seconds or whenever the bench re-renders.
   let wipeArmed = 0, wipeTimer = null;
@@ -2328,7 +2331,7 @@
   // ---------------------------------------------------------------------
   // Losing the probe. Where to put it back: the nearest column still standing
   // to where the probe went down, not the spawn. Falling is meant to cost
-  // electrons, not progress — sending the player back across specimen they
+  // electrons, not progress — sending the player back across sample they
   // have already paid to scan would charge them twice for one mistake.
   // ---------------------------------------------------------------------
   function recoveryAtom(x) {
@@ -2360,7 +2363,7 @@
     player.coyoteTimer = COYOTE_TIME; player.jumpBufferTimer = 0;
     player.trail.length = 0;
     realignGrace = REALIGN_GRACE;
-    camera.init = false; // snap, rather than sweeping the whole specimen
+    camera.init = false; // snap, rather than sweeping the whole sample
     emitRing(home.x, home.y, 8, 150, 0.55, "150,225,255", 2.4);
     emit(home.x, home.y, 14,
       { ang: -Math.PI / 2, spread: 2.4, speed: 150, life: 0.6, size: 1.8,
@@ -2376,7 +2379,7 @@
   }
 
   // Two ways a run ends: the lattice is fully phased, or the budget is gone.
-  // Neither is a failure screen — the score is how much of the specimen you
+  // Neither is a failure screen — the score is how much of the sample you
   // got to see, and what you spent to see it.
   // Three ways a session ends. None of them is a failure screen — the report
   // and the upgrade pick are earned by what the scan recovered, however it
@@ -2403,11 +2406,11 @@
       overlayTitle.textContent = MODE.winFrac >= 1 ? "Every column phased" : "Reconstruction solved";
       overlayTitle.style.color = "#7dffc4";
       const closer = MODE.winFrac >= 1
-        ? "There is nothing left in the field of view to resolve. What it cost the specimen to get there is the only score that means anything in a survey."
+        ? "There is nothing left in the field of view to resolve. What it cost the sample to get there is the only score that means anything in a survey."
         : timeLimit
           ? `Solved with ${timeLeft.toFixed(1)}s still on the clock — the drift window closed on a finished reconstruction.`
           : `Past ${Math.round(MODE.winFrac * 100)}% the structure is unambiguous — a real reconstruction is called solved there, ` +
-            `not at every last column. Every electron you didn't spend is specimen that survived.`;
+            `not at every last column. Every electron you didn't spend is sample that survived.`;
       overlayText.textContent = `${pct}% of the lattice phased on ${cost}, ${dmg}. ` + closer + fellLine;
     } else if (kind === "timeout") {
       overlayTitle.textContent = "Drift window closed";
@@ -2415,7 +2418,7 @@
       overlayText.textContent =
         `${pct}% of the lattice phased in ${timeLimit} seconds, on ${cost}, ${dmg}. ` +
         `Dose was free here and time was not, which is the trade a real fast-scan acquisition makes: ` +
-        `you spend the specimen to beat the drift.` + fellLine;
+        `you spend the sample to beat the drift.` + fellLine;
     } else if (kind === "ended") {
       overlayTitle.textContent = "Survey ended";
       overlayTitle.style.color = "#7fe3ff";
@@ -2450,11 +2453,11 @@
 
     save.sessions++;
     // The draft pays out on completed dose-limited sessions and timed
-    // acquisitions over shipped specimens. A mode with no natural end, or a
+    // acquisitions over shipped samples. A mode with no natural end, or a
     // lattice the player laid out to be easy, would make the upgrade tree
     // meaningless. Bests are tracked per mode because a sprint percentage
     // and a session percentage are not the same number.
-    const shipped = SPEC.id !== SANDBOX_ID;
+    const shipped = SAMPLE.id !== SANDBOX_ID;
     const eligible = MODE.earns && shipped;
     if (shipped) {
       save.bests[MODE.id] = Math.max(save.bests[MODE.id] | 0, pct);
@@ -2479,7 +2482,7 @@
       earnUnit.textContent = shipped ? `% — best here ${save.bests[MODE.id] | 0}%` : "% of your lattice";
       earnBrk.textContent = shipped
         ? "Practice mode — upgrades are awarded in dose-limited and 30-second runs"
-        : "Specimens you designed don't earn upgrades — the instrument is earned on real data";
+        : "Samples you designed don't earn upgrades — the instrument is earned on real data";
     } else if (anyLeft) {
       earnVal.textContent = String(earned);
       earnUnit.textContent = earned === 1 ? "upgrade earned" : "upgrades earned";
@@ -2510,11 +2513,11 @@
   // than a rewrite of it: an entry carries everything a server row would.
   // ---------------------------------------------------------------------
 
-  // A mask is indices into this specimen's atom array, so it stops meaning
+  // A mask is indices into this sample's atom array, so it stops meaning
   // anything the moment that array changes. FNV-1a over the sites gives an
-  // entry something to be checked against: edit a specimen and its old
+  // entry something to be checked against: edit a sample and its old
   // entries drop out instead of drawing the wrong picture.
-  function specimenHash(lattice) {
+  function sampleHash(lattice) {
     let h = 2166136261 >>> 0;
     for (const a of lattice) {
       const s = `${Math.round(a.x)},${Math.round(a.y)},${a.element}`;
@@ -2576,8 +2579,8 @@
   // The balance version is part of the key rather than a field on the entry,
   // so runs posted against different tuning end up on different boards and
   // the old ones are simply not read. Kept, not deleted — they were true.
-  function logKey(modeId, specId, rig) {
-    return `${modeId}|${specId}|${rig}|${BALANCE_VERSION}`;
+  function logKey(modeId, sampleId, rig) {
+    return `${modeId}|${sampleId}|${rig}|${BALANCE_VERSION}`;
   }
 
   function logCmp(B) {
@@ -2588,11 +2591,11 @@
                      (a.sec - b.sec) || (a.at - b.at);
   }
 
-  function logEntries(modeId, specId, rig) {
+  function logEntries(modeId, sampleId, rig) {
     const B = BOARDS[modeId];
     if (!B) return [];
-    return (save.log[logKey(modeId, specId, rig)] || [])
-      .filter(e => e.h === SPEC_HASH)
+    return (save.log[logKey(modeId, sampleId, rig)] || [])
+      .filter(e => e.h === SAMPLE_HASH)
       .sort(logCmp(B));
   }
 
@@ -2635,14 +2638,14 @@
 
   // Called from endRun() while the run's state is still standing. Returns
   // what the scan report needs to say where the run landed, or null when
-  // this mode and specimen keep no board at all.
+  // this mode and sample keep no board at all.
   let logJustPosted = 0;   // marks the most recent entry on the board
   function logRun(kind, pct) {
     const B = BOARDS[MODE.id];
-    if (!B || SPEC.id === SANDBOX_ID) return null;
+    if (!B || SAMPLE.id === SANDBOX_ID) return null;
     const entry = {
       v: BALANCE_VERSION,
-      h: SPEC_HASH,
+      h: SAMPLE_HASH,
       kind,
       pct,
       dose: +doseSpent.toFixed(1),
@@ -2656,8 +2659,8 @@
     };
     if (!B.qualify(entry)) return { rank: 0, entry, ahead: null, kept: false, board: B };
 
-    const key = logKey(MODE.id, SPEC.id, rigClass());
-    const all = (save.log[key] || []).filter(e => e.h === SPEC_HASH);
+    const key = logKey(MODE.id, SAMPLE.id, rigClass());
+    const all = (save.log[key] || []).filter(e => e.h === SAMPLE_HASH);
     all.push(entry);
     all.sort(logCmp(B));
     const rank = all.indexOf(entry) + 1;
@@ -2711,7 +2714,7 @@
     logSlug.innerHTML = line;
   }
 
-  // The phase image and the specimen are already in memory for whichever
+  // The phase image and the sample are already in memory for whichever
   // lattice the board is scoped to, so a row draws its own picture out of
   // 19 bytes of coverage instead of storing one. Two layers, the same two
   // the scan report composites: the reconstruction, and fog punched through
@@ -2756,7 +2759,7 @@
     t.drawImage(fg, 0, 0);
   }
 
-  // The board sits under the mode and specimen pickers because those two
+  // The board sits under the mode and sample pickers because those two
   // are what it is keyed by: switching either one re-ranks it in place, so
   // choosing what to play and seeing what it is worth are one gesture.
   let logRigView = null;
@@ -2770,17 +2773,17 @@
 
     // Same argument that withholds picks from a lattice you drew: a layout
     // built to be easy would out-post the ones the balance is tuned against.
-    if (SPEC.id === SANDBOX_ID) {
+    if (SAMPLE.id === SANDBOX_ID) {
       logScope.textContent = "No board for a lattice you built";
       logEmpty.textContent =
-        "Specimens you designed keep no logbook — one laid out to be crossable would out-post the " +
+        "Samples you designed keep no logbook — one laid out to be crossable would out-post the " +
         "measured lattices within a couple of runs, which is the same reason they earn no upgrades.";
       return;
     }
     if (!B) return;
     if (!logRigView) logRigView = rigClass();
 
-    logScope.textContent = `${B.scope} · ${SPEC.name}`;
+    logScope.textContent = `${B.scope} · ${SAMPLE.name}`;
     for (const t of [["stock", "Stock column"], ["open", "Any rig"]]) {
       const b = document.createElement("button");
       b.className = "ltab" + (t[0] === logRigView ? " on" : "");
@@ -2794,7 +2797,7 @@
       logTabs.appendChild(b);
     }
 
-    const rows = logEntries(MODE.id, SPEC.id, logRigView).slice(0, LOG_SHOW);
+    const rows = logEntries(MODE.id, SAMPLE.id, logRigView).slice(0, LOG_SHOW);
     if (!rows.length) {
       // an empty board says what would qualify, rather than "no data"
       logEmpty.textContent = (logRigView === "stock"
@@ -2869,7 +2872,7 @@
     return b;
   }
 
-  // The mode is picked in the same rail and the same shape as the specimen,
+  // The mode is picked in the same rail and the same shape as the sample,
   // because they are the same kind of decision: what you are looking at, and
   // what you are short of while you look at it.
   function renderModes() {
@@ -2890,26 +2893,26 @@
     }
   }
 
-  // The instrument you build carries across specimens — that is the point of
+  // The instrument you build carries across samples — that is the point of
   // having more than one. A rig tuned on light carbon meets an oxide that
   // punishes the same habits differently, and the upgrade tree has to answer
-  // both. A lattice the player drew is listed here as one more specimen,
+  // both. A lattice the player drew is listed here as one more sample,
   // because to everything downstream of build() that is exactly what it is.
-  function renderSpecimens() {
-    specPick.innerHTML = "";
-    for (const sp of SPECIMENS) {
-      const b = scardEl(sp.id === SPEC.id, sp.name, sp.tag, sp.blurb);
+  function renderSamples() {
+    samplePick.innerHTML = "";
+    for (const sample of SAMPLES) {
+      const b = scardEl(sample.id === SAMPLE.id, sample.name, sample.tag, sample.blurb);
       b.addEventListener("click", () => {
-        if (sp.id === SPEC.id) return;
-        loadSpecimen(sp.id);
+        if (sample.id === SAMPLE.id) return;
+        loadSample(sample.id);
         writeSave();
         renderLab();
         sfx.dopant();
       });
-      specPick.appendChild(b);
+      samplePick.appendChild(b);
     }
     for (const d of save.designs) {
-      const on = SPEC.id === SANDBOX_ID && save.designId === d.id;
+      const on = SAMPLE.id === SANDBOX_ID && save.designId === d.id;
       const n = d.cells.length;
       const b = scardEl(on, `<span class="ed">Edit</span>${esc(d.name)}`,
         `Your design · ${n} column${n === 1 ? "" : "s"}`,
@@ -2918,19 +2921,19 @@
         if (ev.target.classList.contains("ed")) { openEditor(d); return; }
         if (on) return;
         save.designId = d.id;
-        loadSpecimen(SANDBOX_ID);
+        loadSample(SANDBOX_ID);
         writeSave();
         renderLab();
         sfx.dopant();
       });
-      specPick.appendChild(b);
+      samplePick.appendChild(b);
     }
-    const add = scardEl(false, "＋ Design a specimen",
+    const add = scardEl(false, "＋ Design a sample",
       `Sandbox · ${save.designs.length}/${MAX_DESIGNS} saved`,
-      "Lay out your own lattice column by column. Element mass sets how wide a platform is and how much dose it survives — the same rules the measured specimens run on.",
+      "Lay out your own lattice column by column. Element mass sets how wide a platform is and how much dose it survives — the same rules the measured samples run on.",
       "ghost");
     add.addEventListener("click", () => openEditor(null));
-    specPick.appendChild(add);
+    samplePick.appendChild(add);
   }
 
   function renderLab() {
@@ -2949,14 +2952,14 @@
     upgradeNoticeText.textContent = save.picks > 1
       ? `${save.picks} picks are ready. Choose an instrument upgrade below.`
       : "One pick is ready. Choose an instrument upgrade below.";
-    const shipped = SPEC.id !== SANDBOX_ID;
+    const shipped = SAMPLE.id !== SANDBOX_ID;
     const eligibleSetup = MODE.earns && shipped;
     upgradeEligibility.classList.toggle("off", !eligibleSetup);
     upgradeEligibility.textContent = eligibleSetup
       ? "✓ Current setup will award upgrade picks when the run ends."
       : !MODE.earns
         ? "Open survey awards no upgrades — choose Dose-limited or 30-second mode above."
-        : "Custom specimens award no upgrades — choose a supplied specimen above.";
+        : "Custom samples award no upgrades — choose a supplied sample above.";
     const best = MODE.earns
       ? Math.max(save.bests[MODE.id] | 0, MODE.id === "session" ? save.best | 0 : 0)
       : Math.max(save.best | 0, save.bests.sprint | 0);
@@ -2998,7 +3001,7 @@
       labTitle.textContent = anyLeft ? "Rig ready" : "Instrument complete";
       labText.textContent = anyLeft
         ? "Nothing left to pick this session. Recover more of the lattice next run and the draft comes back wider."
-        : "Every line on the column is at its limit. Whatever the specimen has left to show you, this is the instrument that has to show it.";
+        : "Every line on the column is at its limit. Whatever the sample has left to show you, this is the instrument that has to show it.";
       pickLeft.textContent = "";
       labDone.style.display = "block";
       beginBtn.textContent = "Begin session";
@@ -3009,7 +3012,7 @@
     }
 
     renderModes();
-    renderSpecimens();
+    renderSamples();
     renderLogbook();
 
     rigSummary.innerHTML = "";
@@ -3018,7 +3021,7 @@
       none.className = "rnone";
       none.textContent = save.picks > 0
         ? "Nothing on the column yet — take one of the three above."
-        : "Nothing on the column yet. Picks settle on a dose-limited or 30-second run over a shipped specimen, one for finishing at all and three past 70%.";
+        : "Nothing on the column yet. Picks settle on a dose-limited or 30-second run over a shipped sample, one for finishing at all and three past 70%.";
       rigSummary.appendChild(none);
     }
     for (const u of UPGRADES) {
@@ -3074,13 +3077,13 @@
   // logged says so rather than pretending to be news.
   function notesFound() {
     // counted against the symbols in *this* lattice: every design shares one
-    // specimen id, so a notebook filled in on one of them would otherwise
+    // sample id, so a notebook filled in on one of them would otherwise
     // report 6 of 2 on the next
-    return Object.keys(NOTES_BY_SYMBOL).filter(sym => save.found[`${SPEC.id}:${sym}`]).length;
+    return Object.keys(NOTES_BY_SYMBOL).filter(sym => save.found[`${SAMPLE.id}:${sym}`]).length;
   }
   function showFact(atom) {
     const art = ELEMENT_ART[atom.element] || ELEMENT_ART.C;
-    const key = `${SPEC.id}:${atom.element}`;
+    const key = `${SAMPLE.id}:${atom.element}`;
     const known = !!save.found[key];
     if (!known) { save.found[key] = 1; writeSave(); }
     showNote(
@@ -3160,7 +3163,7 @@
     // the beam stays off while the stage settles after a re-insertion, so
     // you are never charged for the frames you didn't choose to be there
     realignGrace = Math.max(0, realignGrace - dt);
-    // A timed mode's clock is wall time, not beam time: the specimen drifts
+    // A timed mode's clock is wall time, not beam time: the sample drifts
     // under the beam whether or not you are looking at it, so blanking buys
     // nothing here. It keeps running through a stage re-insertion too — that
     // is what makes falling expensive when electrons are free.
@@ -3172,7 +3175,7 @@
     beamOn = !runOver && !keys["shift"] && realignGrace <= 0;
     if (beamOn) {
       // electrons are still counted when they are not rationed — the report
-      // is about what the scan cost the specimen either way
+      // is about what the scan cost the sample either way
       doseSpent += BEAM_DRAIN * dt;
       if (budgetLimited) {
         doseSpent = Math.min(doseBudgetEff, doseSpent);
@@ -3181,7 +3184,7 @@
     }
     // --- horizontal input ---
     // Top speed is the scan generator's slew rate; once the probe is out of
-    // the specimen plane it is the shift deflectors carrying it sideways, so
+    // the sample plane it is the shift deflectors carrying it sideways, so
     // airborne authority is its own dial. Acceleration and cap scale together
     // — friction settles top speed at accel/drag, so raising the cap alone
     // would just mean a ceiling the probe never reaches.
@@ -3462,9 +3465,9 @@
       }
     }
 
-    // the specimen ends before the world does; running off its right edge into
+    // the sample ends before the world does; running off its right edge into
     // empty frame is not a challenge, it is just an unmarked hole
-    player.x = Math.max(SPECIMEN_LEFT, Math.min(SPECIMEN_RIGHT, player.x));
+    player.x = Math.max(SAMPLE_LEFT, Math.min(SAMPLE_RIGHT, player.x));
 
     // probe trail (a short comet tail; long enough to read direction)
     player.trail.push({ x: cx, y: cy });
@@ -4528,7 +4531,7 @@
   }
 
   // Post: a slow raster sweep (this is a scanning microscope, after all),
-  // scanlines, grain, and a vignette that warms up as the specimen cooks.
+  // scanlines, grain, and a vignette that warms up as the sample cooks.
   // Dust rides above the world layer: the fog sheet covers the whole lattice,
   // so parallax drawn underneath it would never be seen.
   function drawMotes() {
@@ -4592,7 +4595,7 @@
     ctx.fillStyle = vg;
     ctx.fillRect(0, 0, VW, VH);
 
-    // the specimen is cooking / the budget is nearly gone — warn at the
+    // the sample is cooking / the budget is nearly gone — warn at the
     // edge of vision rather than with another number on the panel
     // whichever resource this mode rations; in a mode that rations neither
     // there is nothing to warn about
@@ -4615,12 +4618,12 @@
   }
 
   // =====================================================================
-  // THE SPECIMEN DESIGNER
+  // THE SAMPLE DESIGNER
   //
   // A grid editor over the lattice the engine already runs on: one cell is
   // one 90px lattice site, and painting one emits exactly the atom a
   // build() would. Nothing in here reaches into the simulation — it edits a
-  // design, loadSpecimen() does the rest, and the game cannot tell a
+  // design, loadSample() does the rest, and the game cannot tell a
   // player's lattice from a measured one.
   //
   // The one thing it does read out of the simulation is the physics, and
@@ -4707,7 +4710,7 @@
   // The canvas fills the frame and the lattice is centred inside it, so the
   // empty part of the field of view is drawn as vacuum with the detector
   // plane under it rather than left as a hole in the panel. Same picture the
-  // run gives you: a specimen suspended over a detector.
+  // run gives you: a sample suspended over a detector.
   let edOX = 0, edOY = 0;
   const ED_FLOOR = 30;   // px of detector plane along the bottom
   function edLayout() {
@@ -4838,7 +4841,7 @@
     if (!a.pts.length) {
       warn = "Empty grid — paint some columns.";
     } else if (a.pts.length < 8) {
-      warn = "Under 8 columns is not really a specimen yet.";
+      warn = "Under 8 columns is not really a sample yet.";
     } else if (a.lost.length) {
       warn = `${a.lost.length} column${a.lost.length === 1 ? "" : "s"} ringed in amber can be neither reached ` +
              `nor scanned from the spawn on this instrument. Bridge the gap through the row above or below, ` +
@@ -4879,8 +4882,8 @@
   }
 
   // A blank grid is a worse first move than a lattice to carve: two carbon
-  // rows at the pitch the shipped specimens run at is already a playable
-  // specimen, and it shows what the units are before you have placed a thing.
+  // rows at the pitch the shipped samples run at is already a playable
+  // sample, and it shows what the units are before you have placed a thing.
   function edSeed() {
     for (let c = 0; c < GRID_COLS; c++) {
       edSlot[3 * GRID_COLS + c] = 1;
@@ -4906,7 +4909,7 @@
       }
     } else {
       edId = newDesignId();
-      edNameInput.value = `Specimen ${save.designs.length + 1}`;
+      edNameInput.value = `Sample ${save.designs.length + 1}`;
       edSeed();
     }
     edEl = 0; edTool = "paint"; edDrift = false; edHover = -1; edPaint = 0;
@@ -4927,7 +4930,7 @@
       }
     }
     if (!cells.length) return null;
-    const name = (edNameInput.value || "").trim().slice(0, 32) || "Untitled specimen";
+    const name = (edNameInput.value || "").trim().slice(0, 32) || "Untitled sample";
     let d = save.designs.find(x => x.id === edId);
     if (!d) {
       if (save.designs.length >= MAX_DESIGNS) return null;
@@ -4941,14 +4944,14 @@
     writeSave();
     // if the bench behind the designer is sitting on this lattice, rebuild it
     // so the edit is what the next session runs on
-    if (SPEC.id === SANDBOX_ID) loadSpecimen(SANDBOX_ID);
+    if (SAMPLE.id === SANDBOX_ID) loadSample(SANDBOX_ID);
     return d;
   }
 
   function closeEditor(committed) {
     if (!committed && !commitDesign()) {
       showNote("Nothing saved",
-        "An empty grid is not a specimen, so the design was left as it was.",
+        "An empty grid is not a sample, so the design was left as it was.",
         "∅", "#ffd9c0", "#ff9d70", "255,150,110");
     }
     editorOpen = false;
@@ -5020,11 +5023,11 @@
 
   edPlayBtn.addEventListener("click", () => {
     const d = commitDesign();
-    if (!d) { edWarn.textContent = "Paint a few columns first — an empty grid is not a specimen."; return; }
-    save.specimen = SANDBOX_ID;
+    if (!d) { edWarn.textContent = "Paint a few columns first — an empty grid is not a sample."; return; }
+    save.sample = SANDBOX_ID;
     save.designId = d.id;
     writeSave();
-    loadSpecimen(SANDBOX_ID);
+    loadSample(SANDBOX_ID);
     closeEditor(true);
     resetGame();
   });
@@ -5037,7 +5040,7 @@
     writeSave();
     // the run behind the designer cannot be left pointing at a lattice that
     // no longer exists
-    if (SPEC.id === SANDBOX_ID) loadSpecimen(activeDesign() ? SANDBOX_ID : SPECIMENS[0].id);
+    if (SAMPLE.id === SANDBOX_ID) loadSample(activeDesign() ? SANDBOX_ID : SAMPLES[0].id);
     closeEditor(true);
   });
   edNameInput.addEventListener("keydown", (ev) => {
@@ -5089,7 +5092,7 @@
   </style>
   <g class="f1">
     <line x1="26" y1="100" x2="454" y2="100" stroke="#6f92aa" stroke-width="1" stroke-dasharray="2 5" opacity=".5"/>
-    <text x="28" y="94">SPECIMEN PLANE</text>
+    <text x="28" y="94">SAMPLE PLANE</text>
     <path d="M182 10 L240 100 L298 10 Z" fill="#5ad4ff" fill-opacity=".05"/>
     <line x1="182" y1="10" x2="240" y2="100" stroke="#5ad4ff" stroke-width="1.4"/>
     <line x1="298" y1="10" x2="240" y2="100" stroke="#5ad4ff" stroke-width="1.4"/>
@@ -5155,7 +5158,7 @@
       b: "The electrons that resolve an atom also knock it loose. Proximity does " +
          "both — one action, two consequences — so the orange arc winding around " +
          "a column is dose going in. It is a net gauge: back away and it unwinds, " +
-         "jump and it stalls, because leaving the specimen plane defocuses the " +
+         "jump and it stalls, because leaving the sample plane defocuses the " +
          "probe. Step out of the scan field and the reading freezes where you " +
          "left it.",
       x: "",
@@ -5295,7 +5298,7 @@
       b: "A session ends when the electrons run out or the reconstruction is " +
          "solved — 85% of the lattice, the point where the structure stops being " +
          "ambiguous. Your score is how much of the picture you recovered. Every " +
-         "electron you did not spend is specimen that survived.",
+         "electron you did not spend is sample that survived.",
       x: '<table class="tref">' +
          '<tr><td><kbd>&larr;</kbd> <kbd>&rarr;</kbd></td><td>Move the probe</td></tr>' +
          '<tr><td><kbd>Space</kbd></td><td>Jump — forgiving on late presses</td></tr>' +
@@ -5305,7 +5308,7 @@
          '<tr><td><kbd>M</kbd></td><td>Mute / unmute &nbsp;·&nbsp; <kbd>?</kbd> reopen this guide</td></tr>' +
          '</table>' +
          '<p>Between sessions you are on the bench — one page holding ' +
-         'your mode, specimen, upgrades, latest report and the ' +
+         'your mode, sample, upgrades, latest report and the ' +
          'logbook, with a bar across the top that jumps to any of them. It ' +
          'offers three modes: a 100-electron session, a 30-second acquisition, ' +
          'or an open survey with nothing scarce. Dose-limited sessions and ' +
@@ -5364,7 +5367,7 @@
     tutorialEl.classList.remove("on");
     if (!save.guideSeen) { save.guideSeen = 1; writeSave(); }
     // the first-ever open sits in front of a fresh, unstarted run — hand the
-    // player the bench so they can choose a mode and specimen before
+    // player the bench so they can choose a mode and sample before
     // they begin. Every later open lays over whatever was on screen (a live
     // run, or the bench) and just gets out of the way.
     if (!tResumeOnClose) openSetup();
@@ -5395,9 +5398,9 @@
     requestAnimationFrame(loop);
   }
 
-  // Load the specimen last: it needs makeCanvas() and the fog helpers, and
+  // Load the sample last: it needs makeCanvas() and the fog helpers, and
   // it is the thing every frame reads from.
-  loadSpecimen(save.specimen);
+  loadSample(save.sample);
   resetGame();
   if (!save.guideSeen) openTutorial(false);
   requestAnimationFrame(loop);

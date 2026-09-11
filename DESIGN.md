@@ -363,7 +363,7 @@ Ten lines, three levels each — 30 picks to max the instrument, so roughly 12�
 | Code | Instrument | Scales | Why it's real |
 |------|-----------|--------|---------------|
 | 80 kV | Low-voltage column | `DOSE_LIMIT` ×1.3 → ×2.1 | Below carbon's knock-on threshold the beam stops displacing atoms |
-| MSR | Mixed-state reconstruction | `RESOLVE_TIME` ×0.82 → ×0.55 | Modelling partial coherence converges from fewer scan positions |
+| GPU | GPU reconstruction accelerator | `RESOLVE_TIME` ×0.82 → ×0.55 | Faster compute closes the loop on the live phase estimate sooner |
 | DED | Direct electron detector | `DOSE_BUDGET` +22 → +78 | Counting single electrons beats integrating a current |
 | BLNK | Fast electrostatic blanker | `DOSE_ANNEAL` ×2 → ×4.2 | Microsecond blanking gives the specimen real rest |
 | FOV | Wide-field scan coils | `RESOLVE_RADIUS` +26 → +88 | More columns per position — and more of them irradiated |
@@ -424,9 +424,9 @@ are live in the field at once — but the freeze also means the columns you
 already passed are no longer quietly healing behind you, which makes reaching
 the next one from further away worth more than it was.
 
-**MSR and SCAN cut exposure time.** Deposition is rate × time. MSR takes dwell
-from 0.5s to 0.275s — a straight ~45% cut in dose per column resolved — and SCAN
-moves the probe past everything else 16–45% faster.
+**GPU and SCAN cut exposure time.** The game's acquisition is a compute-bound,
+closed-loop scan: the GPU upgrade takes the live-reconstruction dwell from 0.5s
+to 0.275s, while SCAN moves the probe past everything else 16–45% faster.
 
 **PZT and SHFT are the escape verbs, and they now preserve rather than repair.**
 `DOSE_DEFOCUS` (2.0) makes vertical distance count double, so the vertical
@@ -567,7 +567,7 @@ reasoning.
 Ranking on electrons has one pleasant side effect: it neutralises the biggest
 upgrade in the game. DED adds up to 78 electrons of budget and buys nothing on the
 board, because you cannot post a better number by having more electrons you did
-not need. MSR, FOV, SPRS and the three handling lines still cut beam-on time and
+not need. GPU, FOV, SPRS and the three handling lines still cut beam-on time and
 still help, which is why the split is not optional.
 
 ### A row carries the picture, not a number
