@@ -102,11 +102,13 @@ Which means the level design falls out of the material rather than out of a diff
 
 ## Specimens
 
-Two lattices ship with the game, chosen from the bench between sessions, and you can draw your own alongside them — see **Design your own specimen** below. The instrument you build carries across all of them; that's the point of having more than one, since a rig tuned on light carbon meets an oxide that punishes the same habits differently.
+Three lattices ship with the game, chosen from the bench between sessions, and you can draw your own alongside them — see **Design your own specimen** below. The instrument you build carries across all of them; that's the point of having more than one, since a rig tuned on light carbon meets a heavy compound that punishes the same habits differently.
 
 **Doped 2D lattice** — synthetic. A carbon sheet with three substitutions hidden in it and four vacancies to jump. Even ground, even columns; what it costs you is dose, not footing.
 
 **Perovskite scandate** — measured, not invented. Traced off `obj_phase_roi_sum_Niter200.tiff`, a 277×277 px electron ptychography phase reconstruction at 200 iterations. 253 column peaks were located to sub-pixel precision and a lattice fitted through them, and what came back was a near-perfect square cell — a = 43.20 px, b = 42.98 px, interior angle 91.8° — with every site landing inside 0.012 of a cell edge. The 1.8° of shear is scan distortion, not crystallography.
+
+Its card links to Zhen Chen *et al.*, “Electron ptychography achieves atomic-resolution limits set by lattice vibrations,” *Science* 372, 826–831 (2021), DOI `10.1126/science.abg2533`.
 
 The cell contents are the textbook ABO₃ perovskite projection down a pseudo-cubic ⟨100⟩ axis:
 
@@ -124,9 +126,24 @@ Calling the three site classes Pr / Sc / O is the one assumption in there — it
 
 **And the structure is the level design.** Every row is a continuous chain at the same 90 px pitch the carbon sheet runs at, but the footholds alternate: heavy cation, oxygen, heavy cation. The A-site dumbbell's two columns are 16 px apart and fuse into one wide safe pad; the B-site is a single broad column; oxygen is a small one. Then `vibrationFactor` does the rest — oxygen survives 2.3 units of dose against the A-site's 6.8, and drifts three times as far. So the fast route along a row keeps landing on the fragile thing, and the only way across a perovskite is the oxygen. Which is also true in a real microscope, where oxygen is the first thing you lose.
 
+**Twisted bilayer WSe₂** — measured from the 557×557 px, 16-bit MEP-with-EDF reconstruction published as Fig. 1E in Zhang *et al.*, *Science* 389, 423–428 (2025). The source shows a soliton in a 1.7° twisted bilayer. The offline extractor found 996 atomic-column peaks in the complete field and refined their centers with local two-dimensional quadratic fits; the game uses a contiguous 557×110 px band of 200 columns so the soliton remains real while the field has a playable side-scrolling aspect ratio. The median local statistical position uncertainty is 0.034 px. Coordinates remain measured and unsnapped. The W/Se assignment is the stated inference: the brightest unsupervised intensity class is treated as W and the other classes as Se.
+
+The description ends with a compact link to Zhang *et al.*, *Science* (2025), DOI `10.1126/science.adw7751`; there is no separate citation panel inside the card.
+
+The extraction is reproducible with:
+
+```sh
+python3 tools/extract_atomic_columns.py \
+  "/path/to/MEP EDF.tif" \
+  --output-dir output/mep-edf \
+  --game-crop 0,220,557,330
+```
+
+That writes the full subpixel coordinate table, fit and shape measurements, a QA overlay, a packed game-data crop, and a new acquisition-like reconstruction that keeps the measured geometry while resampling the residual noise phase.
+
 ## Design your own specimen
 
-The bench's Specimen section has a **＋ Design a specimen** slot next to the two shipped lattices. It opens a grid editor at the same 90 px pitch the real specimens run at: drag to paint columns, right-drag or **E** to erase, **1**–**6** to pick an element, **D** to make a column drift. Play it straight from the editor, and it plays under whichever mode is selected, on your current instrument.
+The bench's Specimen section has a **＋ Design a specimen** slot next to the three shipped lattices. It opens a grid editor at the same 90 px pitch the real specimens run at: drag to paint columns, right-drag or **E** to erase, **1**–**6** to pick an element, **D** to make a column drift. Play it straight from the editor, and it plays under whichever mode is selected, on your current instrument.
 
 Nothing about a lattice you drew is a special case in the engine. The designer emits exactly the atom array `scandate()` emits, so the hidden phase image, the fog, the opening survey scan, knock-on tolerance and the field notes all come along for free — that is what the `SPECIMENS` seam was for.
 

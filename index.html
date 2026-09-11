@@ -507,6 +507,11 @@
     letter-spacing: 0.13em; text-transform: uppercase; color: var(--dim);
   }
   .scard .bl { display: block; margin-top: 7px; font: 400 11px/1.55 var(--sans); color: #93a6bb; }
+  .scard .paper {
+    color: var(--mint); text-decoration: none;
+    border-bottom: 1px solid rgba(125,255,196,0.3);
+  }
+  .scard .paper:hover { border-bottom-color: var(--mint); }
 
   /* ------------------------------------------------------------ logbook */
   /* Scoped to the mode and sample picked above it, because
@@ -1100,7 +1105,7 @@
   // wider, and — once damaged — flicker out of solidity faster too. It is
   // also what sets each column's dose tolerance, so this one table is
   // responsible for most of how a sample feels to run across.
-  const ATOMIC_MASS = { C: 12.011, N: 14.007, O: 15.999, Sc: 44.956, Au: 196.97, Pr: 140.91 };
+  const ATOMIC_MASS = { C: 12.011, N: 14.007, O: 15.999, Se: 78.971, Sc: 44.956, W: 183.84, Au: 196.97, Pr: 140.91 };
   const REF_MASS = ATOMIC_MASS.C;
   function vibrationFactor(element) {
     return Math.sqrt(REF_MASS / (ATOMIC_MASS[element] || REF_MASS));
@@ -1118,7 +1123,9 @@
     C:  { core: "#eaf9ff", mid: "#5ec2ec", edge: "#0e3a54", rim: "#8ff0ff", glow: "90,212,255",  z: 1.00 },
     N:  { core: "#f5ecff", mid: "#a488f2", edge: "#2a1a5e", rim: "#cbb2ff", glow: "168,136,242", z: 1.15 },
     O:  { core: "#fff1de", mid: "#f2a05c", edge: "#5f2a10", rim: "#ffd0a0", glow: "242,160,92",  z: 1.30 },
+    Se: { core: "#ecfff8", mid: "#5bc9aa", edge: "#123f39", rim: "#a5f3d8", glow: "91,201,170",  z: 1.70 },
     Sc: { core: "#eefaff", mid: "#6fc9d8", edge: "#10404c", rim: "#a9edf6", glow: "111,201,216", z: 1.12 },
+    W:  { core: "#fff8dd", mid: "#f0bd58", edge: "#573407", rim: "#ffe8a3", glow: "240,189,88",  z: 2.55 },
     Au: { core: "#fffbe6", mid: "#ffd05a", edge: "#5f3a04", rim: "#fff2b0", glow: "255,208,90",  z: 2.60 },
     Pr: { core: "#fbf3ff", mid: "#b79ae8", edge: "#2b1c52", rim: "#dcc8ff", glow: "183,154,232", z: 2.40 },
   };
@@ -1343,6 +1350,68 @@
     });
   }
 
+  // Sample 3 comes directly from Fig. 1E of Zhang et al., Science (2025),
+  // the extended-depth-of-field multislice electron ptychography phase image
+  // of a soliton in 1.7-degree twisted bilayer WSe2. The offline extractor in
+  // tools/extract_atomic_columns.py located 996 columns in the full 557x557
+  // reconstruction. This contiguous 557x110 px band keeps 200 of them and the
+  // real local distortion through the soliton while giving the game a useful
+  // side-scrolling aspect ratio. Coordinates below are measured subpixel
+  // centers divided by the 18 px autocorrelation spacing; they are not snapped
+  // to an ideal lattice. The final two fields are an unsupervised intensity
+  // class and normalized measured peak phase. Chemistry is the one inference:
+  // the brightest class is assigned to W, the other two to Se.
+  const MEP_EDF_COLUMNS = `
+    22.824,0.020,1,0.755 9.545,0.054,1,0.597 26.048,0.062,1,0.539 19.999,0.124,1,0.711 15.771,0.130,1,0.620 3.832,0.180,2,0.832 30.460,0.230,2,0.839 24.673,0.266,1,0.434
+    14.264,0.277,1,0.749 8.440,0.280,1,0.045 0.989,0.288,1,0.498 20.386,0.294,1,0.781 27.741,0.324,1,0.757 11.386,0.356,1,0.629 17.613,0.409,1,0.666 5.646,0.448,1,0.569
+    10.166,0.484,0,0.024 2.834,0.576,1,0.718 16.130,0.586,1,0.685 26.545,0.587,1,0.805 22.164,0.599,2,0.875 29.586,0.633,1,0.522 13.256,0.648,1,0.647 11.965,0.685,1,0.607
+    19.431,0.714,1,0.579 7.478,0.768,2,0.770 4.734,0.852,1,0.629 23.992,0.870,2,0.853 18.006,0.905,1,0.476 1.842,0.915,1,0.579 28.408,0.924,1,0.846 13.797,0.946,1,0.522
+    15.108,0.950,1,0.718 21.212,1.038,1,0.532 9.353,1.079,2,0.613 25.824,1.114,2,0.896 6.483,1.152,1,0.682 19.815,1.188,1,0.562 3.652,1.200,1,0.570 15.645,1.230,1,0.720
+    30.235,1.241,0,0.125 16.986,1.256,1,0.583 23.017,1.291,1,0.477 0.871,1.330,2,0.887 11.170,1.389,2,0.780 27.605,1.393,2,0.688 21.661,1.430,0,0.092 8.358,1.474,1,0.389
+    5.456,1.480,1,0.331 17.495,1.500,1,0.805 24.850,1.559,1,0.746 18.794,1.589,1,0.488 2.679,1.621,2,0.834 29.355,1.631,2,0.663 13.050,1.701,2,0.669 23.482,1.733,1,0.826
+    7.304,1.759,1,0.244 19.333,1.797,1,0.624 20.693,1.809,1,0.521 10.207,1.826,1,0.458 26.677,1.836,1,0.547 4.512,1.907,2,0.924 16.514,1.929,1,0.607 9.082,1.958,0,0.000
+    1.660,1.966,1,0.631 14.928,1.998,1,0.934 25.357,2.026,1,0.883 21.122,2.065,0,0.000 12.053,2.067,1,0.692 22.438,2.074,1,0.456 28.493,2.127,1,0.582 6.338,2.191,2,0.857
+    18.358,2.208,1,0.419 10.867,2.291,1,0.357 3.531,2.299,1,0.768 16.815,2.311,1,0.834 27.217,2.335,0,0.048 22.892,2.354,1,0.741 13.905,2.361,1,0.524 0.697,2.382,1,0.470
+    30.322,2.382,1,0.536 24.330,2.405,1,0.574 8.211,2.483,2,0.832 12.688,2.483,1,0.871 20.211,2.500,1,0.408 5.337,2.593,1,0.702 29.056,2.624,1,0.760 24.745,2.637,1,0.550
+    15.772,2.660,1,0.674 2.567,2.689,1,0.173 14.538,2.730,1,0.868 9.969,2.746,2,0.359 21.904,2.754,1,0.364 20.433,2.879,1,0.388 7.182,2.893,1,0.591 26.547,2.930,1,0.669
+    17.677,2.931,1,0.507 4.318,2.937,0,0.000 16.384,2.994,1,0.859 23.765,3.044,1,0.594 1.544,3.048,2,0.813 11.811,3.071,2,0.564 22.301,3.137,1,0.275 9.090,3.178,1,0.582
+    6.147,3.205,1,0.617 28.368,3.214,1,0.896 18.232,3.283,1,0.864 19.437,3.297,1,0.451 25.592,3.356,1,0.624 3.377,3.366,2,0.938 13.714,3.395,2,0.719 0.532,3.402,1,0.621
+    30.142,3.429,2,0.823 8.026,3.452,1,0.293 24.136,3.461,1,0.564 10.839,3.465,1,0.585 21.323,3.538,1,0.484 20.006,3.567,0,0.000 5.166,3.644,2,0.862 27.399,3.644,1,0.549
+    15.604,3.708,2,0.870 9.783,3.718,0,0.000 2.385,3.728,1,0.644 26.020,3.745,1,0.828 12.720,3.789,1,0.733 23.106,3.791,1,0.503 21.810,3.821,0,0.000 29.199,3.892,1,0.711
+    7.016,3.911,2,0.806 19.101,3.937,1,0.869 17.506,3.985,2,0.625 11.576,3.992,0,0.000 27.877,4.064,1,0.915 4.181,4.079,1,0.481 14.594,4.092,1,0.704 1.420,4.113,1,0.612
+    23.656,4.115,1,0.747 25.008,4.128,1,0.649 20.866,4.184,1,0.460 8.872,4.184,2,0.855 13.368,4.233,1,0.643 6.012,4.331,1,0.655 3.213,4.345,0,0.139 16.468,4.375,1,0.573
+    29.720,4.379,1,0.913 25.458,4.419,1,0.283 26.871,4.444,1,0.727 0.385,4.480,2,0.855 15.240,4.486,1,0.878 10.689,4.493,2,0.775 21.070,4.568,1,0.581 7.872,4.621,1,0.559
+    4.996,4.626,0,0.030 27.255,4.645,0,0.065 18.362,4.646,1,0.527 28.728,4.747,1,0.684 17.087,4.760,1,0.527 2.242,4.778,2,0.924 12.514,4.816,2,0.468 22.949,4.834,1,0.677
+    6.861,4.892,1,0.749 9.708,4.910,1,0.601 20.095,4.973,1,0.617 18.888,5.013,0,0.000 4.060,5.019,2,0.910 26.303,5.024,1,0.295 14.379,5.102,2,0.779 8.705,5.136,0,0.000
+    1.214,5.168,1,0.762 24.841,5.173,1,0.871 21.952,5.231,1,0.568 11.533,5.256,1,0.468 28.129,5.290,0,0.169 20.727,5.314,0,0.000 5.845,5.337,2,0.771 16.260,5.382,2,0.762
+    10.491,5.432,0,0.010 3.099,5.443,1,0.827 26.705,5.503,1,0.909 13.393,5.507,1,0.765 23.820,5.530,1,0.475 0.260,5.550,1,0.645 29.854,5.564,1,0.546 22.533,5.593,0,0.000
+    7.709,5.627,2,0.806 18.153,5.665,2,0.504 19.767,5.674,1,0.374 12.321,5.710,0,0.000 4.830,5.737,1,0.601 15.268,5.792,1,0.580 28.548,5.809,1,0.858 2.087,5.811,1,0.704
+    24.334,5.833,0,0.000 25.698,5.866,1,0.423 9.556,5.921,2,0.945 14.144,5.981,0,0.000 3.907,6.050,1,0.723 6.692,6.055,1,0.638 11.380,6.086,2,0.501 17.146,6.093,1,0.629
+  `;
+
+  function mepEdf() {
+    const notes = {
+      91: { symbol: "W", r: 20,
+        fact: "W — the bright tungsten columns carry the strongest measured phase; their fitted shapes are the picometre ruler used to image the moiré phason." },
+      92: { symbol: "Se", r: 16,
+        fact: "Se — selenium columns trace the two twisted layers through the soliton instead of sitting on an idealized lattice." },
+    };
+    return MEP_EDF_COLUMNS.trim().split(/\s+/).map((tok, i) => {
+      const [x, y, intensityClass, intensity] = tok.split(",").map(Number);
+      const inferredElement = intensityClass === 2 ? "W" : "Se";
+      const note = notes[i];
+      return {
+        x, y,
+        element: inferredElement,
+        intensity,
+        r: note ? note.r : (inferredElement === "W" ? 18 : 13 + intensity * 3),
+        dopant: !!note,
+        dopantDef: note || null,
+        wobble: inferredElement === "Se" && intensityClass === 0,
+      };
+    });
+  }
+
   const SAMPLES = [
     {
       id: "graphene",
@@ -1356,9 +1425,17 @@
       id: "scandate",
       name: "Perovskite scandate",
       tag: "Measured · Pr / Sc / O · 203 columns",
-      blurb: "Traced off a real 200-iteration phase reconstruction. Heavy cation rows are solid ground; the oxygen columns bridging them are small, they drift, and they take a third of the dose the cations do.",
+      blurb: "Traced off a real 200-iteration phase reconstruction. Heavy cation rows are solid ground; the oxygen columns bridging them are small, they drift, and they take a third of the dose the cations do. <a class=\"paper\" href=\"https://doi.org/10.1126/science.abg2533\" target=\"_blank\" rel=\"noopener noreferrer\">Chen et al., Science (2021)</a>.",
       spawn: 1,
       build: scandate,
+    },
+    {
+      id: "mepedf",
+      name: "Twisted bilayer WSe₂",
+      tag: "Measured · W / Se · 200 columns",
+      blurb: "Subpixel column coordinates extracted from the real Fig. 1E EDF phase reconstruction. The soliton bends the two projected lattices through one continuous measured field; only the W/Se labels are intensity-based inferences. <a class=\"paper\" href=\"https://doi.org/10.1126/science.adw7751\" target=\"_blank\" rel=\"noopener noreferrer\">Zhang et al., Science (2025)</a>.",
+      spawn: 10,
+      build: mepEdf,
     },
   ];
 
@@ -2864,11 +2941,25 @@
   }
 
   function scardEl(on, nm, tg, bl, extra) {
-    const b = document.createElement("button");
+    // A card is a keyboard-operable choice, but it is a div rather than a
+    // button because measured samples may cite a paper with a real link in
+    // their description; interactive elements cannot validly nest in a button.
+    const b = document.createElement("div");
+    b.tabIndex = 0;
+    b.setAttribute("role", "button");
     b.className = "scard" + (on ? " on" : "") + (extra ? " " + extra : "");
     b.innerHTML = `<span class="nm">${nm}</span>` +
                   `<span class="tg">${tg}</span>` +
                   `<span class="bl">${bl}</span>`;
+    b.addEventListener("keydown", ev => {
+      if ((ev.key === "Enter" || ev.key === " ") && ev.target === b) {
+        ev.preventDefault();
+        b.click();
+      }
+    });
+    for (const link of b.querySelectorAll("a")) {
+      link.addEventListener("click", ev => ev.stopPropagation());
+    }
     return b;
   }
 
@@ -2934,6 +3025,7 @@
       "ghost");
     add.addEventListener("click", () => openEditor(null));
     samplePick.appendChild(add);
+
   }
 
   function renderLab() {

@@ -758,7 +758,7 @@ Field notes are keyed `"<specimen id>:<symbol>"`, so oxygen found as a dopant in
 
 ## Specimens
 
-Two, chosen from the bench. The instrument carries across both, which is the reason to have two: a rig tuned on light carbon meets an oxide that punishes the same habits differently.
+Three, chosen from the bench. The instrument carries across all of them, which is the reason to have several: a rig tuned on light carbon meets heavier compounds that punish the same habits differently.
 
 ### 1. Doped 2D lattice (synthetic)
 
@@ -805,6 +805,34 @@ Level size 24.2 × 6.4 lattice units (2182 × 580 px), against the carbon sheet'
 Both are inside the 44 px the carbon sheet was tuned around, so the map is crossable — but roughly half of every row's footholds are oxygen, and `vibrationFactor` already makes oxygen survive 2.3 units of dose against the A-site's 6.8 while drifting three times as far. The fast route along a row therefore keeps landing on the fragile thing. **The only way across a perovskite is the oxygen, and the oxygen is what the beam takes first** — which is also what happens in a real microscope.
 
 The difficulty trade is deliberate and was not re-tuned: 203 columns in the same footprint is 28% denser than the carbon sheet, so a probe field of `RESOLVE_RADIUS` covers 11.3 columns instead of 8.8 and coverage comes *faster* per electron. What it costs instead is footing, and footing costs `REALIGN_COST`. The pressure moves from the dose meter to the platforming, on the same budget.
+
+### 3. Twisted bilayer WSe2 (measured)
+
+This sample comes from the 557x557 px, 16-bit extended-depth-of-field
+multislice electron ptychography reconstruction published as Fig. 1E in Zhang
+et al., *Science* 389, 423-428 (2025). It shows a soliton in a 1.7-degree
+twisted WSe2 bilayer. `tools/extract_atomic_columns.py` removes the slow phase
+background, detects bright column peaks, and refines every center with a local
+two-dimensional quadratic fit. It finds 996 columns in the complete field;
+the game carries a contiguous 557x110 px strip of 200 columns across the
+soliton to preserve the measured local distortion at a playable aspect ratio.
+
+The exported positions are not fitted or snapped to an ideal lattice. The
+median local statistical position uncertainty from the quadratic coefficient
+covariance is 0.034 px. This does not include systematic scan distortion or
+specimen motion. Per-column phase intensity and elliptical second moments are
+also exported, along with an overlay for visual rejection of false or missed
+peaks and a statistically matched reconstruction with resampled residual
+noise.
+
+The chemical mapping is deliberately labeled as an inference: one-dimensional
+clustering separates three measured intensity classes, the brightest is used
+as W, and the two lower classes are used as Se. Geometry and intensity remain
+measured regardless of that assignment.
+
+The sample description ends with a compact link to Zhang et al., *Science*
+(2025), DOI 10.1126/science.adw7751. It stays in the descriptive paragraph
+rather than adding a separate citation treatment inside the card.
 
 ---
 
@@ -871,9 +899,9 @@ physics rather than a heuristic about it, so **the answer changes as the
 instrument does**: a layout that strands half its columns on a stock column
 opens up once the piezo stage is in, and the footer says so in the same
 breath, quoting the jump height, the gap it clears, the scan field and the
-pitch. And it is validated: run against both shipped specimens it reports
-152/152 and 203/203 columns connected, which is the right answer for two
-lattices bots are known to cross.
+pitch. And it is validated on the original pair: it reports 152/152 and
+203/203 columns connected, which is the right answer for two lattices bots are
+known to cross. The measured WSe2 strip has not yet been balance-tested.
 
 It also teaches the thing the numbers imply and nobody would guess. A single
 vacancy in a flat row leaves 137px edge to edge against a 67px reach, so it is
@@ -937,6 +965,7 @@ names the vocabulary.
 - ~~**Single synthetic level.**~~ Partly addressed: the perovskite scandate specimen is traced off a real 200-iteration reconstruction, and its geometry, site hierarchy and hazard placement are the material's rather than mine. The carbon sheet is still hand-tuned.
 - **The perovskite has not been balance-tested.** Its constants are the carbon sheet's, on the argument above that denser coverage pays for more treacherous footing. That argument is reasoning, not measurement — no bot run and no human run exists for it yet, and `WIN_FRAC` at 0.85 of 203 columns may be the wrong bar.
 - **The element labels on the perovskite are an inference.** See **Specimens**. The site classes are measured; Pr/Sc/O is the scandate reading of the intensity ratio and wants confirming against whatever the specimen actually was.
+- **The W/Se labels in the Fig. 1E sample are intensity-based inferences.** The subpixel geometry and three intensity classes are measured; assigning the brightest class to W and both lower classes to Se should be checked against the authors' atom-registration data before using it as a chemical map.
 - **Fixed camera framing.** Smoothing and velocity look-ahead are in, but there is no zoom; the framing works for one screen-sized level and is untested at larger world sizes.
 - **Renderer cost is still untested on low-end hardware, and cannot be tested here.** What *is* measured: a full `draw()` costs **0.5ms of JavaScript**, and the 152 atoms, their halos, the convergence sprites, the speckle, the probe rig and the bloom composite are all free to the millisecond (the convergence blur is baked into the sprite cache, so it never enters a frame's budget — it costs memory, not time). Everything expensive is a full-screen fill — post, the parallax background, and the two full-world `drawImage` calls for the reconstruction and the fog over it. That is fill rate, which a software rasteriser punishes (100ms/frame at 2880x1800 headless) and any real GPU handles without noticing. An adaptive quality system that sheds those passes was written and then reverted: on the only instrument available it produced no measurable saving, so shipping it would have been guesswork wearing a measurement's clothes. If a real weak machine ever turns up, the ablation ranking above says exactly what to cut first.
 - **No mobile/touch controls.** Keyboard only.

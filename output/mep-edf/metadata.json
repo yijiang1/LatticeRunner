@@ -1,0 +1,21 @@
+{
+  "source": "MEP EDF.tif",
+  "shape": [
+    557,
+    557
+  ],
+  "source_dtype": "uint16",
+  "analysis_dtype": "float64",
+  "estimated_nearest_neighbor_spacing_px": 18.0,
+  "column_count": 996,
+  "coordinate_convention": "origin at upper-left; x right; y down; subpixel pixel coordinates",
+  "intensity_classes": "0=dim, 1=medium, 2=bright; unsupervised, not chemical labels",
+  "game_crop_px": [
+    0.0,
+    220.0,
+    557.0,
+    330.0
+  ],
+  "game_column_count": 200,
+  "seed_for_new_realization": 7751
+}
