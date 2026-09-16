@@ -229,32 +229,41 @@
      carries the count of picks still waiting to be spent */
   #benchBar {
     position: sticky; top: 0; z-index: 3;
-    display: flex; align-items: center; gap: 14px 20px; flex-wrap: wrap;
-    padding: 13px 26px; border-bottom: 1px solid var(--line);
+    display: grid; grid-template-columns: auto minmax(360px, 1fr) auto;
+    align-items: center; gap: 18px;
+    padding: 15px 30px; border-bottom: 1px solid var(--line);
     background: rgba(6,10,18,0.9);
     backdrop-filter: blur(16px) saturate(1.2);
     -webkit-backdrop-filter: blur(16px) saturate(1.2);
   }
-  #benchId { display: flex; gap: 12px; align-items: center; }
-  #labTitle { margin-top: 6px; font: 400 15px/1 var(--sans); color: var(--mint); }
-  #benchNav { display: flex; gap: 3px; flex-wrap: wrap; margin: 0 auto; }
+  #benchId { display: flex; gap: 13px; align-items: center; min-width: 220px; }
+  #benchId .mark { width: 42px; height: 42px; border-radius: 12px; }
+  #benchId .eyebrow { font-size: 9.5px; }
+  #labTitle { margin-top: 6px; font: 500 17px/1 var(--sans); color: var(--mint); }
+  #benchNav {
+    display: flex; justify-content: center; gap: 4px; min-width: 0;
+    padding: 4px; margin: 0 auto; border-radius: 12px;
+    background: rgba(120,200,255,0.035); border: 1px solid rgba(120,200,255,0.06);
+  }
   .bnav {
     display: flex; align-items: center; gap: 7px; cursor: pointer;
-    padding: 9px 13px; border-radius: 9px;
+    padding: 10px 12px; border-radius: 8px;
     background: none; border: 1px solid transparent; color: var(--dim);
-    font: 600 8.5px/1 var(--mono); letter-spacing: 0.18em; text-transform: uppercase;
+    font: 650 10px/1 var(--mono); letter-spacing: 0.11em; text-transform: uppercase;
     transition: color .13s, background .13s, border-color .13s;
   }
   .bnav:hover { color: var(--ice); background: rgba(120,200,255,0.08); }
+  .bnav .ui-icon { width: 15px; height: 15px; }
   .bnav b {
     padding: 3px 6px; border-radius: 20px; font: 700 8px/1 var(--mono);
     color: #05131c; background: var(--mint); box-shadow: 0 0 12px rgba(125,255,196,0.5);
   }
   .bnav b:empty { display: none; }
-  #benchDo { display: flex; gap: 8px; align-items: center; }
+  #benchDo { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
   .bbtn {
-    cursor: pointer; padding: 11px 16px; border-radius: 9px; border: 1px solid transparent;
-    font: 600 9.5px/1 var(--mono); letter-spacing: 0.18em; text-transform: uppercase;
+    display: inline-flex; align-items: center; justify-content: center; gap: 8px;
+    cursor: pointer; min-height: 42px; padding: 11px 16px; border-radius: 10px; border: 1px solid transparent;
+    font: 650 10.5px/1 var(--mono); letter-spacing: 0.12em; text-transform: uppercase;
     color: #05131c; background: linear-gradient(180deg, #8affd0, #45d3a5);
     box-shadow: 0 10px 26px rgba(80,220,170,0.2);
     transition: transform .12s ease, filter .12s ease, background .14s ease;
@@ -270,15 +279,19 @@
     color: #ffb499; background: rgba(255,122,77,0.1); border-color: rgba(255,122,77,0.42);
   }
   .bbtn.danger:hover { background: rgba(255,122,77,0.18); }
+  .ui-icon {
+    width: 17px; height: 17px; flex: 0 0 auto; display: inline-block;
+    stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
+  }
 
   /* One column keeps the setup choices in decision order: choose the mode,
      choose the sample, then configure the instrument. */
   #benchDoc {
-    max-width: 1000px; margin: 0 auto; padding: 28px 26px 90px;
+    max-width: 1240px; margin: 0 auto; padding: 38px 30px 100px;
   }
-  .bcol { display: flex; flex-direction: column; gap: 24px; min-width: 0; }
+  .bcol { display: flex; flex-direction: column; gap: 28px; min-width: 0; }
   .bsec {
-    padding: 20px 22px 22px; border-radius: 16px;
+    padding: 26px 28px 28px; border-radius: 20px;
     border: 1px solid var(--line); scroll-margin-top: 96px;
     background: linear-gradient(180deg, rgba(11,18,31,0.9), rgba(7,12,21,0.9));
     transition: border-color .3s ease, box-shadow .3s ease;
@@ -289,26 +302,26 @@
     box-shadow: 0 0 0 3px rgba(125,255,196,0.09);
   }
   .shead {
-    display: flex; align-items: baseline; gap: 10px 14px; flex-wrap: wrap;
-    padding-bottom: 12px; margin-bottom: 16px;
+    display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap;
+    padding-bottom: 15px; margin-bottom: 20px;
     border-bottom: 1px solid rgba(255,255,255,0.06);
   }
   .shead h2 {
-    margin: 0; font: 600 9px/1 var(--mono); letter-spacing: 0.24em;
-    text-transform: uppercase; color: #c3e2f4;
+    margin: 0; font: 650 20px/1.1 var(--sans); letter-spacing: -0.01em;
+    color: var(--ice);
   }
   .shead .meta {
-    margin-left: auto; font: 400 9.5px/1.4 var(--mono);
+    margin-left: auto; font: 400 11px/1.4 var(--mono);
     letter-spacing: 0.05em; color: var(--dim); text-align: right;
   }
   .subhead {
     margin-top: 18px; padding-top: 14px;
     border-top: 1px solid rgba(255,255,255,0.05);
-    font: 500 8.5px/1 var(--mono); letter-spacing: 0.2em;
+    font: 650 11px/1 var(--mono); letter-spacing: 0.17em;
     text-transform: uppercase; color: var(--dim);
   }
   .bsec p {
-    margin: 0 0 15px; font: 400 12.5px/1.65 var(--sans);
+    margin: 0 0 15px; font: 400 14px/1.6 var(--sans);
     color: #9fbdd0; max-width: 62ch;
   }
 
@@ -392,7 +405,7 @@
   /* the count of picks waiting is the loudest thing in the section header,
      because it is the one number that tells you there is something to do */
   #pickLeft {
-    margin-left: auto; font: 600 8.5px/1 var(--mono); letter-spacing: 0.16em;
+    margin-left: auto; font: 650 10.5px/1 var(--mono); letter-spacing: 0.12em;
     text-transform: uppercase; color: var(--dim);
   }
   #pickLeft:not(:empty) {
@@ -415,11 +428,11 @@
     background: var(--mint); box-shadow: 0 0 13px rgba(125,255,196,0.8);
   }
   #upgradeNotice strong {
-    display: block; font: 700 9px/1 var(--mono); letter-spacing: 0.18em;
+    display: block; font: 700 11.5px/1 var(--mono); letter-spacing: 0.14em;
     text-transform: uppercase;
   }
   #upgradeNotice span:last-child {
-    display: block; margin-top: 5px; font: 400 11.5px/1.45 var(--sans);
+    display: block; margin-top: 6px; font: 400 13.5px/1.5 var(--sans);
     color: #9fcbb8;
   }
   #upgradeRules {
@@ -427,24 +440,24 @@
     background: rgba(90,212,255,0.045); border: 1px solid rgba(90,212,255,0.16);
   }
   #upgradeRules h3 {
-    margin: 0 0 7px; font: 650 9px/1 var(--mono); letter-spacing: 0.18em;
+    margin: 0 0 9px; font: 700 12px/1 var(--mono); letter-spacing: 0.14em;
     text-transform: uppercase; color: var(--cyan);
   }
-  #upgradeRules p { margin: 0 0 11px; font-size: 11.5px; line-height: 1.5; }
+  #upgradeRules p { margin: 0 0 13px; font-size: 14px; line-height: 1.55; }
   #upgradeTiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
   .upgradeTier {
     padding: 9px 10px; border-radius: 8px; text-align: center;
     background: rgba(4,8,15,0.45); border: 1px solid rgba(255,255,255,0.07);
-    font: 500 8px/1.4 var(--mono); letter-spacing: 0.08em;
+    font: 600 10.5px/1.4 var(--mono); letter-spacing: 0.06em;
     text-transform: uppercase; color: var(--dim);
   }
-  .upgradeTier b { display: block; margin-bottom: 4px; font: 500 18px/1 var(--sans); color: var(--ice); }
+  .upgradeTier b { display: block; margin-bottom: 5px; font: 550 23px/1 var(--sans); color: var(--ice); }
   #upgradeEligibility {
-    margin-top: 10px; font: 600 9px/1.45 var(--mono); letter-spacing: 0.04em;
+    margin-top: 12px; font: 650 11.5px/1.5 var(--mono); letter-spacing: 0.03em;
     color: var(--mint);
   }
   #upgradeEligibility.off { color: #ffc078; }
-  #upgradeProgress { margin-top: 5px; font: 400 10px/1.45 var(--mono); color: var(--dim); }
+  #upgradeProgress { margin-top: 7px; font: 400 12px/1.5 var(--mono); color: var(--dim); }
   #draft { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
   #draft:empty { display: none; }
   .dcard {
@@ -461,14 +474,14 @@
   .dcard .code {
     align-self: flex-start; padding: 3px 7px; border-radius: 5px;
     background: rgba(90,212,255,0.16); color: #bfeaff;
-    font: 700 8px/1 var(--mono); letter-spacing: 0.14em;
+    font: 700 10px/1 var(--mono); letter-spacing: 0.12em;
   }
-  .dcard .nm { font: 500 12.5px/1.3 var(--sans); color: var(--ice); }
+  .dcard .nm { font: 600 16px/1.3 var(--sans); color: var(--ice); }
   .dcard .ef {
-    font: 500 8.5px/1.4 var(--mono); letter-spacing: 0.12em;
+    font: 600 10.5px/1.45 var(--mono); letter-spacing: 0.1em;
     text-transform: uppercase; color: var(--mint);
   }
-  .dcard .bl { font: 400 10.5px/1.5 var(--sans); color: #8ba6ba; }
+  .dcard .bl { font: 400 13.5px/1.55 var(--sans); color: #96adc0; }
   .dcard .dots { margin-top: auto; padding-top: 4px; }
   .dots { display: flex; gap: 5px; }
   .dots i {
@@ -484,29 +497,49 @@
   #labDone {
     padding: 14px 16px; border-radius: 11px;
     background: rgba(125,255,196,0.06); border: 1px solid rgba(125,255,196,0.2);
-    font: 400 12px/1.6 var(--sans); color: #a8e6c8;
+    font: 400 14px/1.6 var(--sans); color: #a8e6c8;
   }
 
   /* --------------------------------------------------- sample picker */
-  #samplePick, #modePick { display: flex; gap: 8px; flex-wrap: wrap; }
+  #samplePick, #modePick { display: grid; gap: 12px; }
+  #modePick { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+  #samplePick { grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .scard {
-    flex: 1 1 200px; text-align: left; cursor: pointer;
-    padding: 11px 13px; border-radius: 10px;
-    background: rgba(255,255,255,0.025); border: 1px solid rgba(255,255,255,0.08);
-    color: inherit; font: inherit; transition: border-color .15s, background .15s;
+    position: relative; min-width: 0; min-height: 166px; text-align: left; cursor: pointer;
+    display: grid; grid-template-columns: 58px minmax(0, 1fr); grid-template-rows: auto auto 1fr;
+    gap: 0 14px; align-content: start; padding: 18px; border-radius: 14px;
+    background: linear-gradient(145deg, rgba(255,255,255,0.035), rgba(255,255,255,0.012));
+    border: 1px solid rgba(255,255,255,0.09); color: inherit; font: inherit;
+    overflow: hidden; transition: transform .15s, border-color .15s, background .15s, box-shadow .15s;
   }
-  .scard:hover { border-color: rgba(90,212,255,0.35); background: rgba(90,212,255,0.05); }
+  .scard::after {
+    content: ""; position: absolute; inset: auto 12% -45% 12%; height: 70%;
+    border-radius: 50%; background: rgba(90,212,255,0.08); filter: blur(24px); pointer-events: none;
+  }
+  .scard:hover {
+    transform: translateY(-2px); border-color: rgba(90,212,255,0.38);
+    background: linear-gradient(145deg, rgba(90,212,255,0.075), rgba(255,255,255,0.018));
+  }
   .scard.on {
-    border-color: rgba(90,212,255,0.5); background: rgba(90,212,255,0.09);
-    box-shadow: 0 0 0 1px rgba(90,212,255,0.16) inset;
+    border-color: rgba(90,212,255,0.66); background: linear-gradient(145deg, rgba(90,212,255,0.13), rgba(90,212,255,0.045));
+    box-shadow: 0 0 0 1px rgba(90,212,255,0.16) inset, 0 14px 34px rgba(0,0,0,0.18);
   }
-  .scard .nm { display: block; font: 600 12.5px/1.3 var(--sans); color: #dff2ff; }
+  .scard .visual {
+    grid-row: 1 / 4; width: 58px; height: 58px; display: grid; place-items: center;
+    border-radius: 14px; color: var(--cyan); background: rgba(90,212,255,0.08);
+    border: 1px solid rgba(90,212,255,0.16);
+  }
+  .scard .visual svg { width: 40px; height: 40px; overflow: visible; }
+  .scard .nm { display: block; font: 650 16px/1.25 var(--sans); color: #dff2ff; }
   .scard.on .nm { color: var(--cyan); }
   .scard .tg {
-    display: block; margin-top: 4px; font: 500 8px/1.4 var(--mono);
-    letter-spacing: 0.13em; text-transform: uppercase; color: var(--dim);
+    display: block; margin-top: 7px; font: 600 10px/1.45 var(--mono);
+    letter-spacing: 0.09em; text-transform: uppercase; color: var(--dim);
   }
-  .scard .bl { display: block; margin-top: 7px; font: 400 11px/1.55 var(--sans); color: #93a6bb; }
+  .scard .bl {
+    display: block; grid-column: 1 / -1; margin-top: 16px;
+    font: 400 13px/1.5 var(--sans); color: #9bafc2;
+  }
   .scard .paper {
     color: var(--mint); text-decoration: none;
     border-bottom: 1px solid rgba(125,255,196,0.3);
@@ -521,13 +554,13 @@
      report's thumbnail makes, applied to a table. */
   #logHead {
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
-    font: 400 9.5px/1.5 var(--mono); letter-spacing: 0.04em; color: var(--dim);
+    font: 450 12.5px/1.5 var(--mono); letter-spacing: 0.03em; color: var(--dim);
   }
   #logTabs { display: flex; gap: 5px; margin-left: auto; }
   .ltab {
-    padding: 4px 9px; border-radius: 6px; cursor: pointer;
+    padding: 7px 11px; border-radius: 7px; cursor: pointer;
     background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.08);
-    font: 600 8px/1 var(--mono); letter-spacing: 0.14em; text-transform: uppercase;
+    font: 650 10px/1 var(--mono); letter-spacing: 0.11em; text-transform: uppercase;
     color: var(--dim);
   }
   .ltab:hover { border-color: rgba(90,212,255,0.35); color: #bfe8ff; }
@@ -547,32 +580,32 @@
   .lrow:last-child { border-bottom: none; }
   .lrow.you { background: rgba(90,212,255,0.07); box-shadow: inset 2px 0 0 var(--cyan); }
   .lrow .rk {
-    font: 400 11px/1 var(--mono); color: var(--dim); font-variant-numeric: tabular-nums;
+    font: 500 13px/1 var(--mono); color: var(--dim); font-variant-numeric: tabular-nums;
   }
   .lrow.you .rk { color: var(--cyan); }
   .lrow canvas { display: block; width: 104px; height: auto; border-radius: 4px; background: #04070d; }
   .lrow .dt {
-    font: 400 9.5px/1.7 var(--mono); color: var(--dim);
+    font: 400 12px/1.65 var(--mono); color: var(--dim);
     letter-spacing: 0.03em; font-variant-numeric: tabular-nums;
   }
   .lrow .dt b { color: #bfd8e8; font-weight: 500; }
   .lrow .dt i { font-style: normal; color: var(--ember); }
   .lrow .sc {
     text-align: right; white-space: nowrap;
-    font: 300 19px/1 var(--sans); color: var(--amber);
+    font: 350 23px/1 var(--sans); color: var(--amber);
     font-variant-numeric: tabular-nums;
   }
   /* a board ranked on coverage is reading a gain, not a cost, so it does not
      take the warm colour that everywhere else means spending */
   #logBoard.gain .sc { color: var(--mint); }
   .lrow .sc em {
-    font-style: normal; font-size: 8.5px; letter-spacing: 0.14em;
+    font-style: normal; font-size: 10px; letter-spacing: 0.11em;
     margin-left: 3px; font-family: var(--mono); color: var(--dim);
   }
   #logEmpty {
-    margin-top: 9px; padding: 12px 14px; border-radius: 10px;
+    margin-top: 11px; padding: 15px 16px; border-radius: 10px;
     background: rgba(255,255,255,0.02); border: 1px dashed rgba(255,255,255,0.1);
-    font: 400 11px/1.6 var(--sans); color: #93a6bb;
+    font: 400 14px/1.6 var(--sans); color: #9bafc2;
   }
   #logEmpty:empty { display: none; }
 
@@ -580,7 +613,7 @@
   #logSlug {
     margin-top: 12px; padding: 11px 14px; border-radius: 11px;
     background: rgba(255,192,120,0.06); border: 1px solid rgba(255,192,120,0.22);
-    font: 400 12px/1.6 var(--sans); color: #e4c9a6;
+    font: 400 14px/1.6 var(--sans); color: #e4c9a6;
   }
   #logSlug:empty { display: none; }
   #logSlug b { color: var(--amber); font-weight: 600; }
@@ -596,11 +629,11 @@
   #rigSummary { margin-top: 10px; }
   /* an instrument with nothing on it still says so, and says where the
      levels come from — this is the spot a player goes looking */
-  .rnone { font: 400 11.5px/1.5 var(--sans); color: #93a6bb; }
+  .rnone { font: 400 14px/1.55 var(--sans); color: #9bafc2; }
   .rchip {
     display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px;
     background: rgba(90,212,255,0.07); border: 1px solid rgba(90,212,255,0.16);
-    font: 600 8px/1 var(--mono); letter-spacing: 0.12em; color: #a9d8ef;
+    font: 650 10px/1 var(--mono); letter-spacing: 0.1em; color: #a9d8ef;
   }
   .rchip u { text-decoration: none; display: flex; gap: 3px; }
   .rchip u i {
@@ -612,7 +645,6 @@
      sample you built yourself */
   .scard.ghost {
     border-style: dashed; color: var(--dim);
-    display: flex; flex-direction: column; justify-content: center;
   }
   .scard.ghost .nm { color: var(--cyan); }
   .scard .ed {
@@ -773,7 +805,11 @@
 
   /* Keep the same reading order on narrower windows. */
   @media (max-width: 1040px) {
+    #benchBar { grid-template-columns: auto 1fr; }
+    #benchNav { grid-row: 2; grid-column: 1 / -1; width: 100%; }
+    #benchDo { grid-column: 2; }
     #benchDoc { padding-left: 20px; padding-right: 20px; }
+    #samplePick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #secMode   { order: 1; }
     #secSample { order: 2; }
     #secDraft  { order: 3; }
@@ -786,14 +822,23 @@
     #hints { display: none; }
     #editor { padding: 12px 12px 10px; }
     #edName { width: 140px; }
-    #benchBar { padding: 11px 14px; gap: 12px; }
+    #benchBar { display: flex; padding: 11px 14px; gap: 12px; }
+    #benchId { min-width: 0; }
+    #benchId .mark { display: none; }
+    #benchDo { margin-left: auto; }
+    #wipeBtn { display: none !important; }
+    #howBtn .btn-label { display: none; }
+    #howBtn { width: 42px; padding: 0; }
     #benchDoc { padding: 20px 14px 70px; }
-    #benchNav { margin: 0; width: 100%; }
+    #benchNav { margin: 0; width: 100%; order: 3; overflow-x: auto; justify-content: flex-start; }
+    .bnav { flex: 1 0 auto; justify-content: center; }
     /* the bar wraps to three rows down here, so a jump has further to clear */
     .bsec { scroll-margin-top: 186px; }
     #secReport { padding: 20px 18px 18px; }
     #secReport h1 { font-size: 24px; }
     .bsec { padding: 17px 18px 19px; }
+    #modePick, #samplePick { grid-template-columns: minmax(0, 1fr); }
+    .scard { min-height: 0; }
     #reportBody, #draft { grid-template-columns: minmax(0, 1fr); }
     .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
     .lrow { grid-template-columns: 18px 80px 1fr; }
@@ -887,29 +932,29 @@
     </div>
 
     <nav id="benchNav">
-      <button class="bnav" data-sec="secMode">Mode</button>
-      <button class="bnav" data-sec="secSample">Sample</button>
-      <button class="bnav" data-sec="secDraft">Upgrades<b id="navPicks"></b></button>
-      <button class="bnav" id="navReport" data-sec="secReport">Report</button>
-      <button class="bnav" data-sec="secLog">Logbook</button>
+      <button class="bnav" data-sec="secMode"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/><circle cx="12" cy="12" r="8"/></svg>Mode</button>
+      <button class="bnav" data-sec="secSample"><svg class="ui-icon" viewBox="0 0 24 24"><circle cx="7" cy="8" r="2.5"/><circle cx="17" cy="8" r="2.5"/><circle cx="12" cy="17" r="2.5"/><path d="m9 9.5 2 5m4-5-2 5M9.5 8h5"/></svg>Sample</button>
+      <button class="bnav" data-sec="secDraft"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M12 3v5m0 8v5M3 12h5m8 0h5"/><circle cx="12" cy="12" r="4"/></svg>Upgrades<b id="navPicks"></b></button>
+      <button class="bnav" id="navReport" data-sec="secReport"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6zM9 10h6m-6 4h6m-6 4h4"/></svg>Report</button>
+      <button class="bnav" data-sec="secLog"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2zM8 8h8m-8 4h8"/></svg>Logbook</button>
     </nav>
 
     <div id="benchDo">
-      <button id="wipeBtn" class="bbtn ghost">Reset upgrades</button>
-      <button id="howBtn" class="bbtn ghost">Field guide</button>
-      <button id="beginBtn" class="bbtn">Begin session</button>
+      <button id="wipeBtn" class="bbtn ghost"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M4 7h16m-10 4v6m4-6v6M8 7l1-3h6l1 3m2 0-1 14H7L6 7"/></svg><span class="btn-label">Reset</span></button>
+      <button id="howBtn" class="bbtn ghost"><svg class="ui-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.3 2.3 0 1 1 3.5 2c-.9.6-1.3 1.1-1.3 2m0 3.5v.1"/></svg><span class="btn-label">Guide</span></button>
+      <button id="beginBtn" class="bbtn"><svg class="ui-icon" viewBox="0 0 24 24"><path d="m9 5 10 7-10 7z"/></svg><span class="btn-label">Begin</span></button>
     </div>
   </div>
 
   <div id="benchDoc">
     <div class="bcol">
       <section class="bsec" id="secMode">
-        <div class="shead"><h2>Mode</h2><span class="meta">What the session rations</span></div>
+        <div class="shead"><h2>Mode</h2></div>
         <div id="modePick"></div>
       </section>
 
       <section class="bsec" id="secSample">
-        <div class="shead"><h2>Sample</h2><span class="meta">What you are looking at</span></div>
+        <div class="shead"><h2>Sample</h2></div>
         <div id="samplePick"></div>
       </section>
 
@@ -1069,6 +1114,12 @@
   const tTitle = el("tTitle"), tBody = el("tBody"), tExtra = el("tExtra");
   const tDots = el("tDots"), tEyebrow = el("tEyebrow"), tSkip = el("tSkip");
   const tBack = el("tBack"), tNext = el("tNext"), tSkipBtn = el("tSkipBtn");
+
+  function setButtonLabel(button, text) {
+    const label = button.querySelector(".btn-label");
+    if (label) label.textContent = text;
+    else button.textContent = text;
+  }
 
   // ---------------------------------------------------------------------
   // Small colour helpers. Art definitions below are authored as hex so the
@@ -1432,7 +1483,7 @@
       id: "graphene",
       name: "Doped 2D lattice",
       tag: "Synthetic · carbon · 152 columns",
-      blurb: "A single sheet of light carbon with three substitutions hidden in it. Even ground, even columns — what it costs you is dose, not footing.",
+      blurb: "Even footing, light atoms, and three hidden substitutions. A clean place to learn dose control.",
       spawn: 0,
       build: graphene,
     },
@@ -1440,7 +1491,7 @@
       id: "scandate",
       name: "Perovskite scandate",
       tag: "Measured · Pr / Sc / O · 203 columns",
-      blurb: "Traced off a real 200-iteration phase reconstruction. Heavy cation rows are solid ground; the oxygen columns bridging them are small, they drift, and they take a third of the dose the cations do. <a class=\"paper\" href=\"https://doi.org/10.1126/science.abg2533\" target=\"_blank\" rel=\"noopener noreferrer\">Chen et al., Science (2021)</a>.",
+      blurb: "Heavy cation rows and fragile, drifting oxygen bridges. From <a class=\"paper\" href=\"https://doi.org/10.1126/science.abg2533\" target=\"_blank\" rel=\"noopener noreferrer\">Chen et al. (2021)</a>.",
       spawn: 1,
       build: scandate,
     },
@@ -1448,7 +1499,7 @@
       id: "mepedf",
       name: "Twisted bilayer WSe₂",
       tag: "Measured · W / Se · 200 columns",
-      blurb: "Subpixel column coordinates extracted from the real Fig. 1E EDF phase reconstruction. The soliton bends the two projected lattices through one continuous measured field; only the W/Se labels are intensity-based inferences. <a class=\"paper\" href=\"https://doi.org/10.1126/science.adw7751\" target=\"_blank\" rel=\"noopener noreferrer\">Zhang et al., Science (2025)</a>.",
+      blurb: "A measured moiré soliton bends two projected lattices through one field. From <a class=\"paper\" href=\"https://doi.org/10.1126/science.adw7751\" target=\"_blank\" rel=\"noopener noreferrer\">Zhang et al. (2025)</a>.",
       spawn: 10,
       build: mepEdf,
     },
@@ -1585,8 +1636,8 @@
   const MODES = [
     {
       id: "session", name: "Dose-limited session",
-      tag: `Campaign · ${DOSE_BUDGET} electrons · earns upgrades`,
-      blurb: "One sample's worth of dose and no clock. Every electron you spend is sample you do not get back, and blanking the beam is what makes the budget stretch.",
+      tag: `${DOSE_BUDGET} electrons · upgrades`,
+      blurb: "Make one specimen last. Blank the beam between scan positions to stretch your dose.",
       budget: true, seconds: 0, winFrac: WIN_FRAC, earns: true,
       hints: [{ k: ["A", "D"], t: "move" }, { k: ["Space"], t: "jump" },
               { k: ["Shift"], t: "blank the beam", hl: 1 }, { k: ["Esc"], t: "setup & upgrades" },
@@ -1594,16 +1645,16 @@
     },
     {
       id: "sprint", name: `${SPRINT_SECONDS}-second acquisition`,
-      tag: `Timed · ${SPRINT_SECONDS}s · dose unlimited · earns upgrades`,
-      blurb: "Stage drift limits the acquisition window to 30 seconds. Dose is free — blanking only costs you seconds. Cover as much lattice as the window allows.",
+      tag: `${SPRINT_SECONDS}s timer · unlimited dose · upgrades`,
+      blurb: "Outrun stage drift. Dose is free, so cover as much lattice as the clock allows.",
       budget: false, seconds: SPRINT_SECONDS, winFrac: WIN_FRAC, earns: true,
       hints: [{ k: ["A", "D"], t: "move" }, { k: ["Space"], t: "jump" },
               { k: ["Esc"], t: "setup & upgrades" }, { k: ["R"], t: "restart the clock" }],
     },
     {
       id: "open", name: "Open survey",
-      tag: "Untimed · dose unlimited · every column",
-      blurb: "No clock and no budget: take as long as you like and phase the whole lattice. Knock-out is still permanent, so it can still be ruined — just not hurried.",
+      tag: "Untimed · unlimited dose · practice",
+      blurb: "Explore at your own pace and phase every column. Damage is still permanent.",
       budget: false, seconds: 0, winFrac: 1, earns: false,
       hints: [{ k: ["A", "D"], t: "move" }, { k: ["Space"], t: "jump" },
               { k: ["Shift"], t: "blank the beam", hl: 1 },
@@ -2406,13 +2457,13 @@
     wipeArmed = 0;
     clearTimeout(wipeTimer);
     wipeBtn.classList.remove("danger");
-    wipeBtn.textContent = "Reset upgrades";
+    setButtonLabel(wipeBtn, "Reset");
   }
   wipeBtn.addEventListener("click", () => {
     if (!wipeArmed) {
       wipeArmed = 1;
       wipeBtn.classList.add("danger");
-      wipeBtn.textContent = "Confirm reset";
+      setButtonLabel(wipeBtn, "Confirm");
       clearTimeout(wipeTimer);
       wipeTimer = setTimeout(disarmWipe, 4000);
       return;
@@ -2978,8 +3029,11 @@
     const b = document.createElement("div");
     b.tabIndex = 0;
     b.setAttribute("role", "button");
+    b.setAttribute("aria-pressed", on ? "true" : "false");
     b.className = "scard" + (on ? " on" : "") + (extra ? " " + extra : "");
-    b.innerHTML = `<span class="nm">${nm}</span>` +
+    const visualKind = (extra || "default").split(" ")[0];
+    b.innerHTML = `<span class="visual" aria-hidden="true">${choiceVisual(visualKind)}</span>` +
+                  `<span class="nm">${nm}</span>` +
                   `<span class="tg">${tg}</span>` +
                   `<span class="bl">${bl}</span>`;
     b.addEventListener("keydown", ev => {
@@ -2994,6 +3048,24 @@
     return b;
   }
 
+  // These tiny specimen diagrams carry the first read of each choice, using
+  // the same clocks, columns and grids that appear inside the game.
+  function choiceVisual(kind) {
+    const attrs = `viewBox="0 0 48 48" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"`;
+    const art = {
+      "mode-session": `<circle cx="24" cy="24" r="12"/><path d="M24 5v7M24 36v7M5 24h7M36 24h7"/><path d="m20 24 3 3 6-7"/><circle cx="24" cy="24" r="3" fill="currentColor" stroke="none"/>`,
+      "mode-sprint": `<circle cx="24" cy="26" r="15"/><path d="M19 5h10M24 11V6m0 20 7-7M35 13l3-3"/><circle cx="24" cy="26" r="2" fill="currentColor" stroke="none"/>`,
+      "mode-open": `<path d="M7 28c5-8 11-12 17-12s12 4 17 12c-5 7-11 10-17 10S12 35 7 28Z"/><circle cx="24" cy="27" r="6"/><circle cx="24" cy="27" r="2" fill="currentColor" stroke="none"/>`,
+      "sample-graphene": `<path d="m13 13 11-6 11 6v12l-11 6-11-6Z"/><path d="m24 31 11 6"/><circle cx="13" cy="13" r="3" fill="currentColor"/><circle cx="35" cy="13" r="3" fill="currentColor"/><circle cx="35" cy="25" r="3" fill="currentColor"/><circle cx="24" cy="31" r="3" fill="currentColor"/><circle cx="13" cy="25" r="3" fill="currentColor"/><circle cx="35" cy="37" r="3" fill="#7dffc4" stroke="none"/>`,
+      "sample-scandate": `<circle cx="12" cy="13" r="6" fill="currentColor" opacity=".9"/><circle cx="36" cy="13" r="6" fill="currentColor" opacity=".9"/><circle cx="12" cy="36" r="6" fill="currentColor" opacity=".9"/><circle cx="36" cy="36" r="6" fill="currentColor" opacity=".9"/><circle cx="24" cy="24" r="3" fill="#7dffc4" stroke="none"/><path d="M17 17l5 5m9-5-5 5m-9 9 5-5m9 5-5-5" opacity=".55"/>`,
+      "sample-mepedf": `<path d="M7 13c8-6 16 5 24 0s10 1 10 1M7 25c8-6 16 5 24 0s10 1 10 1M7 37c8-6 16 5 24 0s10 1 10 1"/><circle cx="14" cy="9" r="3" fill="currentColor"/><circle cx="25" cy="17" r="2" fill="#7dffc4" stroke="none"/><circle cx="15" cy="30" r="2" fill="#7dffc4" stroke="none"/><circle cx="34" cy="33" r="3" fill="currentColor"/>`,
+      "sample-custom": `<path d="M8 8h12v12H8zm20 0h12v12H28zM8 28h12v12H8z"/><path d="M28 34h12m-6-6v12"/>`,
+      "sample-add": `<path d="M9 9h12v12H9zm18 0h12v12H27zM9 27h12v12H9z"/><path d="M27 33h12m-6-6v12"/>`,
+      "default": `<circle cx="24" cy="24" r="13"/><circle cx="24" cy="24" r="4" fill="currentColor" stroke="none"/><path d="M24 5v6M24 37v6M5 24h6M37 24h6"/>`,
+    };
+    return `<svg ${attrs}>${art[kind] || art.default}</svg>`;
+  }
+
   // The mode is picked in the same rail and the same shape as the sample,
   // because they are the same kind of decision: what you are looking at, and
   // what you are short of while you look at it.
@@ -3002,7 +3074,7 @@
     for (const m of MODES) {
       const best = save.bests[m.id] | 0;
       const b = scardEl(m.id === save.mode, m.name,
-        m.tag + (best ? ` · best ${best}%` : ""), m.blurb);
+        m.tag + (best ? ` · best ${best}%` : ""), m.blurb, `mode-${m.id}`);
       b.addEventListener("click", () => {
         if (m.id === save.mode) return;
         save.mode = m.id;
@@ -3023,7 +3095,7 @@
   function renderSamples() {
     samplePick.innerHTML = "";
     for (const sample of SAMPLES) {
-      const b = scardEl(sample.id === SAMPLE.id, sample.name, sample.tag, sample.blurb);
+      const b = scardEl(sample.id === SAMPLE.id, sample.name, sample.tag, sample.blurb, `sample-${sample.id}`);
       b.addEventListener("click", () => {
         if (sample.id === SAMPLE.id) return;
         loadSample(sample.id);
@@ -3038,7 +3110,7 @@
       const n = d.cells.length;
       const b = scardEl(on, `<span class="ed">Edit</span>${esc(d.name)}`,
         `Your design · ${n} column${n === 1 ? "" : "s"}`,
-        "A lattice you built. Same dose model, same physics — mass still decides what survives being stood on.");
+        "Your own lattice, tested with the same dose and damage rules.", "sample-custom");
       b.addEventListener("click", (ev) => {
         if (ev.target.classList.contains("ed")) { openEditor(d); return; }
         if (on) return;
@@ -3052,8 +3124,8 @@
     }
     const add = scardEl(false, "＋ Design a sample",
       `Sandbox · ${save.designs.length}/${MAX_DESIGNS} saved`,
-      "Lay out your own lattice column by column. Element mass sets how wide a platform is and how much dose it survives — the same rules the measured samples run on.",
-      "ghost");
+      "Build a lattice, choose its elements, then test it in any mode.",
+      "sample-add ghost");
     add.addEventListener("click", () => openEditor(null));
     samplePick.appendChild(add);
 
@@ -3105,7 +3177,7 @@
         ? `Pick 1 of ${draftOffer.length} · ${save.picks} picks remaining`
         : `Pick 1 of ${draftOffer.length}`;
       labDone.style.display = "none";
-      beginBtn.textContent = "Skip and begin session";
+      setButtonLabel(beginBtn, "Skip & begin");
       beginBtn.classList.add("ghost");
       for (const u of draftOffer) {
         const lvl = levelOf(u);
@@ -3127,7 +3199,7 @@
         : "Every line on the column is at its limit. Whatever the sample has left to show you, this is the instrument that has to show it.";
       pickLeft.textContent = "";
       labDone.style.display = "block";
-      beginBtn.textContent = "Begin session";
+      setButtonLabel(beginBtn, "Begin");
       beginBtn.classList.remove("ghost");
       labDone.textContent = anyLeft
         ? `${bestLabel}: ${best}% of the lattice recovered.`
