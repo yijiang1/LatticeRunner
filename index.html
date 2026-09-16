@@ -199,14 +199,8 @@
   }
 
   /* ------------------------------------------------------------- the bench
-     Everything that happens between sessions — the run just finished, the
-     mode, sample, upgrade draft, run report and board — is one scrolling
-     page rather than a dialog laid over the game. The card this replaces
-     had to scroll inside a fixed frame, so its lower sections were
-     invisible unless you already knew they were there: players kept asking
-     where the upgrades had gone while standing on top of them. A page puts
-     every section in the document, names all of them in a bar that stays
-     put, and lets the browser do the scrolling. */
+     Setup and records live on one scrolling page. The end-game dialog owns
+     results and upgrade choices; this page shows the installed rig only. */
   #bench {
     position: fixed; inset: 0; z-index: 5; display: none;
     overflow-y: auto; overscroll-behavior: contain; scrollbar-width: thin;
@@ -225,11 +219,10 @@
     text-transform: uppercase; color: var(--dim);
   }
 
-  /* the bar names every section from wherever you are on the page, and
-     carries the count of picks still waiting to be spent */
+  /* Keep the run controls visible while the setup page scrolls. */
   #benchBar {
     position: sticky; top: 0; z-index: 3;
-    display: grid; grid-template-columns: auto minmax(360px, 1fr) auto;
+    display: flex; justify-content: space-between;
     align-items: center; gap: 18px;
     padding: 15px 30px; border-bottom: 1px solid var(--line);
     background: rgba(6,10,18,0.9);
@@ -240,26 +233,7 @@
   #benchId .mark { width: 42px; height: 42px; border-radius: 12px; }
   #benchId .eyebrow { font-size: 9.5px; }
   #labTitle { margin-top: 6px; font: 500 17px/1 var(--sans); color: var(--mint); }
-  #benchNav {
-    display: flex; justify-content: center; gap: 4px; min-width: 0;
-    padding: 4px; margin: 0 auto; border-radius: 12px;
-    background: rgba(120,200,255,0.035); border: 1px solid rgba(120,200,255,0.06);
-  }
-  .bnav {
-    display: flex; align-items: center; gap: 7px; cursor: pointer;
-    padding: 10px 12px; border-radius: 8px;
-    background: none; border: 1px solid transparent; color: var(--dim);
-    font: 650 10px/1 var(--mono); letter-spacing: 0.11em; text-transform: uppercase;
-    transition: color .13s, background .13s, border-color .13s;
-  }
-  .bnav:hover { color: var(--ice); background: rgba(120,200,255,0.08); }
-  .bnav .ui-icon { width: 15px; height: 15px; }
-  .bnav b {
-    padding: 3px 6px; border-radius: 20px; font: 700 8px/1 var(--mono);
-    color: #05131c; background: var(--mint); box-shadow: 0 0 12px rgba(125,255,196,0.5);
-  }
-  .bnav b:empty { display: none; }
-  #benchDo { display: flex; gap: 8px; align-items: center; justify-content: flex-end; }
+  #benchDo { display: flex; gap: 8px; align-items: center; justify-content: flex-end; margin-left: auto; }
   .bbtn {
     display: inline-flex; align-items: center; justify-content: center; gap: 8px;
     cursor: pointer; min-height: 42px; padding: 11px 16px; border-radius: 10px; border: 1px solid transparent;
@@ -279,6 +253,8 @@
     color: #ffb499; background: rgba(255,122,77,0.1); border-color: rgba(255,122,77,0.42);
   }
   .bbtn.danger:hover { background: rgba(255,122,77,0.18); }
+  #wipeBtn { min-height: 34px; padding: 8px 11px; margin-left: auto; font-size: 10px; }
+  #wipeBtn .ui-icon { width: 14px; height: 14px; }
   .ui-icon {
     width: 17px; height: 17px; flex: 0 0 auto; display: inline-block;
     stroke: currentColor; fill: none; stroke-width: 1.7; stroke-linecap: round; stroke-linejoin: round;
@@ -296,11 +272,6 @@
     background: linear-gradient(180deg, rgba(11,18,31,0.9), rgba(7,12,21,0.9));
     transition: border-color .3s ease, box-shadow .3s ease;
   }
-  /* a jump from the bar lands somewhere, and this is what says where */
-  .bsec.jump {
-    border-color: rgba(125,255,196,0.55);
-    box-shadow: 0 0 0 3px rgba(125,255,196,0.09);
-  }
   .shead {
     display: flex; align-items: center; gap: 10px 14px; flex-wrap: wrap;
     padding-bottom: 15px; margin-bottom: 20px;
@@ -314,152 +285,33 @@
     margin-left: auto; font: 400 11px/1.4 var(--mono);
     letter-spacing: 0.05em; color: var(--dim); text-align: right;
   }
-  .subhead {
-    margin-top: 18px; padding-top: 14px;
-    border-top: 1px solid rgba(255,255,255,0.05);
-    font: 650 11px/1 var(--mono); letter-spacing: 0.17em;
-    text-transform: uppercase; color: var(--dim);
-  }
   .bsec p {
     margin: 0 0 15px; font: 400 14px/1.6 var(--sans);
     color: #9fbdd0; max-width: 62ch;
   }
 
-  /* --------------------------------------------------------- scan report */
-  #secReport { padding: 26px 26px 24px; }
-  #secReport h1 {
-    margin: 11px 0 0; font: 300 29px/1.1 var(--sans);
-    letter-spacing: -0.015em; color: var(--mint);
+  /* The end dialog owns the score; this is just its visual keepsake. */
+  #secReport { padding: 24px 28px; }
+  #lastRunBody {
+    display: grid; grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    gap: 22px; align-items: center;
   }
-  #secReport p { margin: 12px 0 0; font-size: 13px; }
-  #reportBody {
-    display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-    gap: 18px; align-items: start; margin-top: 16px;
-  }
-  #secReport .actions button { flex: 0 0 auto; padding: 13px 26px; }
-  .stats {
-    display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 1px;
-    background: rgba(255,255,255,0.07); border: 1px solid rgba(255,255,255,0.07);
-    border-radius: 11px; overflow: hidden; margin: 20px 0 0;
-  }
-  .stats div { background: #0a1220; padding: 12px 5px; text-align: center; }
-  .stats .n {
-    font: 300 22px/1 var(--sans); color: var(--ice);
-    font-variant-numeric: tabular-nums;
-  }
-  .stats .n small { font-size: 11px; color: var(--dim); }
-  .stats .l {
-    margin-top: 6px; font: 500 7.5px/1 var(--mono); letter-spacing: 0.15em;
-    color: var(--dim); text-transform: uppercase;
-  }
+  #lastRunInfo { min-width: 0; }
+  #lastRunInfo .eyebrow { font-size: 11px; letter-spacing: .15em; }
+  #lastRunInfo h3 { margin: 9px 0 0; font: 550 25px/1.2 var(--sans); }
   #thumbWrap {
-    position: relative; border-radius: 11px; overflow: hidden;
+    position: relative; border-radius: 12px; overflow: hidden;
     border: 1px solid rgba(255,255,255,0.08); background: #04070d;
   }
   #thumb { display: block; width: 100%; height: auto; }
   #thumbWrap span {
     position: absolute; left: 10px; bottom: 8px;
-    font: 500 7.5px/1 var(--mono); letter-spacing: 0.18em;
+    font: 600 9px/1 var(--mono); letter-spacing: 0.14em;
     text-transform: uppercase; color: rgba(223,242,255,0.55);
     text-shadow: 0 1px 4px rgba(0,0,0,0.9);
   }
-  .actions { display: flex; gap: 10px; margin-top: 20px; }
-  .actions button {
-    flex: 1; padding: 13px; border: none; border-radius: 11px; cursor: pointer;
-    font: 600 10.5px/1 var(--mono); letter-spacing: 0.2em; text-transform: uppercase;
-    color: #05131c; background: linear-gradient(180deg, #8affd0, #45d3a5);
-    box-shadow: 0 12px 32px rgba(80,220,170,0.22);
-    transition: transform 0.12s ease, filter 0.12s ease;
-  }
-  .actions button:hover { filter: brightness(1.08); transform: translateY(-1px); }
-  .actions button:active { transform: translateY(0); }
-  .actions button.ghost {
-    color: var(--ice); background: rgba(120,200,255,0.07);
-    border: 1px solid var(--line-2); box-shadow: none;
-  }
-  .actions button.ghost:hover { background: rgba(120,200,255,0.13); }
-  .actions button.ghost.danger {
-    color: #ffb499; background: rgba(255,122,77,0.1); border-color: rgba(255,122,77,0.42);
-  }
-  .actions button.ghost.danger:hover { background: rgba(255,122,77,0.17); }
 
-  /* ---------------------------------------------------- upgrades earned */
-  #earned {
-    display: flex; align-items: center; gap: 14px; flex-wrap: wrap;
-    padding: 13px 16px; border-radius: 11px;
-    background: linear-gradient(180deg, rgba(90,212,255,0.09), rgba(90,212,255,0.03));
-    border: 1px solid rgba(90,212,255,0.2);
-  }
-  #earned .big {
-    font: 300 26px/1 var(--sans); color: var(--cyan);
-    font-variant-numeric: tabular-nums; white-space: nowrap;
-  }
-  #earned .big em {
-    font-style: normal; font-size: 9px; letter-spacing: 0.2em; margin-left: 4px;
-    text-transform: uppercase; font-family: var(--mono); color: var(--dim);
-  }
-  #earnBrk { font: 400 10.5px/1.55 var(--mono); color: var(--dim); letter-spacing: 0.02em; }
-
-  /* ------------------------------------------------------- upgrade draft */
-  #labDone { display: none; }
-  /* the count of picks waiting is the loudest thing in the section header,
-     because it is the one number that tells you there is something to do */
-  #pickLeft {
-    margin-left: auto; font: 650 10.5px/1 var(--mono); letter-spacing: 0.12em;
-    text-transform: uppercase; color: var(--dim);
-  }
-  #pickLeft:not(:empty) {
-    padding: 6px 11px; border-radius: 20px; color: var(--mint);
-    background: rgba(125,255,196,0.13); border: 1px solid rgba(125,255,196,0.3);
-  }
-  #upgradeNotice {
-    display: none; align-items: center; gap: 12px;
-    margin: 0 0 16px; padding: 12px 14px; border-radius: 11px;
-    color: #bfffe1; background: rgba(125,255,196,0.09);
-    border: 1px solid rgba(125,255,196,0.32);
-    box-shadow: 0 0 24px rgba(90,220,170,0.08);
-  }
-  #upgradeNotice.on { display: flex; animation: upgradeReady .45s ease; }
-  @keyframes upgradeReady {
-    from { opacity: 0; transform: translateY(-5px); }
-  }
-  #upgradeNotice .signal {
-    width: 9px; height: 9px; flex: 0 0 auto; border-radius: 50%;
-    background: var(--mint); box-shadow: 0 0 13px rgba(125,255,196,0.8);
-  }
-  #upgradeNotice strong {
-    display: block; font: 700 11.5px/1 var(--mono); letter-spacing: 0.14em;
-    text-transform: uppercase;
-  }
-  #upgradeNotice span:last-child {
-    display: block; margin-top: 6px; font: 400 13.5px/1.5 var(--sans);
-    color: #9fcbb8;
-  }
-  #upgradeRules {
-    margin: 0 0 16px; padding: 14px; border-radius: 11px;
-    background: rgba(90,212,255,0.045); border: 1px solid rgba(90,212,255,0.16);
-  }
-  #upgradeRules h3 {
-    margin: 0 0 9px; font: 700 12px/1 var(--mono); letter-spacing: 0.14em;
-    text-transform: uppercase; color: var(--cyan);
-  }
-  #upgradeRules p { margin: 0 0 13px; font-size: 14px; line-height: 1.55; }
-  #upgradeTiers { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 7px; }
-  .upgradeTier {
-    padding: 9px 10px; border-radius: 8px; text-align: center;
-    background: rgba(4,8,15,0.45); border: 1px solid rgba(255,255,255,0.07);
-    font: 600 10.5px/1.4 var(--mono); letter-spacing: 0.06em;
-    text-transform: uppercase; color: var(--dim);
-  }
-  .upgradeTier b { display: block; margin-bottom: 5px; font: 550 23px/1 var(--sans); color: var(--ice); }
-  #upgradeEligibility {
-    margin-top: 12px; font: 650 11.5px/1.5 var(--mono); letter-spacing: 0.03em;
-    color: var(--mint);
-  }
-  #upgradeEligibility.off { color: #ffc078; }
-  #upgradeProgress { margin-top: 7px; font: 400 12px/1.5 var(--mono); color: var(--dim); }
-  #draft { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
-  #draft:empty { display: none; }
+  /* ------------------------------------------------------- upgrade choices */
   .dcard {
     display: flex; flex-direction: column; gap: 8px; text-align: left;
     padding: 15px 14px; border-radius: 12px; cursor: pointer; font: inherit; color: inherit;
@@ -493,12 +345,6 @@
     box-shadow: 0 0 9px rgba(90,212,255,0.65);
   }
   .dots i.next { border-color: var(--mint); border-width: 1.5px; box-shadow: 0 0 7px rgba(125,255,196,0.4); }
-
-  #labDone {
-    padding: 14px 16px; border-radius: 11px;
-    background: rgba(125,255,196,0.06); border: 1px solid rgba(125,255,196,0.2);
-    font: 400 14px/1.6 var(--sans); color: #a8e6c8;
-  }
 
   /* --------------------------------------------------- sample picker */
   #samplePick, #modePick { display: grid; gap: 12px; }
@@ -609,7 +455,7 @@
   }
   #logEmpty:empty { display: none; }
 
-  /* the one line on the scan report that says where the run landed */
+  /* the one line on the last-run card that says where the run landed */
   #logSlug {
     margin-top: 12px; padding: 11px 14px; border-radius: 11px;
     background: rgba(255,192,120,0.06); border: 1px solid rgba(255,192,120,0.22);
@@ -622,14 +468,61 @@
   }
   #logSlug.miss b { color: #bfd8e8; }
 
+  /* A finished run pauses here before the player returns to the bench. */
+  #endScreen {
+    position: fixed; inset: 0; z-index: 20; display: none; place-items: center;
+    padding: 24px; overflow-y: auto; background: rgba(3, 7, 13, 0.9);
+    backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+  }
+  #endScreen.on { display: grid; }
+  #endDialog {
+    width: min(900px, 100%); max-height: calc(100vh - 48px); overflow-y: auto;
+    padding: 30px; border-radius: 22px; color: var(--ice);
+    border: 1px solid rgba(120,200,255,0.27);
+    background: linear-gradient(160deg, #111e2c, #080e19 68%);
+    box-shadow: 0 34px 100px rgba(0,0,0,0.7);
+  }
+  #endDialog .eyebrow { font-size: 11px; color: var(--cyan); }
+  #endTitle { margin: 9px 0 8px; font: 550 clamp(28px, 4vw, 42px)/1.1 var(--sans); letter-spacing: -0.03em; }
+  #endSummary { margin: 0; max-width: 68ch; color: #a7bed0; font: 400 15px/1.55 var(--sans); }
+  #endStats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 24px 0; }
+  .endStat { padding: 15px 17px; border: 1px solid var(--line); border-radius: 12px; background: rgba(90,212,255,0.045); }
+  .endStat b { display: block; font: 500 29px/1 var(--sans); color: var(--ice); font-variant-numeric: tabular-nums; }
+  .endStat span { display: block; margin-top: 7px; color: var(--dim); font: 650 10px/1.3 var(--mono); letter-spacing: .1em; text-transform: uppercase; }
+  #endDraftHead { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; padding-top: 21px; border-top: 1px solid var(--line); }
+  #endDraftHead h3 { margin: 0; font: 600 22px/1.2 var(--sans); }
+  #endPickCount { color: var(--mint); font: 650 11px/1.4 var(--mono); letter-spacing: .09em; text-transform: uppercase; }
+  #endDraftNote { margin: 8px 0 16px; color: #9eb6c9; font: 400 14px/1.5 var(--sans); }
+  #endDraft { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; }
+  #endDraft .dcard { min-height: 168px; padding: 17px; }
+  #endDraft .dcard .nm { font-size: 16px; }
+  #endContinue { display: flex; justify-content: flex-end; gap: 10px; margin-top: 24px; }
+  #endContinue button { min-height: 44px; }
+  @media (max-width: 720px) {
+    #endScreen { padding: 12px; }
+    #endDialog { max-height: calc(100vh - 24px); padding: 22px; }
+    #endStats { grid-template-columns: repeat(2, 1fr); }
+    #endDraft { grid-template-columns: 1fr; }
+    #endDraft .dcard { min-height: 0; }
+    #endContinue { flex-wrap: wrap; }
+    #endContinue button { flex: 1 1 180px; }
+  }
+
   /* ------------------------------------------------- in-run rig strip */
-  #rig, #rigSummary { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  #rig { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
   #rig { margin-top: 11px; padding-top: 11px; border-top: 1px solid rgba(255,255,255,0.06); }
   #rig:empty { display: none; margin: 0; padding: 0; border: 0; }
-  #rigSummary { margin-top: 10px; }
-  /* an instrument with nothing on it still says so, and says where the
-     levels come from — this is the spot a player goes looking */
+  #rigSummary { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 11px; }
   .rnone { font: 400 14px/1.55 var(--sans); color: #9bafc2; }
+  .installed {
+    min-width: 0; padding: 16px 18px; border: 1px solid rgba(90,212,255,0.18);
+    border-radius: 12px; background: rgba(90,212,255,0.045);
+  }
+  .installed .top { display: flex; justify-content: space-between; gap: 12px; align-items: center; }
+  .installed .code { font: 700 10px/1 var(--mono); letter-spacing: .12em; color: var(--cyan); }
+  .installed .level { font: 600 10px/1 var(--mono); letter-spacing: .08em; color: var(--dim); text-transform: uppercase; }
+  .installed .name { display: block; margin-top: 12px; font: 600 16px/1.3 var(--sans); color: var(--ice); }
+  .installed .effect { display: block; margin-top: 6px; font: 400 13px/1.45 var(--sans); color: #a2d9bd; }
   .rchip {
     display: flex; align-items: center; gap: 6px; padding: 4px 8px; border-radius: 6px;
     background: rgba(90,212,255,0.07); border: 1px solid rgba(90,212,255,0.16);
@@ -805,9 +698,6 @@
 
   /* Keep the same reading order on narrower windows. */
   @media (max-width: 1040px) {
-    #benchBar { grid-template-columns: auto 1fr; }
-    #benchNav { grid-row: 2; grid-column: 1 / -1; width: 100%; }
-    #benchDo { grid-column: 2; }
     #benchDoc { padding-left: 20px; padding-right: 20px; }
     #samplePick { grid-template-columns: repeat(2, minmax(0, 1fr)); }
     #secMode   { order: 1; }
@@ -822,25 +712,18 @@
     #hints { display: none; }
     #editor { padding: 12px 12px 10px; }
     #edName { width: 140px; }
-    #benchBar { display: flex; padding: 11px 14px; gap: 12px; }
+    #benchBar { display: flex; flex-wrap: wrap; padding: 11px 14px; gap: 12px; }
     #benchId { min-width: 0; }
     #benchId .mark { display: none; }
     #benchDo { margin-left: auto; }
-    #wipeBtn { display: none !important; }
     #howBtn .btn-label { display: none; }
     #howBtn { width: 42px; padding: 0; }
     #benchDoc { padding: 20px 14px 70px; }
-    #benchNav { margin: 0; width: 100%; order: 3; overflow-x: auto; justify-content: flex-start; }
-    .bnav { flex: 1 0 auto; justify-content: center; }
-    /* the bar wraps to three rows down here, so a jump has further to clear */
-    .bsec { scroll-margin-top: 186px; }
-    #secReport { padding: 20px 18px 18px; }
-    #secReport h1 { font-size: 24px; }
+    #secReport { padding: 18px; }
     .bsec { padding: 17px 18px 19px; }
     #modePick, #samplePick { grid-template-columns: minmax(0, 1fr); }
     .scard { min-height: 0; }
-    #reportBody, #draft { grid-template-columns: minmax(0, 1fr); }
-    .stats { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    #lastRunBody { grid-template-columns: minmax(0, 1fr); }
     .lrow { grid-template-columns: 18px 80px 1fr; }
     .lrow canvas { width: 80px; }
     .lrow .sc { grid-column: 3; text-align: right; }
@@ -927,20 +810,11 @@
       </div>
       <div>
         <div class="eyebrow">Between sessions</div>
-        <div id="labTitle">Choose an upgrade</div>
+        <div id="labTitle">Rig ready</div>
       </div>
     </div>
 
-    <nav id="benchNav">
-      <button class="bnav" data-sec="secMode"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M5 12h14M12 5v14"/><circle cx="12" cy="12" r="8"/></svg>Mode</button>
-      <button class="bnav" data-sec="secSample"><svg class="ui-icon" viewBox="0 0 24 24"><circle cx="7" cy="8" r="2.5"/><circle cx="17" cy="8" r="2.5"/><circle cx="12" cy="17" r="2.5"/><path d="m9 9.5 2 5m4-5-2 5M9.5 8h5"/></svg>Sample</button>
-      <button class="bnav" data-sec="secDraft"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M12 3v5m0 8v5M3 12h5m8 0h5"/><circle cx="12" cy="12" r="4"/></svg>Upgrades<b id="navPicks"></b></button>
-      <button class="bnav" id="navReport" data-sec="secReport"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M6 3h9l3 3v15H6zM9 10h6m-6 4h6m-6 4h4"/></svg>Report</button>
-      <button class="bnav" data-sec="secLog"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M5 4h12a2 2 0 0 1 2 2v14H7a2 2 0 0 1-2-2zM8 8h8m-8 4h8"/></svg>Logbook</button>
-    </nav>
-
     <div id="benchDo">
-      <button id="wipeBtn" class="bbtn ghost"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M4 7h16m-10 4v6m4-6v6M8 7l1-3h6l1 3m2 0-1 14H7L6 7"/></svg><span class="btn-label">Reset</span></button>
       <button id="howBtn" class="bbtn ghost"><svg class="ui-icon" viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M9.8 9a2.3 2.3 0 1 1 3.5 2c-.9.6-1.3 1.1-1.3 2m0 3.5v.1"/></svg><span class="btn-label">Guide</span></button>
       <button id="beginBtn" class="bbtn"><svg class="ui-icon" viewBox="0 0 24 24"><path d="m9 5 10 7-10 7z"/></svg><span class="btn-label">Begin</span></button>
     </div>
@@ -959,51 +833,23 @@
       </section>
 
       <section class="bsec" id="secDraft">
-        <div class="shead"><h2>Upgrades</h2><span id="pickLeft"></span></div>
-        <div id="upgradeNotice" role="status" aria-live="polite">
-          <span class="signal" aria-hidden="true"></span>
-          <span><strong>New upgrade available</strong><span id="upgradeNoticeText"></span></span>
+        <div class="shead">
+          <h2>Current upgrades</h2>
+          <button id="wipeBtn" class="bbtn ghost"><svg class="ui-icon" viewBox="0 0 24 24"><path d="M4 7h16m-10 4v6m4-6v6M8 7l1-3h6l1 3m2 0-1 14H7L6 7"/></svg><span class="btn-label">Reset upgrades</span></button>
         </div>
-        <div id="upgradeRules">
-          <h3>When upgrades are awarded</h3>
-          <p>Finish a <strong>dose-limited session</strong> or <strong>30-second acquisition</strong> on a supplied sample. Each run awards picks based on the percentage resolved:</p>
-          <div id="upgradeTiers">
-            <div class="upgradeTier"><b>1</b>Any result</div>
-            <div class="upgradeTier"><b>2</b>40% or more</div>
-            <div class="upgradeTier"><b>3</b>70% or more</div>
-          </div>
-          <div id="upgradeEligibility"></div>
-          <div id="upgradeProgress"></div>
-        </div>
-        <p id="labText">Every option here is a real technique microscopists use to get more picture out of fewer electrons. What you take carries into every session from now on.</p>
-        <div id="draft"></div>
-        <div id="labDone"></div>
-        <div class="subhead">On the column</div>
         <div id="rigSummary"></div>
       </section>
 
       <section class="bsec" id="secReport">
-        <div class="eyebrow" id="reportEyebrow">Scan report</div>
-        <h1 id="overlayTitle">Reconstruction complete</h1>
-        <p id="overlayText"></p>
-        <div class="stats">
-          <div><div class="n" id="statPct">0<small>%</small></div><div class="l">Resolved</div></div>
-          <div><div class="n" id="statDose">0</div><div class="l">Dose spent</div></div>
-          <div><div class="n" id="statKo">0</div><div class="l">Knocked out</div></div>
-          <div><div class="n" id="statRe">0</div><div class="l">Re-inserts</div></div>
-          <div><div class="n" id="statNotes">0</div><div class="l">Notes</div></div>
-        </div>
-        <div id="reportBody">
+        <div class="shead"><h2>Last run</h2></div>
+        <div id="lastRunBody">
           <div id="thumbWrap"><canvas id="thumb"></canvas><span>Recovered phase image</span></div>
-          <div>
-            <div id="earned">
-              <div class="big"><span id="earnVal">1</span><em id="earnUnit">upgrades earned</em></div>
-              <div id="earnBrk"></div>
-            </div>
+          <div id="lastRunInfo">
+            <div class="eyebrow" id="reportEyebrow">Session</div>
+            <h3 id="overlayTitle">Reconstruction complete</h3>
             <div id="logSlug"></div>
           </div>
         </div>
-        <div class="actions"><button id="restartBtn">Scan again</button></div>
       </section>
 
       <section class="bsec" id="secLog">
@@ -1014,6 +860,27 @@
       </section>
     </div>
 
+  </div>
+</div>
+
+<div id="endScreen" role="presentation">
+  <div id="endDialog" role="dialog" aria-modal="true" aria-labelledby="endTitle" tabindex="-1">
+    <div class="eyebrow" id="endEyebrow">Session complete</div>
+    <h2 id="endTitle">Reconstruction solved</h2>
+    <p id="endSummary"></p>
+    <div id="endStats">
+      <div class="endStat"><b id="endPct">0%</b><span>Phased</span></div>
+      <div class="endStat"><b id="endCost">0</b><span id="endCostLabel">Electrons spent</span></div>
+      <div class="endStat"><b id="endDamage">0</b><span>Knocked out</span></div>
+      <div class="endStat"><b id="endReinsert">0</b><span>Re-inserts</span></div>
+    </div>
+    <div id="endDraftHead"><h3 id="endDraftTitle">Choose an upgrade</h3><span id="endPickCount"></span></div>
+    <p id="endDraftNote"></p>
+    <div id="endDraft"></div>
+    <div id="endContinue">
+      <button id="endSetup" class="bbtn ghost">Control page</button>
+      <button id="endPlay" class="bbtn">Play again</button>
+    </div>
   </div>
 </div>
 
@@ -1084,20 +951,14 @@
   const meterFill = el("meterFill"), meterPct = el("meterPct");
   const doseVal = el("doseVal"), doseFill = el("doseFill");
   const dmgVal = el("dmgVal"), beamState = el("beamState"), panel = el("panel");
-  const benchEl = el("bench"), overlayTitle = el("overlayTitle"), overlayText = el("overlayText");
-  const restartBtn = el("restartBtn"), warningEl = el("warning"), warnText = el("warnText");
+  const benchEl = el("bench"), overlayTitle = el("overlayTitle");
+  const warningEl = el("warning"), warnText = el("warnText");
   const toastEl = el("toast"), toastChip = el("toastChip"), toastText = el("toastText"), toastKind = el("toastKind");
   const hintsEl = el("hints"), thumb = el("thumb");
-  const statPct = el("statPct"), statDose = el("statDose"), statKo = el("statKo");
-  const statRe = el("statRe"), statNotes = el("statNotes"), meterGoal = el("meterGoal");
+  const meterGoal = el("meterGoal");
   const reportEyebrow = el("reportEyebrow"), rigEl = el("rig");
-  const secReport = el("secReport"), navReport = el("navReport"), navPicks = el("navPicks");
-  const benchNav = el("benchNav");
-  const earnVal = el("earnVal"), earnUnit = el("earnUnit"), earnBrk = el("earnBrk");
-  const labTitle = el("labTitle"), labText = el("labText"), pickLeft = el("pickLeft");
-  const upgradeNotice = el("upgradeNotice"), upgradeNoticeText = el("upgradeNoticeText");
-  const upgradeEligibility = el("upgradeEligibility"), upgradeProgress = el("upgradeProgress");
-  const draftEl = el("draft"), labDone = el("labDone"), rigSummary = el("rigSummary");
+  const secReport = el("secReport");
+  const labTitle = el("labTitle"), rigSummary = el("rigSummary");
   const samplePick = el("samplePick"), brandSub = el("brandSub");
   const logScope = el("logScope"), logTabs = el("logTabs");
   const logBoard = el("logBoard"), logEmpty = el("logEmpty"), logSlug = el("logSlug");
@@ -1110,6 +971,13 @@
   const edPlayBtn = el("edPlay"), edCloseBtn = el("edClose");
   const edClearBtn = el("edClear"), edDeleteBtn = el("edDelete");
   const howBtn = el("howBtn"), wipeBtn = el("wipeBtn");
+  const endScreen = el("endScreen"), endDialog = el("endDialog");
+  const endEyebrow = el("endEyebrow"), endTitle = el("endTitle"), endSummary = el("endSummary");
+  const endPct = el("endPct"), endCost = el("endCost"), endCostLabel = el("endCostLabel");
+  const endDamage = el("endDamage"), endReinsert = el("endReinsert");
+  const endDraftHead = el("endDraftHead"), endDraftTitle = el("endDraftTitle"), endPickCount = el("endPickCount");
+  const endDraftNote = el("endDraftNote"), endDraft = el("endDraft");
+  const endSetup = el("endSetup"), endPlay = el("endPlay");
   const tutorialEl = el("tutorial"), tguideEl = el("tguide"), tFig = el("tFig");
   const tTitle = el("tTitle"), tBody = el("tBody"), tExtra = el("tExtra");
   const tDots = el("tDots"), tEyebrow = el("tEyebrow"), tSkip = el("tSkip");
@@ -2157,6 +2025,10 @@
 
   // the three instruments currently on offer; rerolled per pick and per session
   let draftOffer = [];
+  let endResult = null;
+  let endDialogOpen = false;
+  let endPicked = 0;
+  let endLastUpgrade = "";
 
   // Everything below is rebuilt whenever a sample is loaded. It was all
   // const when there was only one lattice to run across.
@@ -2321,6 +2193,10 @@
     sfx.unlock(); // an AudioContext needs a gesture; this is the first one
     if (editorOpen) { editorKey(k, e); return; }
     if (tutorialOpen) { tutorialKey(k, e); return; }
+    if (endDialogOpen) {
+      if (k === "escape" || k === "r" || MOVE_KEYS.has(k)) e.preventDefault();
+      return;
+    }
     // the field guide is reachable from anywhere — mid-run it pauses and
     // resumes, from the bench it lays back over it
     if ((k === "?" || k === "h") && !e.repeat) { openTutorial(true); return; }
@@ -2350,6 +2226,7 @@
   }
 
   function resetGame() {
+    closeEndDialog();
     applyUpgrades();
     applyMode();
     player.x = SPAWN.x; player.y = SPAWN.y;
@@ -2388,16 +2265,12 @@
     renderRig();
   }
   // ---------------------------------------------------------------------
-  // Opening and closing the bench. The scan report is the only section that
-  // comes and goes: arriving from a finished run it heads the page, and
-  // arriving from Esc or the field guide there is no run to report on, so
-  // it and its nav entry are taken out rather than left showing the last
-  // session's numbers as if they were this one's.
+  // The last-run keepsake appears only after a finished run. Entering setup
+  // from Esc has no completed run to show.
   // ---------------------------------------------------------------------
   let benchOpen = false;
-  function openBench(showReport) {
-    secReport.style.display = showReport ? "" : "none";
-    navReport.style.display = showReport ? "" : "none";
+  function openBench(showLastRun) {
+    secReport.style.display = showLastRun ? "" : "none";
     benchOpen = true;
     benchEl.classList.add("on");
     renderLab();
@@ -2406,6 +2279,93 @@
   function closeBench() {
     benchOpen = false;
     benchEl.classList.remove("on");
+  }
+
+  function closeEndDialog() {
+    endDialogOpen = false;
+    endScreen.classList.remove("on");
+  }
+  endSetup.addEventListener("click", () => {
+    closeEndDialog();
+    openBench(true);
+  });
+  endPlay.addEventListener("click", resetGame);
+  endScreen.addEventListener("keydown", e => {
+    if (e.key !== "Tab") return;
+    const items = [...endDialog.querySelectorAll("button:not([disabled])")];
+    if (!items.length) return;
+    const first = items[0], last = items[items.length - 1];
+    if (e.shiftKey && (document.activeElement === first || document.activeElement === endDialog)) {
+      e.preventDefault(); last.focus();
+    } else if (!e.shiftKey && document.activeElement === last) {
+      e.preventDefault(); first.focus();
+    }
+  });
+
+  function showEndDialog(kind, pct, earned, eligible, anyLeft) {
+    endResult = { kind, pct, earned, eligible, anyLeft };
+    endPicked = 0;
+    endLastUpgrade = "";
+    endEyebrow.textContent = `Session ${save.sessions} · ${MODE.name}`;
+    endTitle.textContent = overlayTitle.textContent;
+    endTitle.style.color = overlayTitle.style.color;
+    const reason = {
+      complete: "You reached the reconstruction target.",
+      timeout: "The drift window closed.",
+      ended: "You ended the open survey.",
+      lost: "The probe could not be recovered.",
+      limit: "The beam budget ran out."
+    };
+    endSummary.textContent = `${reason[kind] || "The run is complete."} You phased ${pct}% of ${SAMPLE.name}.` +
+      (realignCount ? ` ${realignCount * REALIGN_COST} electrons went to re-alignment.` : "");
+    endPct.textContent = `${pct}%`;
+    endCost.textContent = timeLimit ? `${Math.max(0, timeLimit - timeLeft).toFixed(1)}s` : doseSpent.toFixed(0);
+    endCostLabel.textContent = timeLimit ? "Time used" : "Electrons spent";
+    endDamage.textContent = String(damagedCount);
+    endReinsert.textContent = String(realignCount);
+    endDialogOpen = true;
+    endScreen.classList.add("on");
+    renderEndDraft();
+    endDialog.focus();
+  }
+
+  function renderEndDraft() {
+    if (!endResult) return;
+    endDraft.innerHTML = "";
+    const hasPicks = save.picks > 0 && UPGRADES.some(u => levelOf(u) < MAX_LEVEL);
+    if (hasPicks && !draftOffer.length) rollDraft();
+    if (hasPicks) {
+      endDraftTitle.textContent = "Choose an upgrade";
+      endPickCount.textContent = `${save.picks} ${save.picks === 1 ? "pick" : "picks"} available`;
+      endDraftNote.textContent = endPicked
+        ? "Upgrade installed. You can spend another pick now or keep the rest for later."
+        : endResult.earned
+        ? `This run earned ${endResult.earned}. Choose one instrument improvement; remaining picks can be spent here or on the control page.`
+        : "You have saved picks. Choose an instrument improvement or keep them for later.";
+      endSetup.textContent = endPicked ? "Control page" : "Keep picks & continue";
+      for (const u of draftOffer) {
+        const lvl = levelOf(u);
+        const b = document.createElement("button");
+        b.className = "dcard";
+        b.innerHTML = `<span class="code">${u.code}</span>` +
+          `<span class="nm">${u.name}</span>` +
+          `<span class="ef">${u.effect(valueAt(u, lvl + 1))}</span>` +
+          `<span class="bl">${u.blurb}</span>` + dotsHTML(lvl, true);
+        b.addEventListener("click", () => takeUpgrade(u));
+        endDraft.appendChild(b);
+      }
+    } else {
+      endDraftTitle.textContent = endPicked ? "Upgrade installed"
+        : UPGRADES.some(u => levelOf(u) < MAX_LEVEL) ? "Run recorded" : "Instrument complete";
+      endPickCount.textContent = "";
+      endDraftNote.textContent = endPicked
+        ? `${endLastUpgrade} is ready for your next session. You can play again or adjust your setup.`
+        : !endResult.eligible
+        ? (SAMPLE.id === SANDBOX_ID ? "Designed samples do not award upgrades." : "Open survey is for practice and does not award upgrades.")
+        : !UPGRADES.some(u => levelOf(u) < MAX_LEVEL) ? "Every instrument upgrade is already at its maximum level."
+        : "Your upgrade picks are spent. Continue to setup or start another run.";
+      endSetup.textContent = "Control page";
+    }
   }
 
   // Esc is the way to the bench from inside a run. It abandons the session
@@ -2422,29 +2382,6 @@
     openBench(false);
   }
 
-  // A jump from the bar has to say where it landed, or a page this long
-  // reads as if nothing happened — the section it scrolled to lights its
-  // border for a moment.
-  let jumpTimer = null;
-  function jumpTo(id) {
-    const s = el(id);
-    if (!s || s.style.display === "none") return;
-    s.scrollIntoView({ behavior: "smooth", block: "start" });
-    clearTimeout(jumpTimer);
-    for (const b of document.querySelectorAll(".bsec.jump")) b.classList.remove("jump");
-    s.classList.add("jump");
-    jumpTimer = setTimeout(() => s.classList.remove("jump"), 1400);
-  }
-  for (const b of benchNav.querySelectorAll(".bnav")) {
-    b.addEventListener("click", () => { jumpTo(b.dataset.sec); sfx.dopant(); });
-  }
-
-  // banked picks are the one thing on this page that is genuinely waiting on
-  // the player, so the report's button points at them rather than past them
-  restartBtn.addEventListener("click", () => {
-    if (save.picks > 0 && UPGRADES.some(u => levelOf(u) < MAX_LEVEL)) jumpTo("secDraft");
-    else resetGame();
-  });
   beginBtn.addEventListener("click", resetGame);
 
   // "Reset upgrades" drops every level and every banked pick, so the draft
@@ -2457,13 +2394,13 @@
     wipeArmed = 0;
     clearTimeout(wipeTimer);
     wipeBtn.classList.remove("danger");
-    setButtonLabel(wipeBtn, "Reset");
+    setButtonLabel(wipeBtn, "Reset upgrades");
   }
   wipeBtn.addEventListener("click", () => {
     if (!wipeArmed) {
       wipeArmed = 1;
       wipeBtn.classList.add("danger");
-      setButtonLabel(wipeBtn, "Confirm");
+      setButtonLabel(wipeBtn, "Confirm reset");
       clearTimeout(wipeTimer);
       wipeTimer = setTimeout(disarmWipe, 4000);
       return;
@@ -2549,63 +2486,22 @@
     // persistence, audio, or upgrade rewards. Return before any of those
     // side effects so one simulated run cannot contaminate the next.
     if (balanceRunActive) return;
-    const dmg = damagedCount === 0
-      ? "not one atom knocked out"
-      : `${damagedCount} atom${damagedCount > 1 ? "s" : ""} knocked out`;
-    const spentOnFalling = realignCount * REALIGN_COST;
-    const fellLine = realignCount === 0 ? "" :
-      ` You lost the probe ${realignCount} time${realignCount > 1 ? "s" : ""} — ` +
-      `${spentOnFalling} of those electrons went on re-aligning it, not on looking at anything.`;
-    // what the electrons cost is quoted against the budget only where there
-    // is one to quote it against
-    const cost = budgetLimited
-      ? `${doseSpent.toFixed(0)} of ${doseBudgetEff.toFixed(0)} electrons`
-      : `${doseSpent.toFixed(0)} electrons`;
     if (kind === "complete") {
       overlayTitle.textContent = MODE.winFrac >= 1 ? "Every column phased" : "Reconstruction solved";
       overlayTitle.style.color = "#7dffc4";
-      const closer = MODE.winFrac >= 1
-        ? "There is nothing left in the field of view to resolve. What it cost the sample to get there is the only score that means anything in a survey."
-        : timeLimit
-          ? `Solved with ${timeLeft.toFixed(1)}s still on the clock — the drift window closed on a finished reconstruction.`
-          : `Past ${Math.round(MODE.winFrac * 100)}% the structure is unambiguous — a real reconstruction is called solved there, ` +
-            `not at every last column. Every electron you didn't spend is sample that survived.`;
-      overlayText.textContent = `${pct}% of the lattice phased on ${cost}, ${dmg}. ` + closer + fellLine;
     } else if (kind === "timeout") {
       overlayTitle.textContent = "Drift window closed";
       overlayTitle.style.color = "#ffc078";
-      overlayText.textContent =
-        `${pct}% of the lattice phased in ${timeLimit} seconds, on ${cost}, ${dmg}. ` +
-        `Dose was free here and time was not, which is the trade a real fast-scan acquisition makes: ` +
-        `you spend the sample to beat the drift.` + fellLine;
     } else if (kind === "ended") {
       overlayTitle.textContent = "Survey ended";
       overlayTitle.style.color = "#7fe3ff";
-      overlayText.textContent =
-        `${pct}% of the lattice phased on ${cost}, ${dmg}. ` +
-        `Nothing was rationed, so what this run is worth reading is the damage column: ` +
-        `every knock-out here was one you chose to stand still for.` + fellLine;
     } else if (kind === "lost") {
       overlayTitle.textContent = "Probe lost";
       overlayTitle.style.color = "#ff8f6b";
-      overlayText.textContent =
-        (budgetLimited
-          ? `The probe struck the detector at ${pct}% resolved, ${dmg}, with too little beam left to retract the stage ` +
-            `and re-find focus. Falling is survivable — ${REALIGN_COST} electrons a time — right up until it isn't.`
-          : `The probe struck the detector at ${pct}% resolved, ${dmg}, and there was no column left standing to ` +
-            `re-insert onto. Dose costs nothing in this mode, but a knocked-out lattice is still gone for good.`) + fellLine;
     } else {
       overlayTitle.textContent = "Beam exhausted";
       overlayTitle.style.color = "#ffc078";
-      overlayText.textContent =
-        `${pct}% of the lattice resolved before the electrons ran out, ${dmg}. ` +
-        `Blank the beam (SHIFT) across ground you have already scanned and the same budget goes much further.` + fellLine;
     }
-    statPct.innerHTML = pct + "<small>%</small>";
-    statDose.textContent = doseSpent.toFixed(0);
-    statKo.textContent = String(damagedCount);
-    statRe.textContent = String(realignCount);
-    statNotes.textContent = `${notesFound()}/${NOTES_TOTAL}`;
     sfx.beam(false, 0);
     sfx.over(kind);
     paintThumbnail();
@@ -2636,25 +2532,8 @@
     writeSave();
 
     reportEyebrow.textContent = `Session ${save.sessions} · ${MODE.name}`;
-    if (!eligible) {
-      earnVal.textContent = String(pct);
-      earnUnit.textContent = shipped ? `% — best here ${save.bests[MODE.id] | 0}%` : "% of your lattice";
-      earnBrk.textContent = shipped
-        ? "Practice mode — upgrades are awarded in dose-limited and 30-second runs"
-        : "Samples you designed don't earn upgrades — the instrument is earned on real data";
-    } else if (anyLeft) {
-      earnVal.textContent = String(earned);
-      earnUnit.textContent = earned === 1 ? "upgrade earned" : "upgrades earned";
-      earnBrk.textContent =
-        `${pct}% resolved — ${PICK_TIER_1}% earns a second pick, ${PICK_TIER_2}% a third`;
-    } else {
-      earnVal.textContent = String(save.bests[MODE.id] | 0);
-      earnUnit.textContent = `% best ${MODE.id === "sprint" ? "acquisition" : "session"}`;
-      earnBrk.textContent = "Instrument fully upgraded — this is the rig you finish on";
-    }
-    restartBtn.textContent = (save.picks > 0 && anyLeft) ? "Choose an upgrade ↓" : "Scan again";
     renderLogSlug(posted);
-    openBench(true);
+    showEndDialog(kind, pct, earned, eligible, anyLeft);
   }
 
   // How much of the picture you recovered is the score, and the score is
@@ -2846,13 +2725,17 @@
     return `${m} month${m === 1 ? "" : "s"} ago`;
   }
 
-  // The one line on the scan report that says where the run landed. It
+  // The one line on the last-run keepsake that says where the run landed. It
   // quotes the entry above rather than only the rank, because the gap is
   // the thing that sends you back in.
   function renderLogSlug(posted) {
     logSlug.className = "";
     logSlug.innerHTML = "";
-    if (!posted) return;
+    if (!posted) {
+      logSlug.className = "miss";
+      logSlug.textContent = "No logbook entry from this run.";
+      return;
+    }
     const { rank, entry, ahead, kept, board: B } = posted;
     const where = rigClass() === "stock" ? "on a stock column" : "on an upgraded instrument";
     const val = `${B.main(entry)} ${B.unit(entry)}`;
@@ -2999,11 +2882,16 @@
     if (levelOf(u) >= MAX_LEVEL || save.picks <= 0) return;
     save.levels[u.id] = levelOf(u) + 1;
     save.picks--;
+    if (endDialogOpen) { endPicked++; endLastUpgrade = u.name; }
     writeSave();
     applyUpgrades();
     draftOffer = [];
     renderLab();
     renderRig();
+    if (endDialogOpen) {
+      renderEndDraft();
+      (endDraft.querySelector("button") || endSetup).focus();
+    }
   }
 
   function dotsHTML(level, preview) {
@@ -3135,76 +3023,11 @@
     const anyLeft = UPGRADES.some(u => levelOf(u) < MAX_LEVEL);
     const anyOwned = UPGRADES.some(u => levelOf(u) > 0);
     if (!anyLeft) save.picks = 0;
-    if (save.picks > 0 && draftOffer.length === 0) rollDraft();
-
-    draftEl.innerHTML = "";
-    // the reset is offered whenever there's something to clear — levels on
-    // the column, or picks banked from runs you never spent
     wipeBtn.style.display = (anyOwned || save.picks > 0) ? "" : "none";
     disarmWipe();
-    navPicks.textContent = save.picks > 0 ? String(save.picks) : "";
-    upgradeNotice.classList.toggle("on", save.picks > 0 && anyLeft);
-    upgradeNoticeText.textContent = save.picks > 1
-      ? `${save.picks} picks are ready. Choose an instrument upgrade below.`
-      : "One pick is ready. Choose an instrument upgrade below.";
-    const shipped = SAMPLE.id !== SANDBOX_ID;
-    const eligibleSetup = MODE.earns && shipped;
-    upgradeEligibility.classList.toggle("off", !eligibleSetup);
-    upgradeEligibility.textContent = eligibleSetup
-      ? "✓ Current setup will award upgrade picks when the run ends."
-      : !MODE.earns
-        ? "Open survey awards no upgrades — choose Dose-limited or 30-second mode above."
-        : "Custom samples award no upgrades — choose a supplied sample above.";
-    const best = MODE.earns
-      ? Math.max(save.bests[MODE.id] | 0, MODE.id === "session" ? save.best | 0 : 0)
-      : Math.max(save.best | 0, save.bests.sprint | 0);
-    const bestLabel = MODE.earns
-      ? `Best ${MODE.id === "sprint" ? "acquisition" : "session"}`
-      : "Best eligible run";
-    upgradeProgress.textContent = best >= PICK_TIER_2
-      ? `${bestLabel}: ${best}%. You have reached the maximum payout of 3 picks per run.`
-      : best >= PICK_TIER_1
-        ? `${bestLabel}: ${best}%. Reach ${PICK_TIER_2}% in one run to earn 3 picks.`
-        : best > 0
-          ? `${bestLabel}: ${best}%. Reach ${PICK_TIER_1}% in one run to earn 2 picks.`
-          : `Your first eligible run earns 1 pick; reach ${PICK_TIER_1}% for 2 or ${PICK_TIER_2}% for 3.`;
-    if (save.picks > 0 && draftOffer.length) {
-      labTitle.textContent = "Choose an upgrade";
-      labText.textContent =
-        "Every option here is a real technique microscopists use to get more picture out of fewer electrons. " +
-        "What you take is permanent — it carries into every session from now on.";
-      pickLeft.textContent = save.picks > 1
-        ? `Pick 1 of ${draftOffer.length} · ${save.picks} picks remaining`
-        : `Pick 1 of ${draftOffer.length}`;
-      labDone.style.display = "none";
-      setButtonLabel(beginBtn, "Skip & begin");
-      beginBtn.classList.add("ghost");
-      for (const u of draftOffer) {
-        const lvl = levelOf(u);
-        const b = document.createElement("button");
-        b.className = "dcard";
-        b.innerHTML =
-          `<span class="code">${u.code}</span>` +
-          `<span class="nm">${u.name}</span>` +
-          `<span class="ef">${u.effect(valueAt(u, lvl + 1))}</span>` +
-          `<span class="bl">${u.blurb}</span>` +
-          dotsHTML(lvl, true);
-        b.addEventListener("click", () => takeUpgrade(u));
-        draftEl.appendChild(b);
-      }
-    } else {
-      labTitle.textContent = anyLeft ? "Rig ready" : "Instrument complete";
-      labText.textContent = anyLeft
-        ? "Nothing left to pick this session. Recover more of the lattice next run and the draft comes back wider."
-        : "Every line on the column is at its limit. Whatever the sample has left to show you, this is the instrument that has to show it.";
-      pickLeft.textContent = "";
-      labDone.style.display = "block";
-      setButtonLabel(beginBtn, "Begin");
-      beginBtn.classList.remove("ghost");
-      labDone.textContent = anyLeft
-        ? `${bestLabel}: ${best}% of the lattice recovered.`
-        : `Fully upgraded after ${save.sessions} session${save.sessions === 1 ? "" : "s"}. Best so far: ${save.best}%.`;
-    }
+    labTitle.textContent = anyLeft ? "Rig ready" : "Instrument complete";
+    setButtonLabel(beginBtn, "Begin");
+    beginBtn.classList.remove("ghost");
 
     renderModes();
     renderSamples();
@@ -3214,18 +3037,18 @@
     if (!anyOwned) {
       const none = document.createElement("div");
       none.className = "rnone";
-      none.textContent = save.picks > 0
-        ? "Nothing on the column yet — take one of the three above."
-        : "Nothing on the column yet. Picks settle on a dose-limited or 30-second run over a shipped sample, one for finishing at all and three past 70%.";
+      none.textContent = "No upgrades installed yet.";
       rigSummary.appendChild(none);
     }
     for (const u of UPGRADES) {
       const lvl = levelOf(u);
       if (!lvl) continue;
       const d = document.createElement("div");
-      d.className = "rchip";
-      d.innerHTML = `${u.code}<u>${"<i></i>".repeat(lvl)}</u>`;
-      d.title = `${u.name} — ${u.effect(valueAt(u, lvl))}`;
+      d.className = "installed";
+      d.innerHTML = `<div class="top"><span class="code">${u.code}</span>` +
+        `<span class="level">Level ${lvl} / ${MAX_LEVEL}</span></div>` +
+        `<span class="name">${u.name}</span>` +
+        `<span class="effect">${u.effect(valueAt(u, lvl))}</span>`;
       rigSummary.appendChild(d);
     }
   }
@@ -5516,9 +5339,9 @@
          '<tr><td><kbd>R</kbd></td><td>Restart the run (earns no upgrade)</td></tr>' +
          '<tr><td><kbd>M</kbd></td><td>Mute / unmute &nbsp;·&nbsp; <kbd>?</kbd> reopen this guide</td></tr>' +
          '</table>' +
-         '<p>Between sessions you are on the bench — one page holding ' +
-         'your mode, sample, upgrades, latest report and the ' +
-         'logbook, with a bar across the top that jumps to any of them. It ' +
+         '<p>After a run, the results screen shows your score and upgrade choices. ' +
+         'The control page holds your mode, sample, installed upgrades, last run ' +
+         'image and logbook. It ' +
          'offers three modes: a 100-electron session, a 30-second acquisition, ' +
          'or an open survey with nothing scarce. Dose-limited sessions and ' +
          '30-second acquisitions earn instrument upgrades.</p>',
