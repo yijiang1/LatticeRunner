@@ -1021,6 +1021,16 @@
 (function () {
   "use strict";
 
+  // `tools/run_balance.py` opens the game with ?balance=1 and drives this
+  // exact simulation at a fixed timestep. Keeping the hook here means the
+  // balance suite cannot quietly drift away from the rules players use.
+  const BALANCE_PARAMS = new URLSearchParams(window.location.search);
+  const BALANCE_RUNNER = BALANCE_PARAMS.get("balance") === "1";
+  let balanceRunActive = BALANCE_RUNNER;
+  let balanceRandom = null;
+  let lastRunKind = null;
+  function gameRandom() { return balanceRandom ? balanceRandom() : Math.random(); }
+
   const TAU = Math.PI * 2;
   const canvas = document.getElementById("game");
   const ctx = canvas.getContext("2d");
@@ -1143,7 +1153,12 @@
     [1.00, 246, 255, 228],
   ];
 
-  const WORLD_SCALE = 90; // px per lattice unit
+  // Keep the 90px horizontal pitch the jump arc was tuned around, but give
+  // rows substantially more headroom. At the old square 90x90 pitch a full
+  // stock jump crowded the underside of the row above; 120px preserves the
+  // lateral gaps while giving the same jump substantially more headroom.
+  const WORLD_SCALE_X = 90;
+  const WORLD_SCALE_Y = 120;
 
   // =====================================================================
   // SAMPLES
@@ -1172,7 +1187,7 @@
         atoms.push({
           x, y,
           element: "C",
-          intensity: 0.55 + Math.random() * 0.25,
+          intensity: 0.55 + gameRandom() * 0.25,
         });
       }
     }
@@ -1517,9 +1532,12 @@
   // being comparable, so they stop being shown. Three of those constants
   // are on the roadmap to be settled by a single playtest, which is exactly
   // why this exists before the first entry does.
-  const BALANCE_VERSION = 2;
+  const BALANCE_VERSION = 6;
 
-  const RESOLVE_RADIUS = 150;      // must be this close to build resolve progress
+  // Equal-area replacement for the short-lived 150x200 ellipse introduced
+  // with wider row spacing. The probe aperture is circular again while the
+  // total field area stays within 2% of that tuning.
+  const RESOLVE_RADIUS = 175;
   const RESOLVE_TIME = 0.5;        // seconds of continuous presence to fully resolve
   const RESOLVE_DECAY_MULT = 2.2;  // progress bleeds off faster than it builds when you leave
 
@@ -1530,7 +1548,7 @@
   // to converge the row below and the column you are standing on knocks out.
   const SURVEY_RADIUS = RESOLVE_RADIUS * 1.25;
   function surveyScan(lattice, spawnIdx) {
-    const px = a => a.x * WORLD_SCALE + 80, py = a => a.y * WORLD_SCALE + 120;
+    const px = a => a.x * WORLD_SCALE_X + 80, py = a => a.y * WORLD_SCALE_Y + 120;
     const s0 = lattice[spawnIdx], set = new Set();
     lattice.forEach((a, i) => {
       if (Math.hypot(px(a) - px(s0), py(a) - py(s0)) <= SURVEY_RADIUS) set.add(i);
@@ -1677,7 +1695,8 @@
   // Sandbox samples. The data contract a sample has to satisfy is four
   // fields wide, so a lattice a player built is not a special case in the
   // engine — it is another build(). The designer edits a grid of cells at
-  // the same 90px pitch the shipped samples run at, and emits exactly the
+  // the same 90x120px horizontal/vertical pitch the shipped samples run at,
+  // and emits exactly the
   // atom array scandate() emits. Everything downstream — the hidden phase
   // image, the fog, the survey scan, knock-on tolerance, the field notes —
   // falls out of that for free, which is the whole point of having kept the
@@ -1814,7 +1833,7 @@
     { id: "fov", code: "FOV", name: "Wide-field scan coils", identity: 0,
       blurb: "A larger scan field takes in more columns per position — and irradiates every one of them.",
       steps: [26, 54, 88],
-      effect: (v) => `+${v}px scan field` },
+      effect: (v) => `+${v}px scan-field radius` },
     { id: "cryo", code: "CRYO", name: "Cryogenic stage", identity: 1,
       blurb: "Cooling the sample suppresses thermal motion, so drifting columns hold much closer to their true positions.",
       steps: [0.7, 0.48, 0.3],
@@ -2056,6 +2075,9 @@
     jumpBoostEff     = currentValue("piezo");
     airControlEff    = currentValue("shift");
   }
+  function inResolveField(dx, dy, scale = 1) {
+    return dx * dx + dy * dy < Math.pow(resolveRadiusEff * scale, 2);
+  }
   applyUpgrades();
 
   // Everything a mode changes about a run, in one place: what the second
@@ -2102,17 +2124,17 @@
     const speckle = [];
     for (let s = 0; s < 10; s++) {
       speckle.push({
-        ang: Math.random() * TAU,
-        dist: 0.9 + Math.random() * 1.9,
-        phase: Math.random() * TAU,
-        dir: Math.random() < 0.5 ? -1 : 1,
-        size: 1 + Math.random(),
+        ang: gameRandom() * TAU,
+        dist: 0.9 + gameRandom() * 1.9,
+        phase: gameRandom() * TAU,
+        dir: gameRandom() < 0.5 ? -1 : 1,
+        size: 1 + gameRandom(),
       });
     }
     return {
       id: i,
-      x: a.x * WORLD_SCALE + 80,
-      y: a.y * WORLD_SCALE + 120,
+      x: a.x * WORLD_SCALE_X + 80,
+      y: a.y * WORLD_SCALE_Y + 120,
       r,
       element: a.element,
       intensity: a.intensity,
@@ -2136,8 +2158,8 @@
       // (unmoving) reconstructed position. Base speed/amplitude scaled by
       // atomic mass — see vibrationFactor().
       wobble: a.wobble,
-      wobblePhase: Math.random() * TAU,
-      wobbleSpeed: (1.3 + Math.random() * 0.6) * vib,
+      wobblePhase: gameRandom() * TAU,
+      wobbleSpeed: (1.3 + gameRandom() * 0.6) * vib,
       wobbleAmp: 10 * vib,
       wobbleOffset: 0,
       speckle,
@@ -2182,8 +2204,10 @@
     SPAWN.x = world[SAMPLE.spawn].x - 10;
     SPAWN.y = world[SAMPLE.spawn].y - 200;
 
-    renderTargetImage();
-    buildFog();
+    if (!BALANCE_RUNNER) {
+      renderTargetImage();
+      buildFog();
+    }
     applyMode();
 
     // Re-seat the probe on the new lattice. The picker lives on the
@@ -2300,8 +2324,10 @@
     // skipping a draft banks the picks but must not lock in that offer —
     // the next session rolls a fresh three
     draftOffer = [];
-    resetFog();
-    SEEDED.forEach(i => eraseFogAt(world[i]));
+    if (!BALANCE_RUNNER) {
+      resetFog();
+      SEEDED.forEach(i => eraseFogAt(world[i]));
+    }
     closeBench();
     // a new mode has a new hint strip; bring it back rather than leaving it
     // faded out from the last session
@@ -2466,7 +2492,12 @@
     if (runOver) return;
     runOver = true;
     beamOn = false;
+    lastRunKind = kind;
     const pct = Math.round((resolvedCount / totalResolvable) * 100);
+    // Batch simulations need the terminal state, not report rendering,
+    // persistence, audio, or upgrade rewards. Return before any of those
+    // side effects so one simulated run cannot contaminate the next.
+    if (balanceRunActive) return;
     const dmg = damagedCount === 0
       ? "not one atom knocked out"
       : `${damagedCount} atom${damagedCount > 1 ? "s" : ""} knocked out`;
@@ -3195,6 +3226,7 @@
   let shake = 0;
 
   function emit(x, y, n, opts) {
+    if (balanceRunActive) return;
     for (let i = 0; i < n; i++) {
       if (particles.length >= MAX_PARTICLES) return;
       const ang = opts.ang != null ? opts.ang + (Math.random() - 0.5) * opts.spread : Math.random() * TAU;
@@ -3212,6 +3244,7 @@
     }
   }
   function emitRing(x, y, r0, r1, life, glow, width) {
+    if (balanceRunActive) return;
     rings.push({ x, y, r0, r1, life, maxLife: life, glow, width });
   }
 
@@ -3331,11 +3364,11 @@
     for (const a of world) {
       if (a.resolved) { a.popIn = Math.min(1, a.popIn + dt * 5); continue; }
       const dx = a.x - cx, dy = a.y - cy;
-      const near = beamOn && (dx * dx + dy * dy) < resolveRadiusEff * resolveRadiusEff;
+      const near = beamOn && inResolveField(dx, dy);
       if (near) {
         scanningSomething = true;
         a.resolveProgress = Math.min(1, a.resolveProgress + dt / resolveTimeEff);
-        eraseFogAt(a);
+        if (!balanceRunActive) eraseFogAt(a);
         if (a.resolveProgress >= 1 && !a.resolved) {
           a.resolved = true;
           resolvedCount++;
@@ -3458,7 +3491,6 @@
     let hottest = null, hottestFrac = 0;
     for (const a of world) {
       const ddx = a.x - cx, ddy = (a.y + a.wobbleOffset) - cy;
-      const d2 = ddx * ddx + ddy * ddy;
       // A column's dose only moves while it is under the probe field. Inside
       // it, deposition and annealing both run and the arc shows the net: sit
       // on a column and it climbs, back off to the edge of the field and it
@@ -3467,7 +3499,7 @@
       // backward, however long you are gone. That is what a real accumulated
       // dose is, and it makes the ring a record you can come back and read
       // instead of a gauge that quietly resets the moment you look away.
-      const inField = d2 < resolveRadiusEff * resolveRadiusEff;
+      const inField = inResolveField(ddx, ddy);
       if (!a.damaged && inField) {
         const dd2 = ddx * ddx + (ddy * DOSE_DEFOCUS) * (ddy * DOSE_DEFOCUS);
         let rate = -doseAnnealEff;
@@ -3560,6 +3592,15 @@
     // the sample ends before the world does; running off its right edge into
     // empty frame is not a challenge, it is just an unmarked hole
     player.x = Math.max(SAMPLE_LEFT, Math.min(SAMPLE_RIGHT, player.x));
+
+    // Headless balance runs stop here. Everything below is presentation:
+    // trails, particles, camera motion, HUD text and sound. Skipping it makes
+    // thousands of fixed-step playthroughs cheap without changing a single
+    // gameplay decision above this line.
+    if (balanceRunActive) {
+      if (resolvedCount >= WIN_COUNT) endRun("complete");
+      return;
+    }
 
     // probe trail (a short comet tail; long enough to read direction)
     player.trail.push({ x: cx, y: cy });
@@ -3810,7 +3851,7 @@
 
     // bonding network: faint bridges between nearest neighbours, which is
     // what makes the revealed image read as a lattice rather than dots
-    const BOND = WORLD_SCALE * 1.15;
+    const BOND = Math.max(WORLD_SCALE_X, WORLD_SCALE_Y) * 1.15;
     f.lineCap = "round";
     for (let i = 0; i < world.length; i++) {
       for (let j = i + 1; j < world.length; j++) {
@@ -4713,7 +4754,8 @@
   // THE SAMPLE DESIGNER
   //
   // A grid editor over the lattice the engine already runs on: one cell is
-  // one 90px lattice site, and painting one emits exactly the atom a
+  // one 90x120px horizontal/vertical lattice site, and painting one emits
+  // exactly the atom a
   // build() would. Nothing in here reaches into the simulation — it edits a
   // design, loadSample() does the rest, and the game cannot tell a
   // player's lattice from a measured one.
@@ -4745,8 +4787,8 @@
              vAir: 117 * 0.9 * moveSpeedEff * airControlEff };
   }
   function edLinked(a, b, arc) {
-    const gap = Math.abs(b.wx - a.wx) * WORLD_SCALE - edHalf(a.pal) - edHalf(b.pal);
-    const rise = (a.row - b.row) * WORLD_SCALE;   // how much higher b sits
+    const gap = Math.abs(b.wx - a.wx) * WORLD_SCALE_X - edHalf(a.pal) - edHalf(b.pal);
+    const rise = (a.row - b.row) * WORLD_SCALE_Y;   // how much higher b sits
     if (rise > arc.apex - 10) return false;       // cannot clear its top at all
     if (gap <= 0) return true;                    // the pads touch: walk it
     // time in the air before the probe is back down at b's height — falling
@@ -4782,16 +4824,16 @@
         }
       }
       // A column the probe cannot stand on is not necessarily lost — the scan
-      // field reaches 150px, so a neighbour of a reachable column still gets
+      // field reaches 150px horizontally and 200px vertically, so a neighbour still gets
       // phased from next door. What is lost is a column that is neither.
-      const rr = resolveRadiusEff * resolveRadiusEff;
       for (const b of pts) {
         if (reach.has(b.k)) continue;
         let scanned = false;
         for (const a of pts) {
           if (!reach.has(a.k)) continue;
-          const dx = (b.wx - a.wx) * WORLD_SCALE, dy = (b.row - a.row) * WORLD_SCALE;
-          if (dx * dx + dy * dy <= rr) { scanned = true; break; }
+          const dx = (b.wx - a.wx) * WORLD_SCALE_X;
+          const dy = (b.row - a.row) * WORLD_SCALE_Y;
+          if (inResolveField(dx, dy)) { scanned = true; break; }
         }
         if (!scanned) lost.push(b);
       }
@@ -4827,7 +4869,7 @@
     const W = edCanvas.width / DPR, H = edCanvas.height / DPR;
     const gh = edCell * GRID_ROWS, gw = edCell * (GRID_COLS + 0.5);
     const cellX = (c, row) => (c + (row % 2 ? 0.5 : 0)) * edCell;
-    const scale = edCell / WORLD_SCALE;   // the grid is the lattice, to scale
+    const scale = edCell / WORLD_SCALE_X;   // atom sizes follow the horizontal pitch
 
     const bg = g.createLinearGradient(0, 0, 0, H);
     bg.addColorStop(0, "#060d1a");
@@ -4870,7 +4912,9 @@
       // resolves for free is most of what routing a lattice is about
       g.strokeStyle = "rgba(90,212,255,0.18)";
       g.setLineDash([4, 5]);
-      g.beginPath(); g.arc(hx, hy, resolveRadiusEff * scale, 0, TAU); g.stroke();
+      const fieldX = resolveRadiusEff / WORLD_SCALE_X * edCell;
+      const fieldY = resolveRadiusEff / WORLD_SCALE_Y * edCell;
+      g.beginPath(); g.ellipse(hx, hy, fieldX, fieldY, 0, 0, TAU); g.stroke();
       g.setLineDash([]);
       g.fillStyle = "rgba(90,212,255,0.09)";
       g.fillRect(cellX(hc, hr), hr * edCell, edCell, edCell);
@@ -4928,7 +4972,8 @@
     // whole of whether a layout is playable
     edRig.innerHTML =
       `your rig: jumps <b>${Math.round(a.arc.apex)}px</b> high · clears a <b>${reachPx}px</b> gap · ` +
-      `scan field <b>${Math.round(resolveRadiusEff)}px</b> · columns sit <b>${WORLD_SCALE}px</b> apart`;
+      `scan radius <b>${Math.round(resolveRadiusEff)}px</b> · ` +
+      `pitch <b>${WORLD_SCALE_X}×${WORLD_SCALE_Y}px</b>`;
     let warn = "";
     if (!a.pts.length) {
       warn = "Empty grid — paint some columns.";
@@ -5481,6 +5526,257 @@
   tSkipBtn.addEventListener("click", closeTutorial);
   howBtn.addEventListener("click", () => openTutorial(true));
 
+  // ---------------------------------------------------------------------
+  // Deterministic balance runner
+  // ---------------------------------------------------------------------
+  // The command-line harness asks this page to simulate named player
+  // profiles. These are deliberately legible heuristics, not superhuman
+  // solvers: each one sees the same nearby resolved state a player sees,
+  // sweeps across the specimen, jumps with a characteristic timing error,
+  // and blanks according to its skill level.
+  const BALANCE_PROFILES = {
+    novice: {
+      reaction: 0.24, jumpEvery: 1.05, jumpHold: 0.11, launchOffset: 4,
+      inputError: 0.18, blankSkill: 0.22, dangerFrac: 0.78,
+    },
+    intermediate: {
+      reaction: 0.12, jumpEvery: 0.88, jumpHold: 0.17, launchOffset: 9,
+      inputError: 0.07, blankSkill: 0.72, dangerFrac: 0.63,
+    },
+    expert: {
+      reaction: 0.06, jumpEvery: 0.82, jumpHold: 0.23, launchOffset: 13,
+      inputError: 0.015, blankSkill: 0.98, dangerFrac: 0.52,
+    },
+  };
+
+  function seededRandom(seed) {
+    let a = seed >>> 0;
+    return function () {
+      a = (a + 0x6D2B79F5) >>> 0;
+      let t = a;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  function clearBalanceKeys() {
+    for (const k in keys) keys[k] = false;
+  }
+
+  function makeBalanceBot(name, rng) {
+    const profile = BALANCE_PROFILES[name] || BALANCE_PROFILES.intermediate;
+    return {
+      profile,
+      dir: 1,
+      decisionIn: 0,
+      jumpIn: profile.jumpEvery * (0.7 + rng() * 0.5),
+      jumpHeldFor: 0,
+      lastX: player.x,
+      stuckFor: 0,
+      target: null,
+      dropToY: null,
+    };
+  }
+
+  function chooseBalanceTarget(bot) {
+    const cx = player.x + player.w / 2;
+    const cy = player.y + player.h / 2;
+    const available = world.filter(a => !a.resolved && !a.damaged);
+    if (!available.length) return null;
+
+    // Prefer the current sweep direction and a nearby row. Horizontal
+    // distance is cheap because the purpose of a sweep is to keep moving;
+    // changing rows is expensive and therefore receives the larger weight.
+    let best = null, bestScore = Infinity;
+    for (const a of available) {
+      const dx = a.x - cx;
+      const behind = dx * bot.dir < -resolveRadiusEff * 0.35;
+      const score = Math.abs(a.y - cy) * 1.8 + Math.abs(dx) * 0.12 + (behind ? 800 : 0);
+      if (score < bestScore) { bestScore = score; best = a; }
+    }
+    return best;
+  }
+
+  function driveBalanceBot(bot, dt, rng) {
+    const p = bot.profile;
+    const cx = player.x + player.w / 2;
+    const cy = player.y + player.h / 2;
+    bot.decisionIn -= dt;
+    bot.jumpIn -= dt;
+    bot.jumpHeldFor = Math.max(0, bot.jumpHeldFor - dt);
+
+    if (Math.abs(player.x - bot.lastX) < 2) bot.stuckFor += dt;
+    else { bot.stuckFor = 0; bot.lastX = player.x; }
+
+    if (cx > SAMPLE_RIGHT - 35 || cx < SAMPLE_LEFT + 35) {
+      bot.dir = cx > SAMPLE_RIGHT - 35 ? -1 : 1;
+      // A horizontal sweep sees roughly two rows. At the turn, deliberately
+      // miss one platform to descend onto the already-resolved row below;
+      // otherwise a perfect bot would patrol the top row forever.
+      const below = world.filter(a => !a.resolved && !a.damaged && a.y > cy + 55);
+      if (below.length) bot.dropToY = Math.min(...below.map(a => a.y));
+    }
+    if (bot.dropToY != null && cy >= bot.dropToY - 24) bot.dropToY = null;
+
+    if (bot.decisionIn <= 0) {
+      bot.decisionIn = p.reaction * (0.75 + rng() * 0.5);
+      bot.target = chooseBalanceTarget(bot);
+      let unresolvedInField = false;
+      for (const a of world) {
+        if (!a.resolved && !a.damaged && inResolveField(a.x - cx, a.y - cy, 0.96)) {
+          unresolvedInField = true;
+          break;
+        }
+      }
+      // In a sprint electrons are free, so even the expert keeps the beam
+      // on. In a session, skill controls how consistently dead travel time
+      // is blanked rather than giving a bot impossible perfect switching.
+      keys["shift"] = budgetLimited && !unresolvedInField && rng() < p.blankSkill;
+    }
+
+    keys["arrowleft"] = bot.dir < 0;
+    keys["arrowright"] = bot.dir > 0;
+    keys["a"] = keys["arrowleft"];
+    keys["d"] = keys["arrowright"];
+
+    let hot = false;
+    if (player.standingOn && !player.standingOn.damaged) {
+      hot = player.standingOn.dose / player.standingOn.doseLimit >= p.dangerFrac;
+    }
+    const launchEdge = player.standingOn &&
+      (cx - player.standingOn.x) * bot.dir >= p.launchOffset;
+    const shouldJump = player.onGround &&
+      !bot.dropToY &&
+      (launchEdge || hot || bot.stuckFor > 0.55 || (!player.standingOn && bot.jumpIn <= 0));
+    if (shouldJump) {
+      // Input error represents late/missed presses. It is seeded, so a
+      // balance regression is exactly reproducible from its reported seed.
+      if (rng() >= p.inputError) {
+        player.jumpBufferTimer = JUMP_BUFFER_TIME;
+        bot.jumpHeldFor = p.jumpHold * (0.78 + rng() * 0.44);
+      }
+      bot.jumpIn = p.jumpEvery * (0.75 + rng() * 0.5);
+      bot.stuckFor = 0;
+    }
+    keys[" "] = bot.jumpHeldFor > 0;
+  }
+
+  function balanceRig(name) {
+    const levels = {};
+    for (const u of UPGRADES) levels[u.id] = 0;
+    if (name === "max") {
+      for (const u of UPGRADES) levels[u.id] = MAX_LEVEL;
+    } else {
+      const match = /^([a-z]+)([123])$/.exec(name);
+      if (match && UPGRADES.some(u => u.id === match[1])) levels[match[1]] = Number(match[2]);
+    }
+    return levels;
+  }
+
+  function runBalanceGame(specimen, mode, profileName, rigName, seed, maxSeconds) {
+    balanceRunActive = true;
+    balanceRandom = seededRandom(seed);
+    clearBalanceKeys();
+    for (const u of UPGRADES) save.levels[u.id] = 0;
+    Object.assign(save.levels, balanceRig(rigName));
+    save.mode = MODES.some(m => m.id === mode) ? mode : "session";
+    applyUpgrades();
+    loadSample(specimen);
+    lastRunKind = null;
+    resetGame();
+
+    const rng = balanceRandom;
+    const bot = makeBalanceBot(profileName, rng);
+    const visitedBands = new Set();
+    const dt = 1 / 60;
+    const cap = maxSeconds || (mode === "sprint" ? SPRINT_SECONDS + 2 : 150);
+    const steps = Math.ceil(cap / dt);
+    for (let i = 0; i < steps && !runOver; i++) {
+      driveBalanceBot(bot, dt, rng);
+      update(dt);
+      if (player.standingOn) visitedBands.add(Math.round(player.standingOn.y / WORLD_SCALE_Y));
+    }
+    if (!runOver) { runOver = true; beamOn = false; lastRunKind = "limit"; }
+
+    const byElement = {};
+    const damagedByElement = {};
+    for (const a of world) {
+      if (a.resolved) byElement[a.element] = (byElement[a.element] || 0) + 1;
+      if (a.damaged) damagedByElement[a.element] = (damagedByElement[a.element] || 0) + 1;
+    }
+    const pct = totalResolvable ? resolvedCount / totalResolvable * 100 : 0;
+    const result = {
+      specimen: SAMPLE.id,
+      mode: MODE.id,
+      profile: profileName,
+      rig: rigName,
+      seed,
+      ending: lastRunKind || "unknown",
+      completed: lastRunKind === "complete",
+      percent: Number(pct.toFixed(3)),
+      resolved: resolvedCount,
+      total: totalResolvable,
+      dose: Number(doseSpent.toFixed(3)),
+      budget: Number(doseBudgetEff.toFixed(3)),
+      damaged: damagedCount,
+      falls: realignCount,
+      seconds: Number(runSeconds.toFixed(3)),
+      picks: MODE.earns ? picksFor(Math.round(pct)) : 0,
+      resolvedByElement: byElement,
+      damagedByElement,
+      visitedBands: Array.from(visitedBands).sort((a, b) => a - b),
+    };
+    clearBalanceKeys();
+    balanceRandom = null;
+    return result;
+  }
+
+  function balanceList(name, fallback) {
+    const value = BALANCE_PARAMS.get(name);
+    return value ? value.split(",").map(x => x.trim()).filter(Boolean) : fallback;
+  }
+
+  function runBalanceSuite() {
+    const count = Math.max(1, Math.min(500, Number(BALANCE_PARAMS.get("runs")) || 10));
+    const baseSeed = Number(BALANCE_PARAMS.get("seed")) || 1337;
+    const samples = balanceList("samples", SAMPLES.map(s => s.id));
+    const modes = balanceList("modes", ["session", "sprint"]);
+    const profiles = balanceList("profiles", Object.keys(BALANCE_PROFILES));
+    const rigs = balanceList("rigs", ["stock", "max"]);
+    const results = [];
+    for (const specimen of samples) {
+      for (const mode of modes) {
+        for (const profile of profiles) {
+          for (const rig of rigs) {
+            for (let run = 0; run < count; run++) {
+              // The same seed is used across rigs, which makes marginal
+              // upgrade comparisons paired rather than two unrelated panels.
+              const seed = (baseSeed + run * 104729) >>> 0;
+              results.push(runBalanceGame(specimen, mode, profile, rig, seed));
+            }
+          }
+        }
+      }
+    }
+    return {
+      schemaVersion: 1,
+      balanceVersion: BALANCE_VERSION,
+      fixedDt: 1 / 60,
+      runsPerCell: count,
+      generatedAt: new Date().toISOString(),
+      results,
+    };
+  }
+
+  function showBalanceResult(value) {
+    const pre = document.createElement("pre");
+    pre.id = "balance-json";
+    pre.textContent = JSON.stringify(value);
+    document.body.replaceChildren(pre);
+    document.documentElement.dataset.balanceDone = "1";
+  }
+
   function loop(now) {
     const dt = Math.min(0.033, (now - lastTime) / 1000);
     lastTime = now;
@@ -5494,8 +5790,17 @@
   // it is the thing every frame reads from.
   loadSample(save.sample);
   resetGame();
-  if (!save.guideSeen) openTutorial(false);
-  requestAnimationFrame(loop);
+  if (BALANCE_RUNNER) {
+    try { showBalanceResult(runBalanceSuite()); }
+    catch (error) {
+      showBalanceResult({ error: String(error && error.stack || error) });
+      document.documentElement.dataset.balanceError = "1";
+    }
+  } else {
+    balanceRunActive = false;
+    if (!save.guideSeen) openTutorial(false);
+    requestAnimationFrame(loop);
+  }
 })();
 </script>
 </body>

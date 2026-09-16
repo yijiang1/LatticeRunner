@@ -16,6 +16,42 @@ Falling isn't the end of the session, though. A real operator who loses the prob
 
 Open [`index.html`](index.html) in a browser. No build step, no dependencies, no server — it's one self-contained file.
 
+## Automated balance simulation
+
+The game includes a deterministic headless entry point that runs the real
+`update()` loop at 60 Hz. The command-line harness launches it in Chrome,
+drives novice, intermediate, and expert bot profiles, and writes both the raw
+per-run data and an aggregated Markdown report:
+
+```sh
+python3 tools/run_balance.py --runs 20
+```
+
+By default this compares stock and fully upgraded instruments across all
+shipped specimens, the dose-limited session, and the 30-second acquisition.
+Use a smaller matrix while iterating:
+
+```sh
+python3 tools/run_balance.py \
+  --runs 10 \
+  --samples graphene,scandate \
+  --modes session \
+  --profiles intermediate,expert \
+  --rigs stock,max,marginal
+```
+
+`marginal` expands to ten rigs with one upgrade line at level 3. The report
+then flags upgrades whose average coverage contribution appears negligible or
+dominant, along with stock configurations that miss broad difficulty targets.
+Results land in `output/balance/balance-results.json` and
+`output/balance/balance-report.md`. Every run records its seed, so a regression
+can be reproduced exactly. Pass `--browser /path/to/chrome` if Chrome or
+Chromium is not in a standard location.
+
+The bots are regression instruments, not claims about human skill. Tune
+candidate numbers against their distributions, then validate movement feel,
+comprehension, and enjoyment with human playtests.
+
 A seven-page **field guide** opens the first time you load the game — the probe, resolving by dwelling, the dose-is-damage bargain, blanking, permanent knock-out, stage re-insertion, and the win bar, each as a ray-diagram of the mechanic rather than a wall of text. It's reachable afterwards from **Field guide** on the bench, or the **?** key from anywhere.
 
 It also runs inside the [PtychoHub](https://ptychohub.com) Kids section, which fetches this repo's `index.html` through an authenticated proxy route. While this repo is private that card is contributor-only and the route is session-gated, so the game isn't reachable by the public. Making the repo public is the switch that ships it.
@@ -49,7 +85,7 @@ A session ends when the electrons run out or the reconstruction is solved — 85
 
 Picks settle on a completed dose-limited session or 30-second acquisition over a specimen that shipped with the game — see **Modes**. Every upgrade is a real technique for getting more picture out of fewer electrons — an 80 kV column that sits under carbon's knock-on threshold, GPU-accelerated live reconstruction, a direct electron detector, a fast blanker, wide-field scan coils, a cryo stage, sparse scanning. Three more buy handling rather than picture: a faster scan generator to slew the probe between positions, a piezo focal stage that steps further out of the specimen plane — which is what a jump is here — and beam-shift deflectors to carry the probe sideways while it's up there. Ten lines, three levels each. Progress is kept in `localStorage`; if that's unavailable the game still runs, it just won't remember.
 
-Fully rigged, those three take the probe from 117 to 163 px/s, from a 109px jump to a 203px one, and from clearing one 90px lattice gap to clearing two and a half. They're the only upgrades that change which routes exist rather than what a route costs.
+Fully rigged, those three take the probe from 117 to 163 px/s, from a 109px jump to a 203px one, and from clearing one 90px horizontal lattice gap to clearing two and a half. Rows are 120px apart vertically, giving jumps substantially more clearance beneath the row above. The scan field is a 175px-radius circle, chosen to keep approximately the same total coverage area after the row-spacing change. They're the only upgrades that change which routes exist rather than what a route costs.
 
 On a stock instrument a solved reconstruction is reachable but tight — it leaves room for about three falls and not much sloppy routing. The rig is what makes it comfortable.
 
@@ -124,7 +160,7 @@ Calling the three site classes Pr / Sc / O is the one assumption in there — it
 
 **The layout is the reconstruction.** The field is 6.1 cells wide and 6.2 tall, which is the wrong shape for a side-scroller, so it's cut along a lattice plane into two 3-cell bands and the lower band is laid to the right of the upper one, offset by a whole number of cells in both directions. Both halves are the same crystal, so the join is seamless — rows line up, the checkerboard continues. Every measured column is used exactly once and carries its own real deviation from the ideal site. The 44 faintest peaks were dropped: they sit on no consistent sublattice, so they're the noise floor, not oxygen.
 
-**And the structure is the level design.** Every row is a continuous chain at the same 90 px pitch the carbon sheet runs at, but the footholds alternate: heavy cation, oxygen, heavy cation. The A-site dumbbell's two columns are 16 px apart and fuse into one wide safe pad; the B-site is a single broad column; oxygen is a small one. Then `vibrationFactor` does the rest — oxygen survives 2.3 units of dose against the A-site's 6.8, and drifts three times as far. So the fast route along a row keeps landing on the fragile thing, and the only way across a perovskite is the oxygen. Which is also true in a real microscope, where oxygen is the first thing you lose.
+**And the structure is the level design.** Every row is a continuous chain at the same 90 px horizontal pitch the carbon sheet runs at, with 120px of vertical row spacing, but the footholds alternate: heavy cation, oxygen, heavy cation. The A-site dumbbell's two columns are 16 px apart and fuse into one wide safe pad; the B-site is a single broad column; oxygen is a small one. Then `vibrationFactor` does the rest — oxygen survives 2.3 units of dose against the A-site's 6.8, and drifts three times as far. So the fast route along a row keeps landing on the fragile thing, and the only way across a perovskite is the oxygen. Which is also true in a real microscope, where oxygen is the first thing you lose.
 
 **Twisted bilayer WSe₂** — measured from the 557×557 px, 16-bit MEP-with-EDF reconstruction published as Fig. 1E in Zhang *et al.*, *Science* 389, 423–428 (2025). The source shows a soliton in a 1.7° twisted bilayer. The offline extractor found 996 atomic-column peaks in the complete field and refined their centers with local two-dimensional quadratic fits; the game uses a contiguous 557×110 px band of 200 columns so the soliton remains real while the field has a playable side-scrolling aspect ratio. The median local statistical position uncertainty is 0.034 px. Coordinates remain measured and unsnapped. The W/Se assignment is the stated inference: the brightest unsupervised intensity class is treated as W and the other classes as Se.
 
@@ -143,7 +179,7 @@ That writes the full subpixel coordinate table, fit and shape measurements, a QA
 
 ## Design your own specimen
 
-The bench's Specimen section has a **＋ Design a specimen** slot next to the three shipped lattices. It opens a grid editor at the same 90 px pitch the real specimens run at: drag to paint columns, right-drag or **E** to erase, **1**–**6** to pick an element, **D** to make a column drift. Play it straight from the editor, and it plays under whichever mode is selected, on your current instrument.
+The bench's Specimen section has a **＋ Design a specimen** slot next to the three shipped lattices. It opens a grid editor at the same 90×120 px horizontal/vertical pitch the real specimens run at: drag to paint columns, right-drag or **E** to erase, **1**–**6** to pick an element, **D** to make a column drift. Play it straight from the editor, and it plays under whichever mode is selected, on your current instrument.
 
 Nothing about a lattice you drew is a special case in the engine. The designer emits exactly the atom array `scandate()` emits, so the hidden phase image, the fog, the opening survey scan, knock-on tolerance and the field notes all come along for free — that is what the `SPECIMENS` seam was for.
 
@@ -151,7 +187,7 @@ Element choice is the level design, the same way it is in the perovskite. Each p
 
 **The editor knows your jump arc.** It walks the lattice you have drawn using the real constants the run flies on — `JUMP_VELOCITY`, gravity, the airborne speed your SCAN/PZT/SHFT levels actually give you — and rings in amber every column the probe could neither reach nor scan from the spawn. Which means the advice is not a guess about the game, it is the game solved for reachability, and it changes as your instrument does: a layout that is unplayable on a stock column opens up once the piezo stage is in. The footer quotes the numbers it is reasoning from — jump height, the gap it clears, the scan field, the lattice pitch.
 
-Alternate rows sit half a cell over, exactly the way the carbon sheet lays its rows out. That is mechanical rather than decorative: on a rigid grid every column has another column directly overhead and the probe fights a ceiling it can't land on, while offset rows put the site above you 45 px to one side — the geometry the whole game was tuned against, and what a close-packed lattice does anyway.
+Alternate rows sit half a cell over, exactly the way the carbon sheet lays its rows out. Rows are now 120px apart, while resolved columns remain solid from every direction. Unresolved columns are still deliberately non-solid until the reconstruction converges—the central scan-before-you-can-stand mechanic.
 
 Eight designs are kept, in `localStorage` alongside the rest of your progress.
 

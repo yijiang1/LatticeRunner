@@ -53,7 +53,7 @@ whatever the boxes say now.
 
 ### Resolve-by-proximity
 Each unresolved atom has a `resolveProgress` (0–1) that:
-- builds while the probe is within `RESOLVE_RADIUS` (150px), taking `RESOLVE_TIME` (0.5s) of continuous presence to complete
+- builds while the probe is inside the circular scan field, taking `RESOLVE_TIME` (0.5s) of continuous presence to complete. Its 175px radius is the equal-area replacement for the briefly tested 150×200px ellipse, keeping total coverage nearly constant without making the aperture visually dishonest
 - decays at 2.2× the build rate if the probe leaves before finishing (leaving early costs real progress, not just time)
 - once complete, permanently resolves the atom into a solid platform and erases a patch of fog around it on the reveal image
 
@@ -138,8 +138,9 @@ Numbers below come from driving the shipped simulation headlessly at a fixed
 timestep, not from a feel judgement.
 
 **What coverage costs.** Riding a single row from one end of the specimen to the
-other converges about half the lattice, because the 150px scan field reaches one
-row up and one row down:
+other converges about half the lattice, because the scan field reaches one row
+up and one row down (formerly a 150px circle, now a 175px circle after the
+vertical-spacing change):
 
 | Route | Reconstructed | Electrons |
 |---|---|---|
@@ -183,6 +184,12 @@ unpractised run:
 and the standable top stays inside the glow already drawn around each sphere.
 There is clearly more room to move here if playtesting says the opening is
 still too steep.
+
+Rows now use a 120px vertical pitch while retaining the tuned 90px horizontal
+pitch. Resolved columns remain solid from every direction; a briefly tested
+one-way-platform rule was removed because it made upward jumps visibly pass
+through atoms. The wider rows reduce overhead collisions without widening the
+gaps the stock jump was measured against.
 
 **Falling is now what the budget is spent on.** With stage re-insertion in, the
 same routes play out completely differently. Each row below is the median of 15
@@ -366,7 +373,7 @@ Ten lines, three levels each — 30 picks to max the instrument, so roughly 12�
 | GPU | GPU reconstruction accelerator | `RESOLVE_TIME` ×0.82 → ×0.55 | Faster compute closes the loop on the live phase estimate sooner |
 | DED | Direct electron detector | `DOSE_BUDGET` +22 → +78 | Counting single electrons beats integrating a current |
 | BLNK | Fast electrostatic blanker | `DOSE_ANNEAL` ×2 → ×4.2 | Microsecond blanking gives the specimen real rest |
-| FOV | Wide-field scan coils | `RESOLVE_RADIUS` +26 → +88 | More columns per position — and more of them irradiated |
+| FOV | Wide-field scan coils | circular radius +26 → +88 | More columns per position — and more of them irradiated |
 | CRYO | Cryogenic stage | wobble amplitude ×0.7 → ×0.3 | Cooling suppresses the thermal motion the drift hazard models |
 | SPRS | Sparse scan strategy | `RESOLVE_DECAY_MULT` ×0.65 → ×0.3 | Smarter scan patterns keep partial information instead of discarding it |
 | SCAN | High-speed scan generator | `MOVE_SPEED` ×1.16 → ×1.45 | A higher slew rate moves the probe between positions faster |
@@ -410,7 +417,7 @@ draining a hot one is a deliberate act — park it in range and hold SHIFT. Full
 carbon limit: 8.0s at base, 1.9s at BLNK 3.
 
 The **net-zero radius** is where the beam-on arc flips from filling to draining.
-At base it is 169px — outside the 150px field — so on a base instrument every
+At base it is 169px horizontally — outside the 150px horizontal field — so on a base instrument every
 in-field position fills, and the only beam-on relief is vertical (84px, which
 the 109px jump apex already clears). BLNK is what opens a horizontal standing
 band inside the field.
@@ -739,7 +746,7 @@ Specimens live in the `SPECIMENS` array. Each declares an id, display copy, the 
 { x, y, element, intensity, r?, wobble?, dopant?, dopantDef? }
 ```
 
-- `x, y` — lattice-unit coordinates, scaled to world pixels via `WORLD_SCALE`
+- `x, y` — lattice-unit coordinates, scaled to world pixels via `WORLD_SCALE_X` (90px) and `WORLD_SCALE_Y` (120px). The extra vertical spacing prevents a full stock jump colliding with the row above without widening horizontal gaps.
 - `element` — symbol string, looked up in `ATOMIC_MASS` for vibration behavior (unknown symbols fall back to a neutral factor of 1)
 - `intensity` — 0–1 measured column brightness; drives visual weight in the reveal image, and platform size when `r` is absent
 - `r` — explicit platform radius, when the site hierarchy is the level design rather than a by-product of brightness
@@ -763,7 +770,7 @@ Three, chosen from the bench. The instrument carries across all of them, which i
 ### 1. Doped 2D lattice (synthetic)
 
 Hand-tuned: a 26×6 atom grid with a gentle sine-wave vertical undulation (so it reads as terrain, not a flat strip) rather than a real reconstruction. Contains:
-- A seeded survey scan: every column within `RESOLVE_RADIUS · 1.25` of the spawn (6 of 152) starts converged. One pre-resolved column was not enough — the first second of a run used to be unsurvivable in both directions. Step off the single spawn column and the probe fell through six rows of unconverged speckle to the detector; stand on it long enough to converge the row below and the column under you knocked out instead. The survey patch gives the opening both ground to step onto and ground to fall back to.
+- A seeded survey scan: every column within 1.25× the 175px circular scan field of the spawn starts converged. One pre-resolved column was not enough — the first second of a run used to be unsurvivable in both directions. Step off the single spawn column and the probe fell through six rows of unconverged speckle to the detector; stand on it long enough to converge the row below and the column under you knocked out instead. The survey patch gives the opening both ground to step onto and ground to fall back to.
 - Hard scan-field edges at the outermost columns, so the probe cannot run off the end of the specimen into empty frame
 - 4 vacancy gaps (one is a 2-wide chasm)
 - 3 dopants (Au, N, O) spread early/mid/late across the level
@@ -793,9 +800,9 @@ Column σ is 2.0–2.6 px, so the information limit sits well inside a single ce
 
 **Layout.** The field is 6.1 cells wide and 6.2 tall, the wrong shape for a side-scroller. So it is cut along a lattice plane into two 3-cell bands and the lower band is laid to the right of the upper one, offset by a whole number of cells in both directions. Both halves are the same crystal, so the join is seamless: rows line up, the checkerboard continues, and there is no repeat. All 203 well-defined columns are used exactly once, each carrying its own real deviation from the ideal site. The 44 faintest peaks were dropped — they sit on no consistent sublattice.
 
-Level size 24.2 × 6.4 lattice units (2182 × 580 px), against the carbon sheet's 26 × 6.
+Level size 24.2 × 6.4 lattice units (2182 × 768 px), against the carbon sheet's 26 × 6.
 
-**Why the structure is the level design.** Every row is a continuous chain at the same 90 px pitch the carbon sheet runs at, but the footholds alternate by species:
+**Why the structure is the level design.** Every row is a continuous chain at the same 90 px horizontal pitch the carbon sheet runs at, with rows separated by 120px, but the footholds alternate by species:
 
 | Row type | Sequence | Air gap between platforms |
 |----------|----------|--------------------------|
@@ -804,7 +811,7 @@ Level size 24.2 × 6.4 lattice units (2182 × 580 px), against the carbon sheet'
 
 Both are inside the 44 px the carbon sheet was tuned around, so the map is crossable — but roughly half of every row's footholds are oxygen, and `vibrationFactor` already makes oxygen survive 2.3 units of dose against the A-site's 6.8 while drifting three times as far. The fast route along a row therefore keeps landing on the fragile thing. **The only way across a perovskite is the oxygen, and the oxygen is what the beam takes first** — which is also what happens in a real microscope.
 
-The difficulty trade is deliberate and was not re-tuned: 203 columns in the same footprint is 28% denser than the carbon sheet, so a probe field of `RESOLVE_RADIUS` covers 11.3 columns instead of 8.8 and coverage comes *faster* per electron. What it costs instead is footing, and footing costs `REALIGN_COST`. The pressure moves from the dose meter to the platforming, on the same budget.
+The difficulty trade is deliberate: 203 columns in the same lattice-unit footprint is 28% denser than the carbon sheet. The 175px circular field keeps nearly the same area as the rejected ellipse, so coverage still comes *faster* per electron on the denser structure. What it costs instead is footing, and footing costs `REALIGN_COST`. The pressure moves from the dose meter to the platforming, on the same budget.
 
 ### 3. Twisted bilayer WSe2 (measured)
 
@@ -847,14 +854,14 @@ it, and nothing downstream can tell it from a measured lattice.
 
 ### The grid is the lattice
 
-One cell is one lattice site at the same `WORLD_SCALE` (90px) pitch the
-shipped specimens run at, 34 x 9 of them. **Alternate rows sit half a cell
+One cell is one lattice site at the same 90×120px horizontal/vertical pitch
+the shipped specimens run at, 34 x 9 of them. **Alternate rows sit half a cell
 over**, exactly the way `graphene()` lays its rows out, and for a mechanical
 reason rather than a decorative one: on a rigid grid every column has another
-column directly overhead, and the probe's AABB fights a ceiling it cannot land
-on. Offset rows put the site above you 45px to one side, which is the geometry
-every jump number in **Balance** was measured against — and it is what a
-close-packed lattice does anyway.
+column directly overhead. Rows remain offset by 45px because that geometry is
+what every horizontal jump number in **Balance** was measured against — and it
+is what a close-packed lattice does anyway. Resolved sites use solid collision
+from every direction; only unresolved reconstruction ghosts can be crossed.
 
 ### Element choice is the level design
 
@@ -891,7 +898,7 @@ gap  <= vAir * (tRise + sqrt(2(apex - rise) / (GRAVITY * FALL_GRAVITY_MULT)))
 
 then breadth-first from the spawn column, and a column outside that set is
 still fine if it falls inside `resolveRadiusEff` of a column inside it — the
-scan field reaches 150px, so a neighbour of a reachable column still gets
+scan field reaches 175px in every direction, so a neighbour of a reachable column still gets
 phased from next door. What is lost is a column that is neither.
 
 Two things make this worth having rather than decorative. It is the game's own
@@ -963,7 +970,7 @@ names the vocabulary.
 ## Known Limitations
 
 - ~~**Single synthetic level.**~~ Partly addressed: the perovskite scandate specimen is traced off a real 200-iteration reconstruction, and its geometry, site hierarchy and hazard placement are the material's rather than mine. The carbon sheet is still hand-tuned.
-- **The perovskite has not been balance-tested.** Its constants are the carbon sheet's, on the argument above that denser coverage pays for more treacherous footing. That argument is reasoning, not measurement — no bot run and no human run exists for it yet, and `WIN_FRAC` at 0.85 of 203 columns may be the wrong bar.
+- **The perovskite has no human balance test.** The deterministic balance suite now runs it across all three bot profiles, both scarce-resource modes and every upgrade line, but that is a regression baseline rather than evidence that the small oxygen footholds feel fair. `WIN_FRAC` at 0.85 of 203 columns may still be the wrong human bar.
 - **The element labels on the perovskite are an inference.** See **Specimens**. The site classes are measured; Pr/Sc/O is the scandate reading of the intensity ratio and wants confirming against whatever the specimen actually was.
 - **The W/Se labels in the Fig. 1E sample are intensity-based inferences.** The subpixel geometry and three intensity classes are measured; assigning the brightest class to W and both lower classes to Se should be checked against the authors' atom-registration data before using it as a chemical map.
 - **Fixed camera framing.** Smoothing and velocity look-ahead are in, but there is no zoom; the framing works for one screen-sized level and is untested at larger world sizes.
@@ -975,7 +982,7 @@ names the vocabulary.
 - **`DOSE_BUDGET` is measured against a bot, not a player.** 100 comes from headless simulation of routed sweeps and of naive edge-running (see **Balance**). Both are proxies; no human has played against the new number.
 - **A bad run still reads as *Probe lost*, because it is.** Stage re-insertion moved the pressure onto the budget — routed play now ends on *solved* or *beam exhausted* — but a random-input run falls seven times, spends 84 of its 94 electrons on re-alignment, and then hits the detector with nothing left to pay with. That ending is accurate and the report explains it, but the underlying precision demand of the platforming is untouched: unconverged lattice is not solid and cannot be converged on the way past (0.5s of dwell needed, under 0.3s in range at fall speed). Widening the columns further is the measured lever if playtesting says it is still too steep.
 - **85% is close to too *easy* a win bar for a good player.** The bar was moved down from all 152 columns because nothing could reach it. Over 15 page loads on a base instrument the loose-timing blanking bot now solves **13 of 15**, and the tightly routed one 5 of 15 — a 7-load sample taken right after the dose change read 7 of 7 and overstated it, which is what the wider sample is for. Two rows ridden end to end still cover 86% for 33 of the 100 electrons, so the ceiling is structural: a player who knows the route has nothing left to spend the budget on. Raising `WIN_FRAC` is a one-constant change, but the honest fix is a lattice whose coverage is not saturated by two horizontal sweeps.
-- **The two new modes are unmeasured.** The new 30-second sprint window and "every column" are both first guesses. The sprint has never been driven by the headless bots the way `DOSE_BUDGET` was — its only numbers come from an unattended probe under the former 60-second clock (18% phased, 19 columns destroyed, seven falls), so the current floor and routed score are unknown. The open survey has no failure state at all and may simply be boring; it earns its place as a way to look at a specimen, not as a game.
+- **The two new modes have no human calibration.** The 30-second sprint now runs in the deterministic bot matrix, so changes to it are measurable and reproducible; its current number is still a first guess until player traces agree with the model. The open survey has no failure state at all and may simply be boring; it earns its place as a way to look at a specimen, not as a game.
 - **The designer has no way to share a design.** Eight lattices, local to one browser, with no export string and no import. The data is four integers per column and would serialise to a URL fragment in a few lines, which is the obvious next move if anyone builds something worth showing someone.
 - **The reachability model is conservative and one-way.** It uses the standing-start horizontal reach, so a run-up crosses more than it promises; it treats a drop as always crossable when the pads overlap, so it will call a region reachable that you cannot climb back out of; and it says nothing about whether a route is *pleasant*. It answers "can the probe get there", which is the question that stops a player building something unplayable, and not the question of whether the layout is any good.
 - **A player's lattice can be trivially easy and there is nothing to stop that.** Picks are withheld from sandbox specimens, which removes the incentive to farm, but the mode/specimen matrix means a flat gold row under an open survey is a legal thing to build and sit in. That seems fine — it is a sandbox — but it does mean the game's difficulty claims stop applying the moment you leave the shipped specimens.
@@ -983,7 +990,7 @@ names the vocabulary.
 - **"Any rig" is a bin, not a ranking.** A level-1 instrument and a fully maxed one share a board and the maxed one wins. Two buckets is the cheapest honest split available before the upgrade curve is measured; the label should not be read as a fair fight.
 - **The survey board may be unreachable.** It requires 100% of the columns, and nobody has checked that every column in either shipped specimen is reachable — the designer's reachability walker exists and could answer it in an afternoon. If one column is stranded, that board is permanently empty.
 - **Nothing has posted a session board in anger.** The session board is exercised by seeded entries and by the ranking tests, not by a human solving the lattice, so what a real distribution of electron counts looks like — and therefore whether the board discriminates at all above the 33-electron floor — is unmeasured, like everything else on this list that says "measured against bots".
-- **The upgrade curve is untuned.** Step sizes, the 40%/70% pick thresholds and 30 total picks are estimates, not playtest results. A fully upgraded instrument may trivialise the single level — and the three handling lines sharpen that risk, since a 229px reach clears gaps the lattice was laid out to make you think about.
+- **The upgrade curve is measured but not yet tuned.** `tools/run_balance.py --rigs stock,max,marginal` now measures every level-3 line against paired seeds and flags negligible or dominant coverage changes. The first baseline identifies FOV as dominant for the current bots and the full rig as potentially flattening graphene; those are hypotheses for human validation, not permission to change constants blindly. The 40%/70% pick thresholds and 30-pick campaign length remain estimates.
 - **Nothing to spend picks on once maxed.** With every line at level 3 the draft is over and further sessions give no progression. A second specimen helps — a maxed rig has somewhere else to go — but two is not a progression system.
 - **Blanking is still taught by text, just at a better moment.** The prompt now fires the first time the beam has spent three seconds with nothing new in range and 15 electrons already gone, and only once across all sessions. The beam hum cutting out on SHIFT teaches the same thing by ear. Neither is the "level 1-1" geometry the principle below actually asks for.
 
@@ -993,7 +1000,7 @@ names the vocabulary.
 
 ### Near-term
 - **Put it in front of a human.** Everything below the top of this file is measured against bots. `DOSE_BUDGET`, `REALIGN_COST` and `WIN_FRAC` are the three constants that a single playtest would settle, and all three are one-line changes.
-- **Tune the upgrade curve from playtesting** — step sizes, the pick thresholds, and whether 30 picks is the right length for the arc. Untouched by any of the balance work so far.
+- **Tune the upgrade curve from playtesting** — use the automated marginal-upgrade report to choose candidates, then validate step sizes, pick thresholds, and the 30-pick campaign length against human traces.
 - **Mix the audio with real ears.** Levels and cutoffs were chosen by reading, not listening.
 - **Teach blanking through geometry** — a "level 1-1" opening with a long stretch of pre-resolved ground where blanking is obviously free, before any dose pressure. The contextual prompt and the hum are stand-ins for this, not replacements.
 - ~~Reconsider the win threshold~~ — done, `WIN_FRAC` is 0.85 with a tick on the HUD meter.
@@ -1002,10 +1009,10 @@ names the vocabulary.
 ### Medium-term
 - ~~**Swap in a real reconstruction.**~~ Done. The perovskite scandate is traced off `obj_phase_roi_sum_Niter200.tiff` and the `SPECIMENS` contract took it without a change to game logic.
 - ~~**Multiple levels**, selectable like Explore mode.~~ Done for two; the picker is in the bench's rail.
-- **Balance the sprint.** Drive the same routed and loose-timing bots through the 30-second window that settled `DOSE_BUDGET`, and tune the clock from where a competent route lands.
+- **Balance the sprint with humans.** The automated matrix now supplies a seeded regression distribution; record real routes and tune the bot profiles and clock from where competent players land.
 - **A shared logbook.** The local board is built as the lower layer of one: an entry already carries everything a server row would (mask, rig, balance version, specimen hash). Inside PtychoHub the game is served same-origin from `/api/games/lattice-runner` behind `requireSession`, so identity is free — `getSessionUser(request).sub`, no name entry and no impersonation — and the write echoes the existing JS-readable `csrf_token` like every other write in the app. What it needs: one table, one GET/POST route, a plausibility gate (mask/percentage agreement, a dose floor set well under the measured 33-electron route, a duration floor, a known specimen hash), and the fetch-or-fall-back in the panel. Record the input trace from the first day even though nothing reads it, because that is what makes verification possible later without throwing the board away.
 - **Design sharing.** A design is four small integers per column; a base64 fragment in the URL would make a lattice something you can hand to someone, which is the only thing the designer is currently missing. It pairs with the board: a shared design has a stable hash, and a hash is a board key, which is the one honest way a sandbox lattice could ever earn one.
-- **Balance the perovskite.** The one thing the new specimen ships without. Run the headless bots against it the way `DOSE_BUDGET` was settled for the carbon sheet, and check whether 85% of 203 columns is the right bar when coverage comes faster but falls come more often.
+- **Balance the perovskite with humans.** Its automated baseline is checked in; test whether 85% of 203 columns is the right bar when real players meet its dense coverage and small oxygen footholds.
 - **More real specimens**, one per paper/structure. Every reconstruction with a resolvable lattice is a level, and the extraction is now a known pipeline: peak-find, fit the cell, classify sites by peak height, cut the field into bands along a lattice plane, lay them end to end.
 - **Probe modes** — a wide/defocused probe resolves safely but coarsely; a tight coherent probe is riskier but reveals rare defects. Unlocking modes recontextualizes earlier levels on replay (Metroidvania-style backtrack incentive) instead of a flat difficulty curve.
 
