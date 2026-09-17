@@ -1022,11 +1022,12 @@
   // Data contract: an array of atom sites. This is the shape a real
   // ptychography reconstruction export should match so it can be dropped
   // in without touching game logic:
-  //   { x, y, element, intensity, r?, wobble?, note? }
+  //   { x, y, element, intensity, r?, platformWidth?, wobble?, note? }
   // x/y are in arbitrary "lattice units" here; they get scaled to world
   // pixels below. element is a string label; intensity is 0..1 and is the
   // measured column brightness — it drives visual weight, and platform size
-  // unless the site supplies its own `r`.
+  // unless the site supplies its own `r`. A site may set `platformWidth`
+  // independently so a small visible column can still be a fair foothold.
   // ---------------------------------------------------------------------
 
   // Atomic mass (amu) drives vibration: real thermal/Debye-Waller motion
@@ -1034,7 +1035,7 @@
   // wider, and — once damaged — flicker out of solidity faster too. It is
   // also what sets each column's dose tolerance, so this one table is
   // responsible for most of how a sample feels to run across.
-  const ATOMIC_MASS = { C: 12.011, N: 14.007, O: 15.999, Se: 78.971, Sc: 44.956, W: 183.84, Au: 196.97, Pr: 140.91 };
+  const ATOMIC_MASS = { C: 12.011, N: 14.007, O: 15.999, Si: 28.085, Se: 78.971, Sc: 44.956, W: 183.84, Au: 196.97, Pr: 140.91 };
   const REF_MASS = ATOMIC_MASS.C;
   function vibrationFactor(element) {
     return Math.sqrt(REF_MASS / (ATOMIC_MASS[element] || REF_MASS));
@@ -1052,6 +1053,7 @@
     C:  { core: "#eaf9ff", mid: "#5ec2ec", edge: "#0e3a54", rim: "#8ff0ff", glow: "90,212,255",  z: 1.00 },
     N:  { core: "#f5ecff", mid: "#a488f2", edge: "#2a1a5e", rim: "#cbb2ff", glow: "168,136,242", z: 1.15 },
     O:  { core: "#fff1de", mid: "#f2a05c", edge: "#5f2a10", rim: "#ffd0a0", glow: "242,160,92",  z: 1.30 },
+    Si: { core: "#eafff8", mid: "#73d7ba", edge: "#12453d", rim: "#b4ffe4", glow: "115,215,186", z: 1.45 },
     Se: { core: "#ecfff8", mid: "#5bc9aa", edge: "#123f39", rim: "#a5f3d8", glow: "91,201,170",  z: 1.70 },
     Sc: { core: "#eefaff", mid: "#6fc9d8", edge: "#10404c", rim: "#a9edf6", glow: "111,201,216", z: 1.12 },
     W:  { core: "#fff8dd", mid: "#f0bd58", edge: "#573407", rim: "#ffe8a3", glow: "240,189,88",  z: 2.55 },
@@ -1346,6 +1348,79 @@
     });
   }
 
+  // Paper-inspired [010] projection of MFI (ZSM-5), not digitized atom
+  // coordinates. Fig. 2G shows broad straight 10-ring channels, bright
+  // framework rims, and rod-/dot-like contrast from adsorbed p-xylene.
+  // The spaced decagons below preserve that visual hierarchy. Alternate O
+  // bridges are omitted for game readability, not as a chemical assertion.
+  const ZEOLITE_RING_COLS = 6;
+  const ZEOLITE_X_START = 1.75;
+  const ZEOLITE_X_STEP = 4.8;
+  const ZEOLITE_Y_CENTERS = [1.45, 4.9];
+  const ZEOLITE_X_RADIUS = 1.6;
+  const ZEOLITE_Y_RADIUS = 1.25;
+  function zeolite() {
+    const atoms = [];
+    const si = (x, y, intensity = 0.78) => ({
+      x, y, element: "Si", intensity, r: 11, platformWidth: 45, wobble: false,
+    });
+    const oxygen = (a, b) => ({
+      x: (a.x + b.x) / 2, y: (a.y + b.y) / 2,
+      element: "O", intensity: 0.42, r: 6, platformWidth: 32, wobble: false,
+    });
+
+    for (let row = 0; row < ZEOLITE_Y_CENTERS.length; row++) {
+      const cy = ZEOLITE_Y_CENTERS[row];
+      for (let col = 0; col < ZEOLITE_RING_COLS; col++) {
+        const cx = ZEOLITE_X_START + col * ZEOLITE_X_STEP + (row ? 0.12 : 0);
+        const ring = [];
+        for (let i = 0; i < 10; i++) {
+          const angle = Math.PI + i * Math.PI / 5;
+          ring.push(si(
+            cx + ZEOLITE_X_RADIUS * Math.cos(angle),
+            cy + ZEOLITE_Y_RADIUS * Math.sin(angle),
+            0.73 + 0.07 * Math.cos(col * 1.3 + i * 2.1 + row),
+          ));
+        }
+        for (let i = 0; i < ring.length; i++) {
+          atoms.push(ring[i]);
+          // Keep every framework vertex, but show alternate O bridges.
+          // The projection is stylized so individual pads stay distinct.
+          if (i % 2 === 0) atoms.push(oxygen(ring[i], ring[(i + 1) % ring.length]));
+        }
+        // A short framework link connects the rims without filling the pore.
+        if (col < ZEOLITE_RING_COLS - 1) {
+          const right = ring[5];
+          const nextLeft = si(cx + ZEOLITE_X_STEP - ZEOLITE_X_RADIUS, cy);
+          const middle = si((right.x + nextLeft.x) / 2, cy, 0.66);
+          atoms.push(middle);
+          // An upper-rim route keeps the specimen traversable while the
+          // large channel interiors remain genuinely empty.
+          const upperRight = ring[3];
+          const upperNextX = cx + ZEOLITE_X_STEP -
+            ZEOLITE_X_RADIUS * Math.cos(2 * Math.PI / 5);
+          for (let step = 1; step <= 4; step++) {
+            atoms.push(si(upperRight.x + (upperNextX - upperRight.x) * step / 5,
+              upperRight.y, 0.68));
+          }
+        }
+      }
+    }
+    // Si dominates the framework at the paper's Si/Al ratio of about 100;
+    // individual Al substitutions are not assigned from this image.
+    atoms[0].dopant = true;
+    atoms[0].dopantDef = {
+      symbol: "Si", r: 11,
+      fact: "Fig. 2G shows p-xylene inside the straight 10-ring channels. Its rod-like contrast reveals different molecular orientations; the framework columns here are predominantly Si."
+    };
+    atoms[1].dopant = true;
+    atoms[1].dopantDef = {
+      symbol: "O", r: 6,
+      fact: "The small oxygen columns sit between framework T columns. Resolving them is what makes the channel rim sharp in the ptychographic image."
+    };
+    return atoms;
+  }
+
   const SAMPLES = [
     {
       id: "graphene",
@@ -1370,6 +1445,14 @@
       blurb: "A measured moiré soliton bends two projected lattices through one field. From <a class=\"paper\" href=\"https://doi.org/10.1126/science.adw7751\" target=\"_blank\" rel=\"noopener noreferrer\">Zhang et al. (2025)</a>.",
       spawn: 10,
       build: mepEdf,
+    },
+    {
+      id: "zeolite",
+      name: "ZSM-5 zeolite",
+      tag: "Paper-inspired · Si / O · 10-ring channels",
+      blurb: "Wide MFI pores and p-xylene contrast, after Fig. 2G of <a class=\"paper\" href=\"https://doi.org/10.1126/science.adg3183\" target=\"_blank\" rel=\"noopener noreferrer\">Zhang et al. (2023)</a>. Geometry is illustrative.",
+      spawn: 3,
+      build: zeolite,
     },
   ];
 
@@ -2059,6 +2142,7 @@
       x: a.x * WORLD_SCALE_X + 80,
       y: a.y * WORLD_SCALE_Y + 120,
       r,
+      platformWidth: a.platformWidth,
       element: a.element,
       intensity: a.intensity,
       dopant: a.dopant,
@@ -2947,6 +3031,7 @@
       "sample-graphene": `<path d="m13 13 11-6 11 6v12l-11 6-11-6Z"/><path d="m24 31 11 6"/><circle cx="13" cy="13" r="3" fill="currentColor"/><circle cx="35" cy="13" r="3" fill="currentColor"/><circle cx="35" cy="25" r="3" fill="currentColor"/><circle cx="24" cy="31" r="3" fill="currentColor"/><circle cx="13" cy="25" r="3" fill="currentColor"/><circle cx="35" cy="37" r="3" fill="#7dffc4" stroke="none"/>`,
       "sample-scandate": `<circle cx="12" cy="13" r="6" fill="currentColor" opacity=".9"/><circle cx="36" cy="13" r="6" fill="currentColor" opacity=".9"/><circle cx="12" cy="36" r="6" fill="currentColor" opacity=".9"/><circle cx="36" cy="36" r="6" fill="currentColor" opacity=".9"/><circle cx="24" cy="24" r="3" fill="#7dffc4" stroke="none"/><path d="M17 17l5 5m9-5-5 5m-9 9 5-5m9 5-5-5" opacity=".55"/>`,
       "sample-mepedf": `<path d="M7 13c8-6 16 5 24 0s10 1 10 1M7 25c8-6 16 5 24 0s10 1 10 1M7 37c8-6 16 5 24 0s10 1 10 1"/><circle cx="14" cy="9" r="3" fill="currentColor"/><circle cx="25" cy="17" r="2" fill="#7dffc4" stroke="none"/><circle cx="15" cy="30" r="2" fill="#7dffc4" stroke="none"/><circle cx="34" cy="33" r="3" fill="currentColor"/>`,
+      "sample-zeolite": `<path d="M7 11h12l5 8 5-8h12M7 37h12l5-8 5 8h12M7 11v26m34-26v26M19 11l-4 10 4 16m10-26 4 10-4 16"/><circle cx="24" cy="19" r="2" fill="#7dffc4" stroke="none"/><circle cx="24" cy="29" r="2" fill="#7dffc4" stroke="none"/>`,
       "sample-custom": `<path d="M8 8h12v12H8zm20 0h12v12H28zM8 28h12v12H8z"/><path d="M28 34h12m-6-6v12"/>`,
       "sample-add": `<path d="M9 9h12v12H9zm18 0h12v12H27zM9 27h12v12H9z"/><path d="M27 33h12m-6-6v12"/>`,
       "default": `<circle cx="24" cy="24" r="13"/><circle cx="24" cy="24" r="4" fill="currentColor" stroke="none"/><path d="M24 5v6M24 37v6M5 24h6M37 24h6"/>`,
@@ -3320,7 +3405,7 @@
       // closing the lattice up. Coyote time and the jump buffer were the
       // obvious knobs here and both turned out to do nothing: the constraint
       // is the gap, not the input window.
-      const pw = a.dopant ? a.r * 3.0 : a.r * 2.7;
+      const pw = a.platformWidth ?? (a.dopant ? a.r * 3.0 : a.r * 2.7);
       const ph = a.r * 0.9;
       const bx = a.x - pw / 2, by = ay - ph / 2;
       // Swept landing test. A column top is only ~24px tall, and at terminal
@@ -3776,6 +3861,34 @@
       f.beginPath();
       f.arc(a.x * S, a.y * S, rad, 0, TAU);
       f.fill();
+    }
+
+    if (SAMPLE.id === "zeolite") {
+      // Fig. 2G's adsorbed p-xylene is phase contrast inside the pores,
+      // not another set of atomic-column platforms. Draw it only in the
+      // hidden reconstruction: rods at several orientations and a few
+      // softer dots where the projected molecules overlap.
+      for (let row = 0; row < ZEOLITE_Y_CENTERS.length; row++) {
+        for (let col = 0; col < ZEOLITE_RING_COLS; col++) {
+          const cx = (ZEOLITE_X_START + col * ZEOLITE_X_STEP + (row ? 0.12 : 0)) * WORLD_SCALE_X + 80;
+          const cy = ZEOLITE_Y_CENTERS[row] * WORLD_SCALE_Y + 120;
+          const dot = (row + col) % 5 === 0;
+          f.save();
+          f.translate(cx * S, cy * S);
+          f.rotate([0.15, -0.55, 0.8, -0.2][(row * 3 + col) % 4]);
+          f.scale(dot ? 0.75 : 0.34, dot ? 0.75 : 1.45);
+          const radius = (dot ? 23 : 36) * S;
+          const guest = f.createRadialGradient(0, 0, 1, 0, 0, radius);
+          guest.addColorStop(0, "rgba(255,255,255,0.48)");
+          guest.addColorStop(0.45, "rgba(255,255,255,0.27)");
+          guest.addColorStop(1, "rgba(255,255,255,0)");
+          f.fillStyle = guest;
+          f.beginPath();
+          f.arc(0, 0, radius, 0, TAU);
+          f.fill();
+          f.restore();
+        }
+      }
     }
     f.globalCompositeOperation = "source-over";
 

@@ -297,7 +297,7 @@ def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--runs", type=int, default=10, help="seeded runs per matrix cell")
     parser.add_argument("--seed", type=int, default=1337)
-    parser.add_argument("--samples", default="graphene,scandate,mepedf")
+    parser.add_argument("--samples", default="graphene,scandate,mepedf,zeolite")
     parser.add_argument("--modes", default="session,sprint")
     parser.add_argument("--profiles", default="novice,intermediate,expert")
     parser.add_argument(

@@ -138,7 +138,7 @@ Which means the level design falls out of the material rather than out of a diff
 
 ## Specimens
 
-Three lattices ship with the game, chosen from the bench between sessions, and you can draw your own alongside them — see **Design your own specimen** below. The instrument you build carries across all of them; that's the point of having more than one, since a rig tuned on light carbon meets a heavy compound that punishes the same habits differently.
+Four lattices ship with the game, chosen from the bench between sessions, and you can draw your own alongside them — see **Design your own specimen** below. The instrument you build carries across all of them; that's the point of having more than one, since a rig tuned on light carbon meets a heavy compound that punishes the same habits differently.
 
 **Doped 2D lattice** — synthetic. A carbon sheet with three substitutions hidden in it and four vacancies to jump. Even ground, even columns; what it costs you is dose, not footing.
 
@@ -177,9 +177,11 @@ python3 tools/extract_atomic_columns.py \
 
 That writes the full subpixel coordinate table, fit and shape measurements, a QA overlay, a packed game-data crop, and a new acquisition-like reconstruction that keeps the measured geometry while resampling the residual noise phase.
 
+**ZSM-5 zeolite** — a playable interpretation of the [010] MFI reconstruction in Hui Zhang *et al.*, *Science* 380, 633–638 (2023), DOI `10.1126/science.adg3183`. The layout takes its cue from Fig. 2G: widely spaced straight 10-ring channels, small oxygen columns between brighter framework T columns (predominantly Si), and rod- or dot-like p-xylene contrast inside selected pores. The p-xylene appears only in the hidden phase image, not as a platform. The sparse game projection keeps 230 visible columns and omits alternate oxygen bridges for legibility; this is not a claim that those O sites are absent in the material. The drawn columns remain small, while their collision footholds are wider so the gaps can still be jumped. The geometry is illustrative, not a digitized extraction or an exact MFI structural model.
+
 ## Design your own specimen
 
-The bench's Specimen section has a **＋ Design a specimen** slot next to the three shipped lattices. It opens a grid editor at the same 90×120 px horizontal/vertical pitch the real specimens run at: drag to paint columns, right-drag or **E** to erase, **1**–**6** to pick an element, **D** to make a column drift. Play it straight from the editor, and it plays under whichever mode is selected, on your current instrument.
+The bench's Specimen section has a **＋ Design a specimen** slot next to the four shipped lattices. It opens a grid editor at the same 90×120 px horizontal/vertical pitch the real specimens run at: drag to paint columns, right-drag or **E** to erase, **1**–**6** to pick an element, **D** to make a column drift. Play it straight from the editor, and it plays under whichever mode is selected, on your current instrument.
 
 Nothing about a lattice you drew is a special case in the engine. The designer emits exactly the atom array `scandate()` emits, so the hidden phase image, the fog, the opening survey scan, knock-on tolerance and the field notes all come along for free — that is what the `SPECIMENS` seam was for.
 
